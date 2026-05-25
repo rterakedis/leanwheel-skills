@@ -98,6 +98,9 @@ After feedback:
 After user approval, execute from `skills/github-tracking/skill.md`:
 
 1. **ENSURE-MILESTONE** — pass `epic_num` and epic title; store `milestone_title`
-2. **CREATE-ISSUE** — pass story path, `epic_num`, `story_num`, `story_title`, `milestone_title`, AC summary; writes `github_issue:` to frontmatter
+2. Check if issue already exists (created when epics.md was written):
+   - `gh issue list --search "Story {epic}.{story}:" --json number,title --jq '.[0].number'`
+   - If found: write the existing number back to frontmatter (`sed -i '' "s/^github_issue: 0$/github_issue: {N}/"`), then **TRANSITION** the issue from `backlog` → `ready-for-dev`. Skip CREATE-ISSUE.
+   - If not found: **CREATE-ISSUE** — pass story path, `epic_num`, `story_num`, `story_title`, `milestone_title`, AC summary (uses default `initial_label: ready-for-dev`); writes `github_issue:` to frontmatter.
 
-If unavailable, skip and note.
+If GitHub unavailable, skip and note.

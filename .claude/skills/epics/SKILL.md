@@ -50,5 +50,6 @@ Verify: every FR in ≥1 story, no gaps or overlaps. Show coverage table. Resolv
 ## Phase 4 — Write and Sync
 
 1. Write `docs/epics.md` using template.
-2. Create GitHub milestones via **ENSURE-MILESTONE** (title only; skip if unavailable).
-3. Report: "{E} epics, {S} stories written. Next: `/create-story`."
+2. Create GitHub milestones via **ENSURE-MILESTONE** for each epic (skip if GitHub unavailable).
+3. If stories are present in `docs/epics.md`: create one GitHub issue per story via **CREATE-ISSUE** with `initial_label: backlog`, attaching each issue to its epic's milestone. Use the story's user story statement + ACs as the issue body. Skip write-back (no story file exists yet).
+4. Report: "{E} epics, {S} stories written, {N} GitHub issues created. Next: `/create-story`."

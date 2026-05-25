@@ -23,7 +23,7 @@ Before composable ops (ENSURE-MILESTONE, CREATE-ISSUE, TRANSITION, CLOSE-ISSUE):
 1. Check auth: `gh auth status`. If no, run `gh auth login` (interactive).
 2. Verify auth succeeded: `gh auth status`.
 3. Verify repo: `gh repo view --json nameWithOwner`. Fail if no remote.
-4. Create labels: `ready-for-dev`, `in-progress`, `review`, `done` with `--force`.
+4. Create labels: `backlog`, `ready-for-dev`, `in-progress`, `review`, `done` with `--force`.
 5. Report: auth user, repo. Next: `/backfill` or `/create-story`.
 
 ---
@@ -51,11 +51,12 @@ Find or create milestone for epic. Input: `epic_num`, `epic_title` from epics.md
 
 ## CREATE-ISSUE
 
-Create issue for story. Input: `story_file`, `epic_num`, `story_num`, `story_title`, `milestone_title`, AC summary.
+Create issue for story. Input: `story_file` (optional), `epic_num`, `story_num`, `story_title`, `milestone_title`, AC summary, `initial_label` (default: `ready-for-dev`).
 - Build body from story (statement + ACs + repo path).
-- `gh issue create --title "Story {epic}.{num}: {title}" --body --milestone --label "ready-for-dev"`
+- `gh issue create --title "Story {epic}.{num}: {title}" --body --milestone --label "{initial_label}"`
 - Extract issue number from URL.
-- Write back to story file: `sed -i '' "s/^github_issue: 0$/github_issue: {N}/" "{file}"`
+- If `story_file` provided: write back `sed -i '' "s/^github_issue: 0$/github_issue: {N}/" "{file}"`
+- If no `story_file` (source is epics.md): skip write-back; issue number will be recorded when `/create-story` generates the story file.
 - Report: "Created #N → URL"
 
 ---
@@ -82,13 +83,15 @@ Also run TRANSITION with `new_label: done` to apply the done label before closin
 ## Status Label Flow
 
 ```
-created → [ready-for-dev]
-             ↓ dev-story starts
-          [in-progress]
-             ↓ dev-story DoD passes
-          [review]
-             ↓ code-review passes
-          [done] + issue closed
+epics.md written → [backlog]
+                      ↓ create-story completes
+                   [ready-for-dev]
+                      ↓ dev-story starts
+                   [in-progress]
+                      ↓ dev-story DoD passes
+                   [review]
+                      ↓ code-review passes
+                   [done] + issue closed
 ```
 
 Milestone progress in GitHub UI automatically shows X/Y closed issues.
