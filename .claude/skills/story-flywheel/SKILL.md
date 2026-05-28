@@ -113,9 +113,38 @@ After "continue":
    ```
    Fall back to scanning `docs/epics.md` for the next story with `Status: not started` or no file.
 
-2. If a next story exists: announce "Moving to {epic}.{next_story}: {title}." and return to **Phase 1**.
+2. If a next story exists in the **same epic**: announce "Moving to {epic}.{next_story}: {title}." and return to **Phase 1**.
 
-3. If no stories remain: proceed to **Exit — Epic Complete**.
+3. If no stories remain in the current epic: proceed to **Phase 5b — Epic Boundary Gate**.
+
+### Phase 5b — Epic Boundary Gate
+
+All stories in the current epic are done. Before starting a new epic, present:
+
+```
+─────────────────────────────────────────────
+EPIC {N} COMPLETE — {X} stories done
+─────────────────────────────────────────────
+All stories in Epic {N} are implemented and reviewed.
+
+What would you like to do next?
+  • "retro"     — run a retrospective for Epic {N} before continuing
+  • "continue"  — skip retrospective and start Epic {N+1}
+  • "stop"      — end the flywheel here
+─────────────────────────────────────────────
+```
+
+**Wait for user response.**
+
+- **"retro"**: Execute `skills/retrospective/skill.md` for the completed epic. After it finishes, prompt again:
+  ```
+  Retrospective complete. Ready to start Epic {N+1}: {title}.
+    • "continue" — start the flywheel on Epic {N+1}
+    • "stop"     — end the flywheel here
+  ```
+  Wait for response, then act accordingly.
+- **"continue"**: Identify the first incomplete story in the next epic and return to **Phase 1** with that story.
+- **"stop"**: Exit gracefully (see **User-Stopped**).
 
 ---
 
@@ -123,18 +152,17 @@ After "continue":
 
 ### Epic Complete
 
-All issues in the milestone are closed (or all stories in `docs/epics.md` have `Status: done`):
+All epics and stories are done (no remaining open issues or stories in `docs/epics.md`):
 
 ```
 ─────────────────────────────────────────────
-EPIC {N} COMPLETE
+ALL EPICS COMPLETE
 ─────────────────────────────────────────────
-All {X} stories implemented and reviewed.
+Every story across all epics is implemented and reviewed.
 
 Next steps:
-  • Run /retrospective to capture learnings
-  • Run /story-flywheel {next_epic} to start the next epic
-  • Or check /status for overall project state
+  • Run /retrospective if you haven't already
+  • Check /status for overall project state
 ─────────────────────────────────────────────
 ```
 
