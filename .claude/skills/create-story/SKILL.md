@@ -52,6 +52,14 @@ Extract from documents:
 - Edge cases and error conditions?
 - Required tests (from testing strategy)?
 
+**Cross-epic runtime dependency check (mandatory):**
+Before writing, explicitly answer: does this story require a runtime artifact — database table, seed data row, API endpoint, migration, or service — that lives in a *different* epic and may not be complete yet?
+
+If yes:
+1. Note the dependency in Dev Notes under `### Prerequisites` with the source story ID (e.g. "Requires Story 13-1 migration `tenant_access_grants` to exist").
+2. If the prerequisite epic/story is scheduled *after* this epic in `docs/epics.md`, flag it as a sequencing risk in the story summary shown to the user — they must decide to reorder, split, or accept the incomplete-until-X gap.
+3. Never silently assume a later epic's output will be present.
+
 ## Generate Cache
 
 When cache is missing/stale, distill content into `docs/epics/epic-{epic_num}-context.md`:

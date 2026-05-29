@@ -43,6 +43,20 @@ For each epic:
 3. Get user confirmation, adjust
 4. Write full entries using template
 
+**Cross-epic runtime dependency scan (do after drafting all epics, before writing):**
+
+For every epic, ask: does any story in this epic require a runtime artifact — migration, seed data, table, endpoint — that lives in a *later* epic to be end-to-end testable or operationally complete?
+
+Common patterns to check:
+- A seed/bootstrap story (e.g. "create admin user") that only becomes useful after a later epic provides the permission model
+- A data model story that references a table introduced in a later epic
+- An auth epic whose "first login" flow depends on tenant data only created in a later onboarding epic
+
+For each identified cross-epic dependency:
+- Add a note to the *earlier* epic's implementation order: "Operationally complete only after Story X-Y ships"
+- Add a note to the *later* epic's relevant story: "Unblocks Story A-B from being fully testable"
+- If the dependency is a blocker (earlier epic cannot be validated without it), consider reordering epics or splitting the blocking story out into the earlier epic
+
 ## Phase 3 — FR Coverage Check
 
 Verify: every FR in ≥1 story, no gaps or overlaps. Show coverage table. Resolve gaps before writing.

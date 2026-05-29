@@ -54,9 +54,24 @@ Auth/data/API/LLM/payment stories: ≥1 security AC. Architecture Section 6 cove
 
 ---
 
+## Check 7 — Cross-Epic Runtime Dependencies
+
+For every epic pair (A scheduled before B), ask: does any story in A require a runtime artifact — migration, seed data row, table, API endpoint — produced by a story in B to be end-to-end testable or operationally complete?
+
+For each dependency found:
+- **If B is scheduled after A and the artifact is required at A's runtime:** flag as a **blocker** — either reorder (pull the artifact story into A or before A), or explicitly annotate both epics with "Story A-N is operationally incomplete until Story B-M ships."
+- **If B is scheduled after A but the artifact is only needed post-MVP or for optional flows:** flag as a **warning** — annotate the dependency, don't reorder.
+
+Concrete examples to look for:
+- Bootstrap/seed stories that produce a user or tenant row required by a later permission model
+- Auth epics whose "first login" path depends on tenant data only created in a later onboarding epic
+- Feature stories that JOIN against a table introduced in a later data-model story
+
+---
+
 ## Output
 
-Readiness report: six checks, blockers (fix before `/create-story`), warnings (fix before epic).
+Readiness report: seven checks, blockers (fix before `/create-story`), warnings (fix before epic).
 
-Blockers: uncovered FRs, circular deps, architecture contradictions. Call **LOG-AND-SCHEDULE** for remediation stories.
-Warnings: weak ACs, scope overlap, missing security ACs. Surface to user.
+Blockers: uncovered FRs, circular deps, architecture contradictions, cross-epic runtime blockers. Call **LOG-AND-SCHEDULE** for remediation stories.
+Warnings: weak ACs, scope overlap, missing security ACs, cross-epic runtime warnings. Surface to user.
