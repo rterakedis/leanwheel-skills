@@ -7,7 +7,7 @@ description: Composable GitHub issue/milestone tracking operations. Called by ot
 
 Reference library of tracking operations called by other skills at marked points.
 
-Directly invocable: `/github-tracking setup` (one-time) | `/github-tracking backfill` (retroactive).
+Directly invocable: `/github-tracking setup` (one-time) | `/github-tracking backfill` (retroactive) | `/github-tracking sync` (reconcile labels/state).
 
 ## Prerequisites Check
 
@@ -37,6 +37,39 @@ Retroactively create milestones/issues for stories with `github_issue: 0` (safe 
 3. Preview list + confirm: "Create milestones + issues + write numbers back?"
 4. For each story: read epic/story/title/Status, add `github_issue: 0` if missing, ENSURE-MILESTONE, label by Status, CREATE-ISSUE, CLOSE-ISSUE if done. Report per-story.
 5. Summary: {N} issues, {M} milestones, {K} closed. Next: `/status`.
+
+---
+
+## SYNC (reconcile labels and state)
+
+Reconcile GitHub issue labels and open/closed state against the current `status:` field in every story file. Safe to re-run — idempotent.
+
+### Status → label/state mapping
+
+| story `status:` | Expected GitHub label | Issue state |
+|---|---|---|
+| `draft` / `ready` | `ready-for-dev` | open |
+| `in-progress` | `in-progress` | open |
+| `review` | `review` | open |
+| `done` / `complete` | `done` | closed |
+| `cancelled` | `done` | closed |
+
+### Steps
+
+1. Verify auth (`gh auth status`, `gh repo view --json nameWithOwner`). Fail fast if either fails.
+2. Build diff table: for each story file in `docs/stories/` that has a non-zero `github_issue:`:
+   - Read `status:` and `github_issue:` from frontmatter.
+   - Fetch current GitHub label(s) and state: `gh issue view {N} --json state,labels`
+   - Determine expected label from the mapping above.
+   - If current label set doesn't include expected label OR current state doesn't match: add to diff list.
+3. Print diff table (story file | issue # | current label | expected label | current state | expected state). If no diffs: report "All issues in sync." and stop.
+4. Confirm: "Apply {N} changes?"
+5. For each diff:
+   - TRANSITION to expected label (remove old status label, add new).
+   - If expected state is `closed` and issue is open: CLOSE-ISSUE.
+   - If expected state is `open` and issue is closed: reopen with `gh issue reopen {N}`.
+   - Report per-issue: "#N → label:done + closed ✓"
+6. Summary: {N} issues updated, {M} already in sync.
 
 ---
 
