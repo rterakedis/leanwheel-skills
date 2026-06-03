@@ -38,14 +38,16 @@ Stop if:
 ## Story File Updates
 
 Modify only:
-- Tasks/Subtasks — check off items
+- Tasks/Subtasks — check off `[ ]` → `[x]` as each task completes
+- Acceptance Criteria — check off `[ ]` → `[x]` as each AC is satisfied; do this during implementation, not after
+- Architecture Compliance Checklist (if present in Dev Notes) — check off each item before marking done
 - Debug Log — log issues
 - Completion Notes — key decisions
 - File List — files created/modified/deleted
 - Change Log — one-line per session
 - Status — to `review` when done
 
-Don't modify: Statement, ACs, Dev Notes, References.
+Don't modify: User Story statement, Dev Notes prose, References.
 
 ## Definition of Done
 
