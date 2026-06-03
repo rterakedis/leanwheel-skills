@@ -30,14 +30,30 @@ Ask one at a time, confirm after each answer.
 
 ## Deferred Item Status Check
 
-Read `docs/deferred-items.md`. Cross-ref against `docs/epics.md`:
-- Scheduled/open: story in epics.md, not started or in progress
-- Completed: story is done
-- Removed: not in epics.md
+### Pass 1 — Catch unlogged deferred items
 
-**Hard rule:** If the retro reassigns a deferred item, edit `docs/deferred-items.md`'s `Scheduled As` column in the same turn. Narrating without editing is a failed retro.
+Scan all story files for the epic just completed (`docs/epics/epic-{N}-*.md`) for any `[Defer]` checkbox entries (checked or unchecked). Compare against `docs/deferred-items.md`.
 
-Include summary in retro doc.
+For each `[Defer]` item found in a story file that has **no matching D-ID** in `docs/deferred-items.md`: call **LOG-AND-SCHEDULE** from `skills/deferred/SKILL.md` immediately. Do not leave unlogged deferred items after the retro.
+
+### Pass 2 — Ensure all logged items are scheduled into open work
+
+Read `docs/deferred-items.md`. For every row, check the `Scheduled As` story against `docs/epics.md`:
+
+- **Scheduled into an open (not-started or in-progress) story:** OK — no action.
+- **Scheduled into a `Status: done` story or completed epic:** INVALID — that story is locked dev-complete. Reassign via **SLOT-INTO-BACKLOG** from `skills/deferred/SKILL.md` (targeting only stories with `Status: not started`). If no slot found, call **SCHEDULE** Step 2 to create a new remediation story. Update `Scheduled As` in `docs/deferred-items.md`.
+- **Scheduled story not found in epics.md (removed/renamed):** Treat as unscheduled — reassign same as above.
+- **Completed/resolved:** Note as resolved in retro doc, no action needed.
+
+**Hard rule:** Every unresolved deferred item must point to an open, not-started story when the retro ends. Narrating without editing `docs/deferred-items.md` is a failed retro.
+
+Include a summary table in the retro doc:
+```markdown
+| D-ID | Title | Was Scheduled As | Action Taken |
+|------|-------|-----------------|--------------|
+| D-1  | ...   | Story X.Y (done — reassigned to Z.W) | Slotted as AC |
+| D-2  | ...   | Story X.Y (open) | No change |
+```
 
 ## PRD / Architecture Sync Check
 
@@ -91,5 +107,5 @@ End the retro with a `## Next Epic Readiness` section:
 
 1. Write to `docs/epics/epic-{epic_num}-retro-{date}.md`: summary, metrics, what went well, blockers, patterns, conventions-held audit, process changes, CLAUDE.md additions, security posture (if applicable), deferred items status, action items (checked off), next epic readiness.
 2. Update CLAUDE.md with new/revised conventions (Q7). If >80 lines, prune: consolidate, remove examples, move verbose explanations to docs/.
-3. Edit `docs/deferred-items.md` for any reassignments (mandatory — same turn).
+3. Edit `docs/deferred-items.md` for any reassignments or newly logged items from the Deferred Item Status Check (mandatory — same turn). Every unresolved item must point to an open, not-started story.
 4. Report: "Retrospective complete. CLAUDE.md updated. Next: `/create-story`."
