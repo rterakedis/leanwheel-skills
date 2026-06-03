@@ -69,9 +69,37 @@ Concrete examples to look for:
 
 ---
 
+## Check 8 — Testing Targets
+
+Read `docs/architecture.md` to identify the tech stack, layers, and component types. From that, determine:
+
+**What to test (include):** Business logic, state management, service/repository layers, data transformations, API clients, utility functions, anything with branching logic or non-trivial state.
+
+**What to skip (exclude):** UI/view layer components that are pure layout (e.g., SwiftUI Views, React presentational components), generated code, third-party wrappers with no logic, boilerplate glue code. Derive these exclusions from the architecture's tech stack — a SwiftUI app excludes Views; a React app excludes pure presentational components; etc.
+
+**Coverage target:** Based on the architecture, propose a meaningful percentage:
+- Heavy business logic / domain model: 80%+
+- Balanced app with service + UI layers: 60–75%
+- Mostly UI-driven with thin logic: 40–60%
+- Adjust up if architecture calls out safety, financial, or auth-critical paths
+
+**Codify in CLAUDE.md:** Append the following to the `## Conventions` section of `CLAUDE.md` (create the section if missing):
+
+```
+### Testing
+- Test targets: {list what to test, derived from architecture}
+- Exclude from coverage: {list what to skip, derived from architecture}
+- Coverage target: {N}% (measured against testable targets only)
+```
+
+If `CLAUDE.md` doesn't exist, note this as a warning but do not create it — that is the `/setup` skill's job.
+
+---
+
 ## Output
 
-Readiness report: seven checks, blockers (fix before `/create-story`), warnings (fix before epic).
+Readiness report: eight checks, blockers (fix before `/create-story`), warnings (fix before epic).
 
 Blockers: uncovered FRs, circular deps, architecture contradictions, cross-epic runtime blockers. Call **LOG-AND-SCHEDULE** for remediation stories.
 Warnings: weak ACs, scope overlap, missing security ACs, cross-epic runtime warnings. Surface to user.
+Testing targets written to `CLAUDE.md` Conventions section as part of this check.
