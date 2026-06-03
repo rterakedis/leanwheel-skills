@@ -49,9 +49,11 @@ Merge duplicates. Drop `dismiss`. If zero remain: clean review.
 ## Step 5 — Report and Act
 
 **Write findings:** If story loaded, write to `### Review Findings`:
-- `- [ ] [Decision] {title} — {detail}`
-- `- [ ] [Patch] {title} [{file}:{line}]`
-- `- [ ] [Defer] {title} — pre-existing`
+- If clean review: write `Clean review — no patches or deferred items.`
+- Otherwise:
+  - `- [ ] [Decision] {title} — {detail}`
+  - `- [ ] [Patch] {title} [{file}:{line}]`
+  - `- [ ] [Defer] {title} — pre-existing`
 
 **Summary:** "Review complete. {D} decision, {P} patches, {W} deferred."
 
