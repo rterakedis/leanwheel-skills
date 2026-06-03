@@ -16,13 +16,27 @@ description: Run the full story development loop (create → dev → review) rep
 1. Determine which epic to run. Check in order:
    - Explicit argument: `/story-flywheel {epic_num}` or `/story-flywheel {epic_num}-{story_num}`
    - Active milestone with `in-progress` or `review` issues (resume in flight)
-   - First milestone with any open issues
+   - Lowest epic-numbered milestone that still has open issues (see epic discovery below)
    - Ask: "Which epic should I run the flywheel on?"
 
-2. If a specific starting story was given, start there. Otherwise find the **first incomplete story** in the epic:
+   **Epic discovery — sort by epic number in title, not by GitHub milestone ID:**
+   GitHub milestone IDs are assigned in creation order and do not reflect intentional epic sequence. Epics may be reordered or inserted later, so always derive sequence from the number embedded in the milestone title (e.g., `"Epic 3 — ..."` → epic 3).
    ```bash
-   gh issue list --milestone "{milestone_title}" --state open --json number,title,labels \
-     --jq 'sort_by(.number) | .[] | select(.labels[].name != "in-progress") | select(.labels[].name != "review") | first'
+   # List all open milestones, extract epic number from title, sort by it, pick lowest
+   gh api repos/{owner}/{repo}/milestones \
+     --jq '[.[] | select(.open_issues > 0)
+            | {title:.title, gh_num:.number,
+               epic_num: (.title | capture("Epic (?P<n>[0-9]+)").n | tonumber)}]
+           | sort_by(.epic_num) | .[0]'
+   ```
+   Use the returned `title` and `gh_num` for all subsequent milestone-scoped queries. If the title does not match the `"Epic N"` pattern, fall back to `docs/epics.md` ordering.
+
+2. If a specific starting story was given, start there. Otherwise find the **first incomplete story** in the epic by querying within that milestone only:
+   ```bash
+   # Use milestone's GitHub number (gh_num) — never sort open issues globally
+   gh api "repos/{owner}/{repo}/issues?milestone={gh_num}&state=open" \
+     --jq '[.[] | select(all(.labels[]; .name != "in-progress") and all(.labels[]; .name != "review"))]
+           | sort_by(.number) | .[0] | {number:.number, title:.title}'
    ```
    Fall back to reading `docs/epics.md` if GitHub unavailable.
 
