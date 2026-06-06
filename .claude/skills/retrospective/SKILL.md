@@ -75,12 +75,29 @@ Collect from `git log` and story files. Include in retro output:
 | Story cycle time (median) | Nd | |
 ```
 
-## Security Posture (security-sensitive epics only)
+## Security Sweep (mandatory — all epics)
 
-For epics touching auth, billing, or content moderation, include:
-- What was reviewed
-- Known accepted risks
-- Deferred hardening items with story assignments
+Before writing the retro doc, run a scoped security review against all stories shipped in this epic. This is a blocking gate — no GO verdict until it completes.
+
+**Scope determination:**
+- Read story files for the epic. Collect all `Security Sensitivity:` values from Dev Notes.
+- If any story touched auth, billing, payments, data-access, api, secrets, llm, or file-upload: run the matching categories from `skills/security-review/SKILL.md` checklists.
+- If no `Security Sensitivity:` flags found: run Category: Secrets Management and Category: Data Exposure at minimum (always applicable).
+
+**Steps:**
+1. Run applicable checklist categories. Mark each item Pass / Fail (file:line) / N/A.
+2. For any **critical or high** findings: call **LOG-AND-SCHEDULE** from `skills/deferred/SKILL.md` immediately. These must be scheduled before the GO verdict is issued.
+3. For **medium/low** findings: include in retro doc under `## Security Findings` — user decides whether to schedule.
+4. If zero findings across all applicable categories: write `Security sweep clean — no findings.`
+
+Include in retro doc:
+```markdown
+## Security Findings
+| Severity | Category | Finding | File:Line | Action |
+|----------|----------|---------|-----------|--------|
+| HIGH     | Auth     | ...     | ...       | Logged as D-N, Story X-Y |
+| MEDIUM   | Headers  | ...     | ...       | Noted — user to schedule |
+```
 
 ## Action Items
 
@@ -101,11 +118,12 @@ End the retro with a `## Next Epic Readiness` section:
 - Architecture pre-reqs met?
 - Blocking unknowns next epic inherits?
 - `epic-{N+1}-context.md` initialized?
-- Explicit **GO / HOLD** verdict.
+- All critical/high security findings logged and scheduled?
+- Explicit **GO / HOLD** verdict. HOLD if any critical/high security finding is unscheduled.
 
 ## Output
 
-1. Write to `docs/epics/epic-{epic_num}-retro-{date}.md`: summary, metrics, what went well, blockers, patterns, conventions-held audit, process changes, CLAUDE.md additions, security posture (if applicable), deferred items status, action items (checked off), next epic readiness.
+1. Write to `docs/epics/epic-{epic_num}-retro-{date}.md`: summary, metrics, what went well, blockers, patterns, conventions-held audit, process changes, CLAUDE.md additions, security findings (mandatory), deferred items status, action items (checked off), next epic readiness.
 2. Update CLAUDE.md with new/revised conventions (Q7). If >80 lines, prune: consolidate, remove examples, move verbose explanations to docs/.
 3. Edit `docs/deferred-items.md` for any reassignments or newly logged items from the Deferred Item Status Check (mandatory — same turn). Every unresolved item must point to an open, not-started story.
 4. Report: "Retrospective complete. CLAUDE.md updated. Next: `/create-story`."

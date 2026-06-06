@@ -5,7 +5,7 @@ description: Review code changes adversarially. Use when the user says "review",
 
 # Code Review Skill
 
-**Goal:** Find real bugs, missing behavior, AC violations. No noise.
+**Goal:** Find real bugs, missing behavior, AC violations. Assume problems exist — your job is to find them. Zero findings requires explicit justification ("re-analyzed, clean because…"), not silence.
 
 **Note:** Inline in `/dev-story` skips Steps 1–2 (context already loaded). This is for PRs/branches/commits outside the flywheel.
 
@@ -25,35 +25,67 @@ If empty diff: stop. If >3000 lines: warn, offer to chunk by file.
 - Read CLAUDE.md if exists.
 - Confirm: "Reviewing {N} files, {+/-lines}. Story context: {yes/no}."
 
-## Step 3 — Three Review Passes
+## Step 3 — Four Review Passes
 
-**Pass A: Blind Correctness**
-Logic errors, null dereference, unchecked returns, injection/auth/data exposure, races, leaks, error handling.
+Work each pass independently. Look for what's *missing* (absent behavior, unhandled path) as hard as what's *wrong*.
 
-**Pass B: Edge Case & Regression**
-Boundary checks, missing error paths, callers outside diff, unchecked assumptions.
+**Pass A: Blind Correctness** — read the diff as if you wrote none of it
+- Logic errors: off-by-one, wrong operator, inverted condition, stale state
+- Null/zero/empty dereference: unchecked optional, missing guard before index
+- Unchecked return values: ignored errors, discarded Results/Optionals
+- Resource leaks: unclosed file handles, connections, or goroutines without cleanup
+- Concurrency: shared mutable state without synchronization, TOCTOU races
+- Error handling: swallowed errors, generic catch blocks that hide root cause
+- Type coercion / implicit conversion producing unexpected values
+- Dead code or unreachable branches that indicate a logic mistake
 
-**Pass C: Acceptance Audit** (if story loaded)
-Unimplemented/partial ACs, AC contradictions, ignored constraints, files touched/untouched.
+**Pass B: Security & Data** — adversarial user mindset
+- Injection: SQL/command/HTML built with string concatenation from user input
+- Auth: missing authentication check, missing authorization/ownership check (IDOR)
+- Secrets: hardcoded keys, tokens, passwords in source or committed config
+- Data exposure: API response leaks fields the caller shouldn't see; PII in logs
+- Input validation: missing size/type/range checks at trust boundaries
+- Session/token: insecure storage (localStorage), missing expiry, no rotation
+- Rate limiting absent on auth, registration, reset, or expensive endpoints
 
-## Step 4 — Triage
+**Pass C: Edge Case & Regression** — break it with inputs
+- Boundary values: empty collection, zero, negative, max int, nil/null
+- Missing error paths: what happens when the external call fails, returns empty, or times out?
+- Callers outside the diff: does this change break existing call sites?
+- Unchecked assumptions baked into the new code (e.g., "list is always non-empty")
+- Regression: does the change touch behavior relied on elsewhere?
 
-For each finding:
-- `decision-needed` — ambiguous; needs user input
-- `patch` — clear bug; unambiguous fix
-- `defer` — pre-existing, not from this diff
-- `dismiss` — noise or false positive
+**Pass D: Acceptance Audit** (only if story loaded)
+- Each AC: implemented? fully? or only the happy path?
+- ACs that contradict each other or the architecture
+- Constraints in Dev Notes that were ignored
+- Files the story said would be touched that weren't (missing implementation)
 
-Merge duplicates. Drop `dismiss`. If zero remain: clean review.
+## Step 4 — Triage and Severity
+
+For each finding assign both a category and severity:
+
+**Category:**
+- `decision-needed` — ambiguous; needs user input before a fix is possible
+- `patch` — clear bug; unambiguous fix exists
+- `defer` — pre-existing issue not introduced by this diff
+- `dismiss` — confirmed false positive (state reason)
+
+**Severity** (for `patch` and `decision-needed`):
+- `HIGH` — data loss, auth bypass, secret exposure, injection, crash in main path
+- `MEDIUM` — incorrect behavior under reachable conditions, missing error handling, IDOR
+- `LOW` — edge case with low probability, best-practice gap, missing guard on unlikely path
+
+Merge duplicates. Drop `dismiss`. If zero remain: write `Clean review — no patches or deferred items.` and justify briefly why each pass came up empty.
 
 ## Step 5 — Report and Act
 
 **Write findings:** If story loaded, write to `### Review Findings`:
-- If clean review: write `Clean review — no patches or deferred items.`
-- Otherwise:
-  - `- [ ] [Decision] {title} — {detail}`
-  - `- [ ] [Patch] {title} [{file}:{line}]`
-  - `- [ ] [Defer] {title} — pre-existing`
+- If clean review: write `Clean review — no patches or deferred items.` plus one-sentence justification per pass.
+- Otherwise, order by severity (HIGH first), then category:
+  - `- [ ] [HIGH/MEDIUM/LOW] [Decision] {title} — {detail}`
+  - `- [ ] [HIGH/MEDIUM/LOW] [Patch] {title} [{file}:{line}]`
+  - `- [ ] [Defer] {title} — pre-existing ({file}:{line})`
 
 **Summary:** "Review complete. {D} decision, {P} patches, {W} deferred."
 
