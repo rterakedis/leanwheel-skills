@@ -33,6 +33,9 @@ This is a standalone skills library for [Claude Code](https://claude.ai/code). I
 - Epic-scoped retrospectives with output in `docs/epics/`
 - BMAD migration flow (`/setup migrate` + `/setup clean`)
 - Consolidated `docs/` layout — all artifacts under `docs/`, nothing at project root except `AGENTS.md` + `CLAUDE.md`
+- Swift/Apple platform guidance system: `/setup` scaffolds `docs/setup/swift/` with sectioned best-practice reference docs (state management, concurrency, architecture, UI composition, testing, anti-patterns, plus iPadOS- and macOS-specific files); a 37-line guardrails block is appended to `CLAUDE.md`; `/dev-story` and `/code-review` read the relevant sections before acting
+- `/refresh-swift` — researches current Swift/SwiftUI/platform patterns from primary sources (Hacking with Swift, Swift with Majid, SwiftLee, Apple WWDC docs, Point-Free) and updates both `docs/setup/swift/` and the skills repo stubs; offers to chain into `/swift-audit`
+- `/swift-audit` — audits planning docs, story files, and Swift source code against `docs/setup/swift/` guidance; produces a triaged remediation file in `docs/maintainer/` ready for `/dev-story`
 
 ---
 
@@ -88,22 +91,24 @@ Once the directory is added, invoke skills by name:
 
 | Skill | What it does |
 |---|---|
-| `/setup` | Scaffold `docs/`, write `AGENTS.md` + `CLAUDE.md`, wire up auto-`/add-dir` hook |
+| `/setup` | Scaffold `docs/`, write `AGENTS.md` + `CLAUDE.md`, wire up auto-`/add-dir` hook; for Apple platform projects, scaffolds `docs/setup/swift/` with platform-appropriate guidance files |
 | `/prd` | Create, update, or validate the Product Requirements Doc |
 | `/ux` | Create UX design specs — responsive web + Apple platforms (SwiftUI + HIG) |
 | `/architecture` | Create or update the architecture document |
 | `/epics` | Break the PRD into epics and stories, create GitHub milestones |
 | `/check-readiness` | Validate PRD + architecture + epics are aligned before coding |
 | `/create-story` | Spec the next story with full dev context embedded |
-| `/dev-story` | Implement a story — code review runs inline at the end |
-| `/code-review` | Standalone adversarial review of current diff or a story |
+| `/dev-story` | Implement a story — reads relevant `docs/setup/swift/` files first on Apple projects; code review runs inline at the end |
+| `/code-review` | Standalone adversarial review — reads Swift anti-patterns and state-management guidance on Apple projects |
 | `/quick-dev` | One-off feature or fix without the full epic/story workflow |
 | `/correct-course` | Handle mid-epic requirement changes or discovered bugs |
 | `/investigate` | Start or resume a structured investigation case file |
 | `/security-review` | OWASP + LLM security sweep, auto-schedules findings |
 | `/status` | Show epic + story progress via GitHub milestones |
-| `/retrospective` | Epic retrospective — 5 questions, updates `CLAUDE.md` |
+| `/retrospective` | Epic retrospective — 7 questions, updates `CLAUDE.md` |
 | `/deferred` | View the deferred items log |
+| `/refresh-swift` | Research current Swift/SwiftUI/platform best practices and update `docs/setup/swift/` + skills repo stubs; offers to chain into `/swift-audit` |
+| `/swift-audit` | Audit planning docs, stories, and Swift source against `docs/setup/swift/`; writes a triaged remediation file to `docs/maintainer/` |
 | `/github-tracking setup` | One-time GitHub auth + create status labels |
 | `/github-tracking backfill` | Retroactively create GitHub issues for existing stories |
 | `/discover` | Brownfield: reverse-engineer a codebase into docs |
@@ -419,7 +424,17 @@ your-project/
 │   │   ├── wireframes/    ← Promoted Excalidraw wireframes
 │   │   └── .working/      ← In-progress creative artifacts
 │   ├── setup/             ← Local dev setup, scripts, resources
+│   │   └── swift/         ← Swift/Apple platform guidance (created by /setup for Apple projects)
+│   │       ├── state-management.md
+│   │       ├── concurrency.md
+│   │       ├── architecture.md
+│   │       ├── ui-composition.md
+│   │       ├── testing.md
+│   │       ├── anti-patterns.md
+│   │       ├── ipados-specific.md   ← present if iPadOS targeted
+│   │       └── macos-specific.md    ← present if macOS targeted
 │   ├── maintainer/        ← Deployment, runbooks, operational procedures
+│   │   └── swift-audit-{date}.md   ← output of /swift-audit runs
 │   └── sql/               ← Database schema and migrations
 ```
 
@@ -484,7 +499,7 @@ All GitHub operations are skipped silently if `gh auth` is not configured — th
 **Project Initialization**
 | Invocation | What it does |
 |------------|-------------|
-| `/setup` | Detects project state and routes automatically: finds `_bmad/` → prompts to run migrate + clean; finds existing `docs/` → idempotent re-run; finds neither → greenfield scaffold of `docs/`, `AGENTS.md`, `CLAUDE.md` |
+| `/setup` | Detects project state and routes automatically: finds `_bmad/` → prompts to run migrate + clean; finds existing `docs/` → idempotent re-run; finds neither → greenfield scaffold of `docs/`, `AGENTS.md`, `CLAUDE.md`. For Apple platform projects, asks which platforms (iOS / iPadOS / macOS, multi-select), appends a Swift/SwiftUI guardrails block to `CLAUDE.md`, and scaffolds `docs/setup/swift/` with the 6 shared guidance files plus `ipados-specific.md` and/or `macos-specific.md` as applicable. |
 | `/setup migrate` | Migrate a full-BMAD project to BMAD-LITE — reads `_bmad/config.toml` to locate artifacts, moves planning docs + stories into the BMAD-LITE `docs/` layout, stamps `Status:` into each story file from `sprint-status.yaml`, updates `AGENTS.md` + `CLAUDE.md`, then attempts GitHub label setup + issue backfill inline (gracefully skipped if auth not configured). Non-destructive — never deletes. |
 | `/setup clean` | Remove BMAD infrastructure after a successful migrate — confirms before deleting each target: `_bmad/`, `sprint-status.yaml`, and optionally `src/bmm-skills/` |
 | `/github-tracking setup` | One-time: GitHub auth + create the four status labels |
@@ -506,17 +521,17 @@ All GitHub operations are skipped silently if `gh auth` is not configured — th
 **Planning Gate**
 | Invocation | What it does |
 |------------|-------------|
-| `/check-readiness` | Validate PRD + architecture + epics are aligned — checks FR coverage, AC testability, story independence, architecture consistency, MVP scope drift, security coverage |
+| `/check-readiness` | Validate PRD + architecture + epics are aligned — checks FR coverage, AC testability, story independence, architecture consistency, MVP scope drift, security coverage, cross-epic runtime dependencies, and testing targets derived from architecture |
 
 **Dev Flywheel**
 | Invocation | What it does |
 |------------|-------------|
-| `/create-story` | Spec the next `ready-for-dev` story (auto-detected from `docs/epics.md`) |
+| `/create-story` | Spec the next `ready-for-dev` story (auto-detected from `docs/epics.md`); performs a cross-epic runtime dependency check before writing |
 | `/create-story {epic}-{story}` | Spec a specific story, e.g. `/create-story 2-3` |
 | `/create-story refresh-cache` | Force-regenerate the epic context cache even if timestamps look fresh — use after editing `prd.md` or `architecture.md` mid-epic |
-| `/dev-story` | Implement the first `ready-for-dev` story found in `docs/epics/` — code-review + security Pass D run inline at the end |
+| `/dev-story` | Implement the first `ready-for-dev` story found in `docs/epics/`. On Apple platform projects, reads the relevant `docs/setup/swift/` guidance files before starting (state management, concurrency, architecture, UI composition, testing, anti-patterns — scoped to the story's tasks); always reads `anti-patterns.md` if present. Code-review + security Pass D run inline at the end. |
 | `/dev-story {path}` | Implement a specific story file, e.g. `/dev-story docs/epics/1-2-user-auth.md` |
-| `/code-review` | Standalone review — auto-detects a story in `review` status, or reviews current branch vs main |
+| `/code-review` | Standalone review — auto-detects a story in `review` status, or reviews current branch vs main. On Apple platform projects, reads `anti-patterns.md` + `state-management.md` as rejection criteria; also reads `ipados-specific.md` or `macos-specific.md` when the diff touches platform-specific code. |
 | `/code-review {branch}` | Review a specific branch vs main, e.g. `/code-review feature/payments` |
 | `/code-review {commit}` | Review a specific commit range, e.g. `/code-review abc123..def456` |
 | `/code-review {story-file}` | Review the diff associated with a specific story file |
@@ -530,6 +545,12 @@ All GitHub operations are skipped silently if `gh auth` is not configured — th
 | `/correct-course` | Triggered by a known change — updates docs, schedules remediation stories forward, clears deferred items |
 | `/deferred` | Show the full `docs/deferred-items.md` log with status of each scheduled story |
 
+**Swift / Apple Platform**
+| Invocation | What it does |
+|------------|-------------|
+| `/refresh-swift` | Research current Swift language, SwiftUI, concurrency, testing, and platform-specific patterns from primary sources (Hacking with Swift, Swift with Majid, SwiftLee, Apple WWDC sample apps, Point-Free). Updates `docs/setup/swift/` in the current project and the corresponding stubs in the skills repo so new projects get the same content. Scope: current stable iOS/macOS releases only — pre-release APIs are hard-excluded. After updating, offers to chain directly into `/swift-audit`. |
+| `/swift-audit` | Audit the full project against the guidance in `docs/setup/swift/`. Scans `architecture.md`, `prd.md`, `epics.md`, all story files, and all `.swift` source files. Findings are triaged by scope (`DOC-ARCH`, `DOC-PRD`, `DOC-EPICS`, `STORY`, `CODE`) and severity (`HIGH` / `MEDIUM` / `LOW`). Writes a single remediation file to `docs/maintainer/swift-audit-{date}.md` — one AC per finding — ready for `/dev-story`. Requires `docs/setup/swift/` to exist. |
+
 **Security**
 | Invocation | What it does |
 |------------|-------------|
@@ -541,7 +562,7 @@ All GitHub operations are skipped silently if `gh auth` is not configured — th
 | Invocation | What it does |
 |------------|-------------|
 | `/status` | Show all epics and stories via GitHub milestones — epic progress, story status at a glance |
-| `/retrospective` | Facilitated **epic** retrospective (one per epic, not per sprint) — 5 questions scoped to the target epic's stories, updates `CLAUDE.md`, checks deferred items log, writes `docs/epics/epic-{n}-retro-{date}.md` |
+| `/retrospective` | Facilitated **epic** retrospective (one per epic, not per sprint) — 7 questions scoped to the target epic's stories (including "what went well?" and a prior-retro conventions audit), updates `CLAUDE.md`, audits deferred items log for any unlogged `[Defer]` entries and verifies scheduled items are in open work, writes `docs/epics/epic-{n}-retro-{date}.md` |
 | `/retrospective epic {n}` | Explicit epic target, e.g. `/retrospective epic 2` — skip auto-detection |
 
 ---
