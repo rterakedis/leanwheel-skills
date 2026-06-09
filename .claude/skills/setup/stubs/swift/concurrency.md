@@ -1,5 +1,6 @@
 # Concurrency & Safe Threading
 
+> Updated: 2026-06-08 — iOS/iPadOS 19+
 > iOS 18+ / Swift 6 | Async patterns, actor isolation, and UI thread safety.
 
 ---
@@ -32,7 +33,9 @@ cancellable = publisher.sink { ... }
 
 ## `@MainActor` — UI Thread Safety
 
-Any `@Observable` class that mutates properties observed by a view must annotate those mutations with `@MainActor`. Apply it at the class level when all methods drive UI state; apply it at the method level when only some mutations are UI-facing.
+Any `@Observable` class that mutates properties observed by a view must annotate those mutations with `@MainActor`. Apply at the class level when all methods drive UI state.
+
+SwiftUI `View` conformances are implicitly `@MainActor` — you don't need to annotate View structs themselves. However, `@Observable` service classes are not implicitly `@MainActor` and must be annotated explicitly.
 
 ```swift
 // ✅ Class-level @MainActor — all property mutations on main thread
@@ -77,47 +80,59 @@ private let networkQueue = DispatchQueue(label: "net", qos: .utility)
 
 ---
 
-## `TaskGroup` — Structured Parallel Work
+## Parallel Work — `async let` vs `TaskGroup`
+
+**`async let`** is the right choice for a small, fixed number of parallel tasks where you know the count at compile time.
+
+**`TaskGroup`** is for a dynamic number of tasks (e.g., fetching N items from an array).
 
 ```swift
-// ✅ Parallel fetches with structured concurrency
+// ✅ async let — 2-3 known parallel fetches
 func loadDashboard() async throws -> Dashboard {
-    try await withThrowingTaskGroup(of: DashboardSection.self) { group in
-        group.addTask { try await fetchOrders() }
-        group.addTask { try await fetchNotifications() }
-        group.addTask { try await fetchProfile() }
+    async let orders = fetchOrders()
+    async let notifications = fetchNotifications()
+    async let profile = fetchProfile()
+    return try await Dashboard(orders: orders, notifications: notifications, profile: profile)
+}
 
-        var sections: [DashboardSection] = []
-        for try await section in group {
-            sections.append(section)
+// ✅ TaskGroup — dynamic count, collect results
+func loadAll(items: [Item]) async throws -> [ItemDetail] {
+    try await withThrowingTaskGroup(of: ItemDetail.self) { group in
+        for item in items {
+            group.addTask { try await fetchDetail(for: item) }
         }
-        return Dashboard(sections: sections)
+        var results: [ItemDetail] = []
+        for try await detail in group { results.append(detail) }
+        return results
     }
 }
 
-// ❌ Unstructured concurrent tasks with no cancellation coordination
-async let orders = fetchOrders()    // only fine for 2-3 known tasks
+// ❌ Serial await — fetches one at a time when they could be parallel
+let orders = try await fetchOrders()
+let notifications = try await fetchNotifications()
 ```
 
 ---
 
 ## Swift 6 Strict Concurrency
 
-With Swift 6 strict concurrency enabled, the compiler enforces actor isolation at compile time. Key implications:
+With Swift 6 strict concurrency enabled (default in Xcode 16+), the compiler enforces actor isolation at compile time. Key implications:
 
 - `@Observable` classes accessed from multiple isolation contexts require explicit `@MainActor` or `nonisolated` annotations.
 - Closures capturing `self` in `Task {}` must be `@Sendable` — avoid capturing mutable state without isolation.
-- Prefer structured concurrency (`async let`, `TaskGroup`, `.task`) over `Task { }` to get automatic cancellation and isolation inference.
-- Test methods that touch `@MainActor`-isolated types must be annotated `@MainActor`.
+- Prefer structured concurrency (`.task`, `async let`, `TaskGroup`) over `Task { }` to get automatic cancellation and isolation inference.
+- Test suites touching `@MainActor`-isolated types must be annotated `@MainActor` at the suite level.
 
 ```swift
-// ✅ Swift 6 safe — @Sendable closure, no implicit self capture
+// ✅ Swift 6 safe — crosses isolation boundary cleanly
 .task {
-    await orderService.refresh()  // crosses isolation boundary cleanly
+    await orderService.refresh()
 }
 
-// ❌ May warn under Swift 6 — captures mutable state without isolation
+// ❌ May produce data race warning under Swift 6
 Task {
-    self.localState = await fetchSomething()
+    self.localState = await fetchSomething()  // captures mutable state without isolation
 }
 ```
+
+Swift 6.2 (released 2025) improved the approachability of strict concurrency by reducing false-positive warnings while maintaining the same guarantees. Most SwiftUI apps that follow the patterns in this document will compile cleanly under Swift 6.

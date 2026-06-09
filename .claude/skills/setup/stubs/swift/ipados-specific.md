@@ -1,5 +1,6 @@
 # iPadOS-Specific Patterns
 
+> Updated: 2026-06-08 — iOS/iPadOS 19+
 > iPadOS 18+ | Navigation, multi-window, pointer, drag-and-drop, and keyboard conventions.
 
 ---
@@ -55,9 +56,38 @@ Sidebar selection must survive app backgrounding and scene restoration. Use `@Sc
 
 NavigationSplitView(columnVisibility: $columnVisibility) { ... }
 
-// Show/hide sidebar from a toolbar button
 Button("Toggle Sidebar") {
     columnVisibility = columnVisibility == .all ? .detailOnly : .all
+}
+```
+
+---
+
+## TabView with Sidebar Adaptation (iOS 18+)
+
+On iPad, `TabView` with `.sidebarAdaptable` automatically converts the tab bar to a sidebar — no manual size-class branching required. Pair with the `Tab` wrapper.
+
+```swift
+// ✅ iOS 18+: Auto-adapting tab/sidebar
+TabView(selection: $selectedTab) {
+    Tab("Schedule", systemImage: "calendar", value: "schedule") {
+        ScheduleView()
+    }
+    Tab("Customers", systemImage: "person.2", value: "customers") {
+        CustomersView()
+    }
+    Tab("Search", systemImage: "magnifyingglass", value: "search") {
+        SearchView()
+    }
+    .role(.search)
+}
+.tabViewStyle(.sidebarAdaptable)  // tab bar on iPhone, sidebar on iPad
+
+// ❌ Manual size-class branching — unnecessary with .sidebarAdaptable
+if horizontalSizeClass == .compact {
+    TabBasedLayout()
+} else {
+    SplitViewLayout()
 }
 ```
 
@@ -129,7 +159,7 @@ TaskListView()
 
 ## Pointer and Hover Interactions
 
-Add `.hoverEffect()` to any tappable element that benefits from pointer feedback. On iPad with a trackpad or mouse, this provides standard macOS-style hover highlighting without requiring custom hit testing.
+Add `.hoverEffect()` to any tappable element that benefits from pointer feedback. On iPad with a trackpad or mouse, this provides standard hover highlighting without custom hit testing.
 
 ```swift
 // ✅ Standard pointer highlight on hover
@@ -153,7 +183,7 @@ struct InteractiveCard: View {
 
 ## Keyboard Shortcuts
 
-iPad apps with external keyboard support must provide shortcuts for primary actions. Users who attach a keyboard expect standard shortcuts to work.
+iPad apps with external keyboard support must provide shortcuts for primary actions.
 
 ```swift
 // ✅ Primary actions get keyboard shortcuts
@@ -201,7 +231,7 @@ iPad toolbars have more placement options than iPhone. Use them to put controls 
 
 ## Size Class Awareness
 
-Read `horizontalSizeClass` to adapt layout between compact (iPhone, iPad slide-over) and regular (full-width iPad) environments. Do not hard-code device checks (`UIDevice.current.userInterfaceIdiom`) — size classes are the correct abstraction.
+Read `horizontalSizeClass` to adapt layout between compact (iPhone, iPad slide-over) and regular (full-width iPad) environments. Do not hard-code device checks.
 
 ```swift
 // ✅ Adapt to size class, not device
@@ -225,6 +255,7 @@ if UIDevice.current.userInterfaceIdiom == .pad { ... }
 
 - **Forcing iPhone layout on iPad** — using `NavigationStack` alone, single-column layout, or ignoring `horizontalSizeClass` = regular.
 - **Using sheet for content that belongs in the detail column** — if `NavigationSplitView` is in use, secondary content goes in the detail column, not a modal sheet.
-- **Ignoring multi-window** — storing navigation state in app-global singletons that conflict across windows. Use scene-scoped `@SceneStorage` and per-window `@Environment`-injected services.
+- **Ignoring multi-window** — storing navigation state in app-global singletons that conflict across windows. Use `@SceneStorage` and per-window `@Environment`-injected services.
 - **Missing keyboard shortcut support** — iPad apps attached to a keyboard are expected to behave like lightweight Mac apps for primary actions.
 - **Not supporting right-click / long-press context menus** — add `.contextMenu` to any item where secondary actions exist.
+- **Old `TabView` content embedding** — use `Tab` wrapper with `.sidebarAdaptable` instead of `.tabItem { }` for proper iPad sidebar adaptation (iOS 18+).

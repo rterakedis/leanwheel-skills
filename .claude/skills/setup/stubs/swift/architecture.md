@@ -1,5 +1,6 @@
 # Architecture & Project Structure
 
+> Updated: 2026-06-08 — iOS/iPadOS 19+
 > iOS 18+ | Project topology, feature isolation, and service layer conventions.
 
 ---
@@ -100,12 +101,12 @@ struct OrderListView: View {
 
 ---
 
-## Navigation
+## Navigation — Value-Based with Type-Safe Routing
 
-Use `NavigationStack` with value-based navigation (`.navigationDestination(for:)`). Do not use `NavigationView` (deprecated). Do not use `NavigationLink(destination:)` with inline destination closures for anything beyond trivial cases — prefer the value-based form so destinations are declared once.
+Use `NavigationStack` with value-based navigation (`.navigationDestination(for:)`). For larger apps, centralize routing in an enum so all destinations are declared once.
 
 ```swift
-// ✅ Value-based navigation
+// ✅ Simple value-based navigation
 NavigationStack {
     OrderListView()
         .navigationDestination(for: Order.self) { order in
@@ -113,6 +114,37 @@ NavigationStack {
         }
 }
 
-// ❌ Deprecated
+// ✅ Type-safe enum routing for apps with many destinations
+enum AppRoute: Hashable {
+    case orderDetail(Order)
+    case settings
+    case search(String)
+}
+
+@Observable @MainActor final class Router {
+    var path: [AppRoute] = []
+}
+
+// Root view wires up all destinations in one place
+NavigationStack(path: $router.path) {
+    OrderListView()
+        .navigationDestination(for: AppRoute.self) { route in
+            switch route {
+            case .orderDetail(let order): OrderDetailView(order: order)
+            case .settings: SettingsView()
+            case .search(let query): SearchResultsView(query: query)
+            }
+        }
+}
+.environment(router)
+
+// Any descendant pushes by appending to the path
+@Environment(Router.self) private var router
+Button("Open Detail") { router.path.append(.orderDetail(order)) }
+
+// ❌ Deprecated — do not use NavigationView
 NavigationView { ... }
+
+// ❌ Inline destination closures for non-trivial cases
+NavigationLink(destination: OrderDetailView(order: order)) { ... }
 ```

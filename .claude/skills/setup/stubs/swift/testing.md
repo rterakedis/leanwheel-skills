@@ -1,6 +1,7 @@
 # Testing Conventions
 
-> iOS 18+ | Swift Testing framework, Core Data test setup, and concurrency-safe tests.
+> Updated: 2026-06-08 — iOS/iPadOS 19+
+> iOS 18+ / Swift 6.2 | Swift Testing framework, Core Data test setup, and concurrency-safe tests.
 
 ---
 
@@ -66,7 +67,7 @@ let controller = PersistenceController.shared
 
 ## Testing `@MainActor`-Isolated Types
 
-When testing `@Observable` classes or functions annotated with `@MainActor`, annotate the entire test struct or the individual test method with `@MainActor`.
+When testing `@Observable` classes or functions annotated with `@MainActor`, annotate the entire test struct with `@MainActor`. Without it, Swift Testing runs tests on a non-main thread, causing deadlocks when accessing `viewContext`.
 
 ```swift
 // ✅ @MainActor on the suite — all tests run on main actor
@@ -80,6 +81,32 @@ struct AuthServiceTests {
         #expect(service.isAuthenticated == true)
     }
 }
+
+// ✅ Suites using only newBackgroundContext() with context.perform { }
+// do NOT need @MainActor
+@Suite("BackgroundSyncService")
+struct BackgroundSyncServiceTests {
+    @Test func sync_completesWithoutError() async throws { ... }
+}
+```
+
+---
+
+## Swift Testing Attachments (Swift 6.2+)
+
+Swift 6.2 added **attachments** for enriching test output with diagnostic data — useful for debugging failures in CI.
+
+```swift
+// ✅ Attach data to a test for inspection on failure
+@Test func exportGenerate_producesValidPDF() async throws {
+    let data = try await ExportService.generatePDF(for: order)
+    
+    // Attachment is captured in the test report on failure
+    try #require(data.count > 0)
+    Attachment(data, named: "generated-output.pdf")
+    
+    #expect(data.isPDF)
+}
 ```
 
 ---
@@ -92,9 +119,11 @@ Test **service and business logic** — not SwiftUI rendering. Views are not uni
 - Service methods (create, update, delete, fetch)
 - Computed properties with non-trivial logic
 - Actor state transitions
-- Validation functions
+- Validation functions and business rules
+- Status progression logic (state machines)
 
 **Do not write unit tests for:**
 - View `body` layout
 - Navigation stack state
-- Core Data `@FetchRequest` results (that's an integration concern; use the simulator)
+- Core Data `@FetchRequest` results (integration concern; verify in Simulator)
+- Animation timing

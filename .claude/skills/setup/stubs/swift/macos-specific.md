@@ -1,5 +1,6 @@
 # macOS-Specific Patterns
 
+> Updated: 2026-06-08 — macOS 15+ (Sequoia)
 > macOS 15+ (Sequoia) | Scene management, menus, toolbar, window, and Mac-idiomatic conventions.
 
 ---
@@ -172,7 +173,7 @@ WindowGroup(id: "detail", for: Item.ID.self) { $itemID in
     if let id = itemID { DetailView(itemID: id) }
 }
 .defaultSize(width: 800, height: 600)
-.restorationBehavior(.disabled)   // opt out of automatic state restoration if needed
+.restorationBehavior(.disabled)
 ```
 
 ---
@@ -182,7 +183,7 @@ WindowGroup(id: "detail", for: Item.ID.self) { $itemID in
 macOS toolbars have explicit style options. Set them at the `WindowGroup` or view level.
 
 ```swift
-// ✅ Unified toolbar (title inline with toolbar items — common for utility apps)
+// ✅ Unified toolbar (title inline with toolbar items)
 ContentView()
     .toolbarTitleDisplayMode(.inline)
 
@@ -242,8 +243,6 @@ panel.runModal()
 
 ## Keyboard Shortcuts
 
-macOS users expect comprehensive keyboard shortcut coverage. Every menu item must have a shortcut; primary actions in toolbars and views should too.
-
 Standard shortcuts to implement without exception:
 
 | Action | Shortcut |
@@ -263,7 +262,7 @@ Standard shortcuts to implement without exception:
 
 ## Context Menus and Right-Click
 
-Every interactive item that has secondary actions must support right-click via `.contextMenu`. On macOS this is a hard user expectation, not optional polish.
+Every interactive item that has secondary actions must support right-click via `.contextMenu`. On macOS this is a hard user expectation.
 
 ```swift
 // ✅ Context menu on a list row

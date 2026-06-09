@@ -1,6 +1,7 @@
 # UI Composition & Layout Rules
 
-> iOS 18+ | Preventing massive views, subview extraction, and layout decisions.
+> Updated: 2026-06-08 — iOS/iPadOS 19+
+> iOS 18+ | Preventing massive views, subview extraction, layout decisions, and new container APIs.
 
 ---
 
@@ -11,7 +12,7 @@ If `var body: some View` exceeds ~50 lines, it must be decomposed. This is not a
 Decomposition priority order:
 1. Extract to a private computed property returning `some View` (zero overhead, stays in same file)
 2. Extract to a private nested `struct` view (use when the subview has its own `@State`)
-3. Extract to a separate file in the same feature folder (use when the component is reused or complex enough to warrant independent testing)
+3. Extract to a separate file in the same feature folder (use when the component is reused or complex)
 
 ```swift
 // ✅ Computed property extraction — stays in same file, no overhead
@@ -39,22 +40,6 @@ private struct ExpandableOrderRow: View {
     @State private var isExpanded = false
 
     var body: some View { ... }
-}
-
-// ❌ Inline logic that should be a subview
-var body: some View {
-    VStack {
-        if orders.isEmpty {
-            VStack(spacing: 16) {
-                Image(systemName: "tray")
-                    .font(.largeTitle)
-                Text("No orders yet")
-                    .font(.headline)
-                Button("Browse") { ... }
-            }  // extract this to EmptyOrdersView
-        }
-        // ... 80 more lines
-    }
 }
 ```
 
@@ -98,6 +83,163 @@ ScrollView {
 
 ---
 
+## ScrollView — New APIs (iOS 18+)
+
+iOS 18 added scroll lifecycle and visibility APIs that replace manual offset detection hacks.
+
+```swift
+// ✅ onScrollPhaseChange — react to scroll state transitions
+.onScrollPhaseChange { oldPhase, newPhase in
+    withAnimation {
+        toolbarHidden = newPhase != .idle
+    }
+}
+// Phases: .idle, .tracking, .interacting, .decelerating, .animating
+
+// ✅ onScrollTargetVisibilityChange — pagination without a sentinel view
+ScrollView {
+    LazyVStack {
+        ForEach(items) { item in
+            ItemRow(item)
+        }
+    }
+    .scrollTargetLayout()
+}
+.onScrollTargetVisibilityChange(idType: Item.ID.self) { visibleIDs in
+    if let last = visibleIDs.last, last == items.last?.id {
+        loadNextPage()
+    }
+}
+
+// ✅ onScrollGeometryChange — track scroll offset for parallax/sticky headers
+.onScrollGeometryChange(for: CGFloat.self) { geo in
+    geo.contentOffset.y
+} action: { oldOffset, newOffset in
+    headerOffset = newOffset
+}
+
+// ❌ Old hack — invisible sentinel view at the bottom of a list
+struct BottomDetector: View {
+    var onAppear: () -> Void
+    var body: some View {
+        Color.clear.onAppear { onAppear() }
+    }
+}
+```
+
+---
+
+## TabView — New `Tab` Wrapper (iOS 18+)
+
+iOS 18 replaced direct content placement in `TabView` with explicit `Tab` wrappers. The `.sidebarAdaptable` style automatically converts the tab bar to a sidebar on iPad and Mac Catalyst.
+
+```swift
+// ✅ iOS 18+: Tab wrapper with sidebar adaptation
+TabView(selection: $selectedTab) {
+    Tab("Schedule", systemImage: "calendar", value: "schedule") {
+        ScheduleView()
+    }
+    Tab("Customers", systemImage: "person.2", value: "customers") {
+        CustomersView()
+    }
+    Tab("Search", systemImage: "magnifyingglass", value: "search") {
+        SearchView()
+    }
+    .role(.search)   // Search tab gets special placement
+}
+.tabViewStyle(.sidebarAdaptable)        // sidebar on iPad, tab bar on iPhone
+
+// ❌ Old pattern — works but misses sidebar adaptation on iPad
+TabView {
+    ScheduleView().tabItem { Label("Schedule", systemImage: "calendar") }
+    CustomersView().tabItem { Label("Customers", systemImage: "person.2") }
+}
+```
+
+---
+
+## Custom Containers — `ForEach(subviews:)` (iOS 18+)
+
+iOS 18 introduced a `ForEach(subviews:)` API that lets you build container views that iterate over their `@ViewBuilder` children — like `List` and `Section` do internally.
+
+```swift
+// ✅ Custom card stack container
+struct CardStack<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(spacing: 12) {
+            ForEach(subviews: content) { subview in
+                subview
+                    .padding()
+                    .background(.regularMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+    }
+}
+
+// Usage
+CardStack {
+    OrderSummaryView(order: order1)
+    OrderSummaryView(order: order2)
+    OrderSummaryView(order: order3)
+}
+```
+
+---
+
+## `MeshGradient` — Backgrounds (iOS 18+)
+
+`MeshGradient` creates smooth, multi-point color blends. Use for decorative backgrounds and hero images — not for content areas.
+
+```swift
+// ✅ Static mesh gradient background
+MeshGradient(
+    width: 2,
+    height: 2,
+    points: [
+        [0, 0], [1, 0],
+        [0, 1], [1, 1]
+    ],
+    colors: [
+        Color.appAccentLawn, .mint,
+        Color.appAccentSnow, .teal
+    ]
+)
+.ignoresSafeArea()
+
+// ❌ Do not hardcode semantic colors — use app accent colors per season
+MeshGradient(
+    width: 2, height: 2,
+    points: [[0,0],[1,0],[0,1],[1,1]],
+    colors: [.green, .mint, .blue, .teal]  // wrong — use Color.appAccent(for:)
+)
+```
+
+---
+
+## Liquid Glass Effect (iOS 19+)
+
+iOS 19 introduced the Liquid Glass design language. Use `glassEffect()` for floating action buttons and overlay controls — not for primary content areas.
+
+```swift
+// ✅ Glass effect for a floating control
+Button("Scroll to Top", systemImage: "chevron.up") {
+    scrollToTop()
+}
+.padding()
+.glassEffect()
+
+// ❌ Glass effect on primary content — reduces readability
+List(orders) { order in
+    OrderRow(order: order)
+        .glassEffect()  // wrong — glass is for overlay/floating UI
+}
+```
+
+---
+
 ## View Modifier Conventions
 
 - Custom modifiers that apply to many views belong in `Shared/Components/` as `ViewModifier` conformances.
@@ -119,9 +261,6 @@ struct CardStyle: ViewModifier {
 extension View {
     func cardStyle() -> some View { modifier(CardStyle()) }
 }
-
-// Usage
-OrderRow(order: order).cardStyle()
 ```
 
 ---

@@ -1,5 +1,6 @@
 # State Management & Data Flow
 
+> Updated: 2026-06-08 — iOS/iPadOS 19+
 > iOS 18+ | Source of truth for observation, data flow, and property wrapper selection.
 
 ---
@@ -44,12 +45,74 @@ struct ChildView: View {
 |---|---|---|
 | View-private transient UI state (sheet flag, search text, form field, toggle) | `@State` | `@StateObject`, `@ObservedObject` |
 | Pass mutable access to a child view | `@Binding` | Passing array snapshots |
-| Bind to a property on an `@Observable` object in a child view | `@Bindable` | `@ObservedObject` |
+| Bind to a property on an `@Observable` object received by a child view | `@Bindable` | `@ObservedObject` |
 | Inject a shared app/feature-level service | `@Environment(MyService.self)` | `@EnvironmentObject` |
 | Own Core Data query results in the rendering view | `@FetchRequest` | Passing `FetchedResults` as Array to children |
 | Persistent cross-launch UI state (tab, scroll position) | `@SceneStorage` / `@AppStorage` | `@State` with manual UserDefaults |
+| Custom environment value key | `@Entry` macro (iOS 18+) | Manual `EnvironmentKey` struct boilerplate |
 
 **Never use:** `ObservableObject`, `@Published`, `@StateObject`, `@ObservedObject`, `@EnvironmentObject`. These are iOS 14–16 patterns fully superseded by `@Observable` + `@Environment`.
+
+**`@ObservedObject` exception:** Core Data `NSManagedObject` subclasses implement `ObservableObject` directly — there is no `@Observable`-compatible alternative. Use `@ObservedObject` only for individual row/detail views that receive a single managed object from a parent's `@FetchRequest`.
+
+---
+
+## `@Bindable` — Bindings to `@Observable` Properties in Child Views
+
+`@Bindable` is for child views that receive an `@Observable` object and need to create `$property` bindings to its properties. The parent passes the object; the child wraps it with `@Bindable`.
+
+```swift
+@Observable final class ProfileModel {
+    var name: String = ""
+    var bio: String = ""
+}
+
+// ✅ Child view uses @Bindable to create bindings
+struct ProfileEditForm: View {
+    @Bindable var model: ProfileModel  // receives the object, creates bindings
+
+    var body: some View {
+        TextField("Name", text: $model.name)
+        TextField("Bio", text: $model.bio)
+    }
+}
+
+// ❌ Incorrect — @State is for view-owned value types, not passed-in objects
+struct ProfileEditForm: View {
+    @State var model: ProfileModel
+}
+```
+
+---
+
+## `@Entry` — Custom Environment Values (iOS 18+)
+
+iOS 18 introduced the `@Entry` macro, which eliminates the `EnvironmentKey` boilerplate for custom environment values.
+
+```swift
+// ✅ iOS 18+: @Entry macro — no EnvironmentKey struct needed
+extension EnvironmentValues {
+    @Entry var seasonTheme: SeasonTheme = .lawn
+}
+
+// Inject at any ancestor
+ContentView()
+    .environment(\.seasonTheme, currentTheme)
+
+// Read in descendants
+@Environment(\.seasonTheme) private var theme
+
+// ❌ iOS 17 boilerplate — still works but no longer necessary
+struct SeasonThemeKey: EnvironmentKey {
+    static let defaultValue: SeasonTheme = .lawn
+}
+extension EnvironmentValues {
+    var seasonTheme: SeasonTheme {
+        get { self[SeasonThemeKey.self] }
+        set { self[SeasonThemeKey.self] = newValue }
+    }
+}
+```
 
 ---
 
@@ -78,10 +141,10 @@ private var filteredCustomers: [Customer] {
 
 ```swift
 // Service — @Observable, lives at app root
-@Observable final class OrderService {
+@Observable @MainActor final class OrderService {
     private(set) var orders: [Order] = []
 
-    @MainActor func refresh() async {
+    func refresh() async {
         orders = await APIClient.fetchOrders()
     }
 }
