@@ -55,6 +55,15 @@ so that {benefit}.
 - {Data model fields that must be present}
 - {Error conditions that must be handled}
 
+### Design Contract
+*UI stories only — extracted from docs/ux/ by `/create-story`. Omit this section for stories with no user-visible surface.*
+
+- **Tokens:** {token: value pairs this UI consumes}
+- **Components:** {component → spec summary; SwiftUI view / element mapping}
+- **Required states:** {surface → empty / loading / error specs}
+- **Reuse (do not recreate):** {components from docs/ux/components-built.md}
+- **Platform checklist:** {applicable HIG / web guardrail items}
+
 ### Prior Story Context
 *What earlier stories established that this story must not break:*
 - {Pattern or file established in story X that we must follow}

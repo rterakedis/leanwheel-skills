@@ -65,7 +65,19 @@ Run during Validate flow and at Finalize. Report critical/high findings with loc
 
 ---
 
-## 7. Bloat & Overspecification
+## 7. Content Site / SSG (required when the SSG preset is in scope)
+- [ ] `## Content & Performance` section present in EXPERIENCE.md.
+- [ ] Every content type maps to a layout + listing surface + URL pattern.
+- [ ] Performance budget stated (CWV target, per-page-type JS budget); every planned island/script named and justified.
+- [ ] Typography tokens include fluid scale values and reading measure.
+- [ ] Dark mode mechanism stated (`prefers-color-scheme`, with/without manual toggle).
+- [ ] SEO/meta decisions present: title pattern, OG image approach, RSS scope.
+
+**Severity if broken:** High (missing performance budget or content-type mapping) / Medium (missing SEO decisions)
+
+---
+
+## 8. Bloat & Overspecification
 - [ ] No pixel values in EXPERIENCE.md where a DESIGN.md token covers it.
 - [ ] No PRD content restated (personas, FRs, scope) — inherited by reference only.
 - [ ] No decorative prose in EXPERIENCE.md untied to a behavioral decision.
@@ -75,7 +87,7 @@ Run during Validate flow and at Finalize. Report critical/high findings with loc
 
 ---
 
-## 8. Shape
+## 9. Shape
 - [ ] DESIGN.md sections in canonical order: Brand & Style → Colors → Typography → Layout & Spacing → Elevation & Depth → Shapes → Components → Do's and Don'ts. (Omittable; order locked when present.)
 - [ ] EXPERIENCE.md required sections present: Foundation · IA · Voice and Tone · Component Patterns · State Patterns · Interaction Primitives · Accessibility Floor · Key Flows. Dropped sections have a stated reason.
 - [ ] Conditional sections present when triggered: Apple Platform (any Apple surface) · Responsive & Platform (web with breakpoints) · Inspiration & Anti-patterns (user provided references or rejects).

@@ -16,6 +16,8 @@ Read all three planning documents fully:
 2. `docs/architecture.md`
 3. `docs/epics.md`
 
+Also read `docs/ux/DESIGN.md` and `docs/ux/EXPERIENCE.md` if present (needed for Check 9).
+
 ---
 
 ## Check 1 — FR Coverage
@@ -96,10 +98,21 @@ If `CLAUDE.md` doesn't exist, note this as a warning but do not create it — th
 
 ---
 
+## Check 9 — UX Alignment (conditional)
+
+Run only if `docs/ux/DESIGN.md` or `docs/ux/EXPERIENCE.md` exists. If the product has user-visible UI but neither file exists, emit a warning: "UI stories planned with no design contract — run `/ux` or accept ad-hoc design."
+
+- **Design status:** DESIGN.md and EXPERIENCE.md are `status: final` before the first UI story is implemented. Draft status = warning; unresolved `[OPEN]` HIG items = blocker for the stories they affect.
+- **Surface coverage:** every story that builds user-visible UI maps to a named surface/flow in EXPERIENCE.md. A UI story with no EXPERIENCE.md coverage is a **blocker** — `/create-story` will have nothing to extract into the Design Contract, and the dev session will improvise.
+- **State coverage:** surfaces being built this epic have empty/loading/error states defined (or explicit N/A). Missing = warning.
+- **Token readiness:** DESIGN.md frontmatter has explicit values (hex, scale) for the tokens those surfaces consume — no empty-string tokens on load-bearing colors. Missing = blocker for affected stories.
+
+---
+
 ## Output
 
-Readiness report: eight checks, blockers (fix before `/create-story`), warnings (fix before epic).
+Readiness report: nine checks, blockers (fix before `/create-story`), warnings (fix before epic).
 
-Blockers: uncovered FRs, circular deps, architecture contradictions, cross-epic runtime blockers. Call **LOG-AND-SCHEDULE** for remediation stories.
-Warnings: weak ACs, scope overlap, missing security ACs, cross-epic runtime warnings. Surface to user.
+Blockers: uncovered FRs, circular deps, architecture contradictions, cross-epic runtime blockers, UI stories without design coverage, empty load-bearing tokens. Call **LOG-AND-SCHEDULE** for remediation stories.
+Warnings: weak ACs, scope overlap, missing security ACs, cross-epic runtime warnings, draft-status design specs, missing state coverage. Surface to user.
 Testing targets written to `CLAUDE.md` Conventions section as part of this check.

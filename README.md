@@ -36,6 +36,11 @@ This is a standalone skills library for [Claude Code](https://claude.ai/code). I
 - Swift/Apple platform guidance system: `/setup` scaffolds `docs/setup/swift/` with sectioned best-practice reference docs (state management, concurrency, architecture, UI composition, testing, anti-patterns, plus iPadOS- and macOS-specific files); a 37-line guardrails block is appended to `CLAUDE.md`; `/dev-story` and `/code-review` read the relevant sections before acting
 - `/refresh-swift` — researches current Swift/SwiftUI/platform patterns from primary sources (Hacking with Swift, Swift with Majid, SwiftLee, Apple WWDC docs, Point-Free) and updates both `docs/setup/swift/` and the skills repo stubs; offers to chain into `/swift-audit`
 - `/swift-audit` — audits planning docs, story files, and Swift source code against `docs/setup/swift/` guidance; produces a triaged remediation file in `docs/maintainer/` ready for `/dev-story`
+- **Web/SSG guidance system** (mirror of the Swift system): `/setup` scaffolds `docs/setup/web/` with sectioned reference docs (CSS design system, accessibility + SEO, anti-patterns, plus Astro- or Hugo-specific files) and appends a web guardrails block to `CLAUDE.md`; `/dev-story`, `/code-review`, and `/web-audit` read the relevant sections before acting
+- `/refresh-web` — researches current web platform / CSS / Astro / Hugo patterns from primary sources (web.dev, MDN, Astro docs, Hugo docs, CSS-Tricks, Smashing, WAI) and updates `docs/setup/web/` + the skills repo stubs; offers to chain into `/web-audit`
+- `/web-audit` — audits planning docs, story files, templates, styles, and markup against `docs/setup/web/` guidance and `docs/ux/DESIGN.md` tokens; produces a triaged remediation file in `docs/maintainer/` ready for `/dev-story`
+- **Closed design loop**: `/create-story` extracts a per-story **Design Contract** (tokens, component specs, required states, reuse list) from `docs/ux/` into Dev Notes; `/dev-story` implements against it and runs `/design-verify` (build + screenshots, light/dark, Dynamic Type / responsive widths) before review; `/code-review` runs a Design Compliance pass and maintains a `docs/ux/components-built.md` inventory so later stories reuse components instead of reinventing them; `/check-readiness` blocks UI stories that have no design coverage
+- `/ux` content-site (SSG) preset for Astro/Hugo sites — typography-first tokens, content-model → layout mapping, and a performance budget (Core Web Vitals + per-page JS budget) decided at design time
 
 ---
 
@@ -109,6 +114,9 @@ Once the directory is added, invoke skills by name:
 | `/deferred` | View the deferred items log |
 | `/refresh-swift` | Research current Swift/SwiftUI/platform best practices and update `docs/setup/swift/` + skills repo stubs; offers to chain into `/swift-audit` |
 | `/swift-audit` | Audit planning docs, stories, and Swift source against `docs/setup/swift/`; writes a triaged remediation file to `docs/maintainer/` |
+| `/refresh-web` | Research current web platform / CSS / Astro / Hugo best practices and update `docs/setup/web/` + skills repo stubs; offers to chain into `/web-audit` |
+| `/web-audit` | Audit planning docs, stories, templates, styles, and markup against `docs/setup/web/` + DESIGN.md tokens; writes a triaged remediation file to `docs/maintainer/` |
+| `/design-verify` | Render changed UI (simulator or dev server + screenshots) and compare against the design contract; runs inline at the end of `/dev-story` for UI stories |
 | `/github-tracking setup` | One-time GitHub auth + create status labels |
 | `/github-tracking backfill` | Retroactively create GitHub issues for existing stories |
 | `/discover` | Brownfield: reverse-engineer a codebase into docs |
@@ -420,21 +428,29 @@ your-project/
 │   ├── ux/                ← UX design specs (from /ux)
 │   │   ├── DESIGN.md      ← Visual identity (colors, typography, components)
 │   │   ├── EXPERIENCE.md  ← IA, behavior, states, interactions
+│   │   ├── components-built.md ← Reusable component inventory (auto-maintained by /code-review)
 │   │   ├── mockups/       ← Promoted HTML mockups
 │   │   ├── wireframes/    ← Promoted Excalidraw wireframes
 │   │   └── .working/      ← In-progress creative artifacts
 │   ├── setup/             ← Local dev setup, scripts, resources
-│   │   └── swift/         ← Swift/Apple platform guidance (created by /setup for Apple projects)
-│   │       ├── state-management.md
-│   │       ├── concurrency.md
-│   │       ├── architecture.md
-│   │       ├── ui-composition.md
-│   │       ├── testing.md
+│   │   ├── swift/         ← Swift/Apple platform guidance (created by /setup for Apple projects)
+│   │   │   ├── state-management.md
+│   │   │   ├── concurrency.md
+│   │   │   ├── architecture.md
+│   │   │   ├── ui-composition.md
+│   │   │   ├── testing.md
+│   │   │   ├── anti-patterns.md
+│   │   │   ├── ipados-specific.md   ← present if iPadOS targeted
+│   │   │   └── macos-specific.md    ← present if macOS targeted
+│   │   └── web/           ← Web/SSG guidance (created by /setup for web projects)
+│   │       ├── css-design-system.md
+│   │       ├── accessibility-seo.md
 │   │       ├── anti-patterns.md
-│   │       ├── ipados-specific.md   ← present if iPadOS targeted
-│   │       └── macos-specific.md    ← present if macOS targeted
+│   │       ├── astro.md             ← present if Astro selected
+│   │       └── hugo.md              ← present if Hugo selected
 │   ├── maintainer/        ← Deployment, runbooks, operational procedures
-│   │   └── swift-audit-{date}.md   ← output of /swift-audit runs
+│   │   ├── swift-audit-{date}.md   ← output of /swift-audit runs
+│   │   └── web-audit-{date}.md     ← output of /web-audit runs
 │   └── sql/               ← Database schema and migrations
 ```
 
@@ -499,7 +515,7 @@ All GitHub operations are skipped silently if `gh auth` is not configured — th
 **Project Initialization**
 | Invocation | What it does |
 |------------|-------------|
-| `/setup` | Detects project state and routes automatically: finds `_bmad/` → prompts to run migrate + clean; finds existing `docs/` → idempotent re-run; finds neither → greenfield scaffold of `docs/`, `AGENTS.md`, `CLAUDE.md`. For Apple platform projects, asks which platforms (iOS / iPadOS / macOS, multi-select), appends a Swift/SwiftUI guardrails block to `CLAUDE.md`, and scaffolds `docs/setup/swift/` with the 6 shared guidance files plus `ipados-specific.md` and/or `macos-specific.md` as applicable. |
+| `/setup` | Detects project state and routes automatically: finds `_bmad/` → prompts to run migrate + clean; finds existing `docs/` → idempotent re-run; finds neither → greenfield scaffold of `docs/`, `AGENTS.md`, `CLAUDE.md`. For Apple platform projects, asks which platforms (iOS / iPadOS / macOS, multi-select), appends a Swift/SwiftUI guardrails block to `CLAUDE.md`, and scaffolds `docs/setup/swift/` with the 6 shared guidance files plus `ipados-specific.md` and/or `macos-specific.md` as applicable. For web projects (web app / Astro / Hugo / other SSG), appends a Web guardrails block to `CLAUDE.md` and scaffolds `docs/setup/web/` with the 3 shared guidance files plus `astro.md` or `hugo.md` as applicable. |
 | `/setup migrate` | Migrate a full-BMAD project to BMAD-LITE — reads `_bmad/config.toml` to locate artifacts, moves planning docs + stories into the BMAD-LITE `docs/` layout, stamps `Status:` into each story file from `sprint-status.yaml`, updates `AGENTS.md` + `CLAUDE.md`, then attempts GitHub label setup + issue backfill inline (gracefully skipped if auth not configured). Non-destructive — never deletes. |
 | `/setup clean` | Remove BMAD infrastructure after a successful migrate — confirms before deleting each target: `_bmad/`, `sprint-status.yaml`, and optionally `src/bmm-skills/` |
 | `/github-tracking setup` | One-time: GitHub auth + create the four status labels |
@@ -512,7 +528,7 @@ All GitHub operations are skipped silently if `gh auth` is not configured — th
 | `/prd update` | Explicit update — reads `docs/project/` for upstream changes, then checks for in-progress/done stories and recommends `/correct-course` if any are affected |
 | `/prd validate` | Critique only — runs the PRD checklist and reports findings without modifying the file |
 | `/architecture` | Create or update `docs/architecture.md` — reads `docs/project/` for technical inputs |
-| `/ux` | Create, update, or validate UX design specs — produces `docs/ux/DESIGN.md` (visual identity: colors, typography, components) and `docs/ux/EXPERIENCE.md` (IA, behavior, states, interactions, accessibility, key flows). Primary surfaces: **responsive web** and **Apple platforms** (iOS · iPadOS · macOS via SwiftUI). Apple output includes a full HIG compliance checklist, SwiftUI component map, and multi-target layout cascade (iPhone → iPad → Mac). Android deferred as `[FUTURE: Android]`. Renders inline HTML mockups on demand to help visualize color and layout decisions. |
+| `/ux` | Create, update, or validate UX design specs — produces `docs/ux/DESIGN.md` (visual identity: colors, typography, components) and `docs/ux/EXPERIENCE.md` (IA, behavior, states, interactions, accessibility, key flows). Primary surfaces: **responsive web apps**, **content sites / SSGs** (Astro · Hugo — typography-first tokens, content-model → layout mapping, performance budget with per-page JS justification), and **Apple platforms** (iOS · iPadOS · macOS via SwiftUI). Apple output includes a full HIG compliance checklist, SwiftUI component map, and multi-target layout cascade (iPhone → iPad → Mac). Android deferred as `[FUTURE: Android]`. Renders inline HTML mockups on demand to help visualize color and layout decisions. |
 | `/ux update` | Explicit update to existing spines — reads change signal, surfaces conflicts with prior decisions, re-triages HIG checklist items |
 | `/ux validate` | Critique only — runs the UX checklist across flow coverage, token completeness, component coverage, state coverage, Apple HIG compliance, and responsive breakpoints |
 | `/discover` | Brownfield only: reverse-engineer existing codebase → `prd.md` + `architecture.md` + `CLAUDE.md` |
@@ -521,21 +537,22 @@ All GitHub operations are skipped silently if `gh auth` is not configured — th
 **Planning Gate**
 | Invocation | What it does |
 |------------|-------------|
-| `/check-readiness` | Validate PRD + architecture + epics are aligned — checks FR coverage, AC testability, story independence, architecture consistency, MVP scope drift, security coverage, cross-epic runtime dependencies, and testing targets derived from architecture |
+| `/check-readiness` | Validate PRD + architecture + epics are aligned — checks FR coverage, AC testability, story independence, architecture consistency, MVP scope drift, security coverage, cross-epic runtime dependencies, testing targets derived from architecture, and UX alignment (UI stories must map to EXPERIENCE.md surfaces; design tokens ready before implementation) |
 
 **Dev Flywheel**
 | Invocation | What it does |
 |------------|-------------|
-| `/create-story` | Spec the next `ready-for-dev` story (auto-detected from `docs/epics.md`); performs a cross-epic runtime dependency check before writing |
+| `/create-story` | Spec the next `ready-for-dev` story (auto-detected from `docs/epics.md`); performs a cross-epic runtime dependency check before writing. For UI stories, extracts a **Design Contract** from `docs/ux/` into Dev Notes (tokens, component specs, required states, reuse list from `components-built.md`) so dev sessions never re-read the UX specs |
 | `/create-story {epic}-{story}` | Spec a specific story, e.g. `/create-story 2-3` |
 | `/create-story refresh-cache` | Force-regenerate the epic context cache even if timestamps look fresh — use after editing `prd.md` or `architecture.md` mid-epic |
-| `/dev-story` | Implement the first `ready-for-dev` story found in `docs/epics/`. On Apple platform projects, reads the relevant `docs/setup/swift/` guidance files before starting (state management, concurrency, architecture, UI composition, testing, anti-patterns — scoped to the story's tasks); always reads `anti-patterns.md` if present. Code-review + security Pass D run inline at the end. |
+| `/dev-story` | Implement the first `ready-for-dev` story found in `docs/epics/`. On Apple platform projects, reads the relevant `docs/setup/swift/` guidance files before starting (scoped to the story's tasks); on web projects, reads the relevant `docs/setup/web/` files; always reads `anti-patterns.md` if present. UI stories implement against the embedded Design Contract and run `/design-verify` (screenshots vs contract) after DoD. Code-review (incl. design Pass E) + security Pass D run inline at the end. |
 | `/dev-story {path}` | Implement a specific story file, e.g. `/dev-story docs/epics/1-2-user-auth.md` |
-| `/code-review` | Standalone review — auto-detects a story in `review` status, or reviews current branch vs main. On Apple platform projects, reads `anti-patterns.md` + `state-management.md` as rejection criteria; also reads `ipados-specific.md` or `macos-specific.md` when the diff touches platform-specific code. |
+| `/code-review` | Standalone review — auto-detects a story in `review` status, or reviews current branch vs main. On Apple platform projects, reads `anti-patterns.md` + `state-management.md` as rejection criteria (plus iPadOS/macOS files when relevant); on web projects, reads `docs/setup/web/` anti-patterns + CSS guidance. UI diffs get a **Design Compliance pass** against DESIGN.md tokens and required states, and new reusable components are recorded in `docs/ux/components-built.md`. |
 | `/code-review {branch}` | Review a specific branch vs main, e.g. `/code-review feature/payments` |
 | `/code-review {commit}` | Review a specific commit range, e.g. `/code-review abc123..def456` |
 | `/code-review {story-file}` | Review the diff associated with a specific story file |
 | `/quick-dev` | Describe a one-off feature or fix — skill scopes it, writes a spec, implements, and updates docs |
+| `/design-verify` | Visually verify the working tree's UI changes against `docs/ux/` — builds/serves, screenshots (light/dark, Dynamic Type or mobile/desktop widths), reports mismatches by severity. Runs automatically inside `/dev-story` for UI stories; invocable standalone. |
 
 **Mid-Sprint Management**
 | Invocation | What it does |
@@ -549,7 +566,13 @@ All GitHub operations are skipped silently if `gh auth` is not configured — th
 | Invocation | What it does |
 |------------|-------------|
 | `/refresh-swift` | Research current Swift language, SwiftUI, concurrency, testing, and platform-specific patterns from primary sources (Hacking with Swift, Swift with Majid, SwiftLee, Apple WWDC sample apps, Point-Free). Updates `docs/setup/swift/` in the current project and the corresponding stubs in the skills repo so new projects get the same content. Scope: current stable iOS/macOS releases only — pre-release APIs are hard-excluded. After updating, offers to chain directly into `/swift-audit`. |
-| `/swift-audit` | Audit the full project against the guidance in `docs/setup/swift/`. Scans `architecture.md`, `prd.md`, `epics.md`, all story files, and all `.swift` source files. Findings are triaged by scope (`DOC-ARCH`, `DOC-PRD`, `DOC-EPICS`, `STORY`, `CODE`) and severity (`HIGH` / `MEDIUM` / `LOW`). Writes a single remediation file to `docs/maintainer/swift-audit-{date}.md` — one AC per finding — ready for `/dev-story`. Requires `docs/setup/swift/` to exist. |
+| `/swift-audit` | Audit the full project against the guidance in `docs/setup/swift/`. Scans `architecture.md`, `prd.md`, `epics.md`, all story files, and all `.swift` source files (including hardcoded-color checks against `docs/ux/DESIGN.md` tokens). Findings are triaged by scope (`DOC-ARCH`, `DOC-PRD`, `DOC-EPICS`, `STORY`, `CODE`) and severity (`HIGH` / `MEDIUM` / `LOW`). Writes a single remediation file to `docs/maintainer/swift-audit-{date}.md` — one AC per finding — ready for `/dev-story`. Requires `docs/setup/swift/` to exist. |
+
+**Web / SSG**
+| Invocation | What it does |
+|------------|-------------|
+| `/refresh-web` | Research current web platform, CSS, Astro, and Hugo best practices from primary sources (web.dev, MDN, Astro docs/blog, Hugo docs/releases, CSS-Tricks, Smashing Magazine, W3C WAI). Updates `docs/setup/web/` in the current project and the corresponding stubs in the skills repo. Scope: Baseline widely-available platform features and current stable Astro/Hugo majors only — experimental features are hard-excluded. After updating, offers to chain directly into `/web-audit`. |
+| `/web-audit` | Audit the full project against the guidance in `docs/setup/web/` and the design tokens in `docs/ux/DESIGN.md`. Scans planning docs, story files, templates (`.astro`, Hugo `layouts/`), stylesheets, and markup — framework-aware (Astro hydration directives, Hugo hardcoded paths). Findings triaged by scope and severity. Writes a single remediation file to `docs/maintainer/web-audit-{date}.md` — one AC per finding — ready for `/dev-story`. Requires `docs/setup/web/` to exist. |
 
 **Security**
 | Invocation | What it does |

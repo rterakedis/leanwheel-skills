@@ -23,6 +23,13 @@ description: Implement a story from its story file. Use when the user says "dev 
    - Always read `docs/setup/swift/anti-patterns.md` if present — it governs what must not be written
    - If `docs/setup/swift/ipados-specific.md` exists and the story touches navigation, split view, drag-and-drop, pointer, keyboard, or multi-window: read it
    - If `docs/setup/swift/macos-specific.md` exists and the story touches menus, windows, toolbar, settings, tables, or file operations: read it
+4b. **If `docs/setup/web/` exists** (web/SSG project): read the files relevant to this story's tasks before implementing:
+   - Any story touching stylesheets, tokens, or layout: read `docs/setup/web/css-design-system.md`
+   - Any story adding pages, forms, or content templates: read `docs/setup/web/accessibility-seo.md`
+   - If `docs/setup/web/astro.md` exists and the story touches `.astro` files, collections, or images: read it
+   - If `docs/setup/web/hugo.md` exists and the story touches `layouts/`, `content/`, or `assets/`: read it
+   - Always read `docs/setup/web/anti-patterns.md` if present — it governs what must not be written
+4c. **Design contract** (UI stories): if the story has a `### Design Contract` in Dev Notes, it is the design source of truth — use its tokens, states, and reuse list; do not read `docs/ux/` again. If the story changes user-visible UI but has **no** Design Contract and `docs/ux/DESIGN.md` exists: read DESIGN.md frontmatter and the relevant EXPERIENCE.md sections before implementing (and note the gap in Completion Notes so `/create-story` improves next time).
 5. Execute **TRANSITION** with `new_label: in-progress` (skip if unavailable).
 6. Confirm: "Implementing {epic}.{story}: {title}. Starting..."
 
@@ -64,7 +71,10 @@ Before review, verify all items in `checklist.md` pass. Fix any failures first.
 
 ## On Completion
 
-When tasks done and DoD passes, run code-review inline (don't stop). Continue directly to Code Review below.
+When tasks done and DoD passes:
+
+1. **Design verification (UI stories):** if the story changed user-visible UI, execute **VERIFY** from `skills/design-verify/SKILL.md` — render the changed surfaces (simulator or dev server + screenshots), compare against the Design Contract, and write results to `### Design Verification` in the story file. Mismatches feed into the inline review triage below as findings. If no rendering tooling is available, record the manual checklist and continue. Skip entirely for stories with no user-visible surface.
+2. Run code-review inline (don't stop). Continue directly to Code Review below.
 
 ---
 
@@ -81,6 +91,8 @@ The diff is uncommitted changes. Story file is loaded. Go straight to three pass
 **Pass C — Acceptance Audit:** Unimplemented/partial ACs, AC contradictions, ignored constraints, files touched/not touched.
 
 **Pass D — Security (conditional):** If Dev Notes has `Security Sensitivity:`, run matching categories from `skills/security-review/skill.md`. Skip if blank.
+
+**Pass E — Design Compliance (conditional):** If the diff touches user-visible UI and a `### Design Contract` (or `docs/ux/DESIGN.md`) exists: hardcoded values where a token exists, missing required states (empty/loading/error), missing dark-mode pair, platform checklist violations (tap targets, Dynamic Type, semantic HTML, focus visibility), near-duplicate of an inventoried component. Include any unresolved `### Design Verification` findings. Skip for non-UI diffs.
 
 ### Triage
 

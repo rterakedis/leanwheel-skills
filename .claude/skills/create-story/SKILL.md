@@ -60,6 +60,20 @@ If yes:
 2. If the prerequisite epic/story is scheduled *after* this epic in `docs/epics.md`, flag it as a sequencing risk in the story summary shown to the user — they must decide to reorder, split, or accept the incomplete-until-X gap.
 3. Never silently assume a later epic's output will be present.
 
+**Design contract extraction (UI stories only):**
+If the story adds or changes user-visible UI and `docs/ux/DESIGN.md` / `docs/ux/EXPERIENCE.md` exist:
+
+1. Read DESIGN.md frontmatter and the EXPERIENCE.md sections for the surfaces this story touches — not the whole files.
+2. Extract into Dev Notes under `### Design Contract` (use the template section):
+   - The specific tokens the story's UI consumes (color/spacing/type/radius — values inline, not "see DESIGN.md")
+   - The component specs involved (visual + behavioral rows for components being built or used)
+   - Required states for each surface (empty / loading / error / offline, with the specced copy and placement)
+   - Applicable platform checklist items (HIG items for Apple; guardrail items for web)
+3. If `docs/ux/components-built.md` exists, list the existing components this story must **reuse** — instruct the dev session to never create a near-duplicate of an inventoried component.
+4. If the UI the story needs has no coverage in EXPERIENCE.md (no surface, no states), flag it to the user before writing — that's a design gap, not a license to improvise.
+
+This extraction is why dev sessions never read `docs/ux/` — the same economics as the epic context cache.
+
 ## Generate Cache
 
 When cache is missing/stale, distill content into `docs/epics/epic-{epic_num}-context.md`:

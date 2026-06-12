@@ -38,6 +38,7 @@ Ask these questions (can be combined into one prompt):
 1. "Project name + one-sentence description?" (store as {project_name}, {project_description})
 2. "Where is your bmad-lite-skills directory?" (store as {skills_path}, e.g. `~/repos/bmad-lite-skills`). If already present in `.claude/settings.json`, skip this question.
 3. "Which Apple platform(s) is this app targeting? (select all that apply: iOS / iPadOS / macOS / none)" (store as {platforms} — a list; set {is_apple_platform} = true if any Apple platform selected)
+4. "Does this project ship a web surface? (none / web app / Astro / Hugo / other SSG)" (store as {web_surface}; set {is_web} = true if not none)
 
 ### Step 1 — Scaffold Docs
 
@@ -82,6 +83,24 @@ If {is_apple_platform} is true:
   - `anti-patterns.md`
 - If {platforms} includes **iPadOS**: also copy `ipados-specific.md`.
 - If {platforms} includes **macOS**: also copy `macos-specific.md`.
+
+### Step 3c — Append Web Guardrails (conditional)
+
+If {is_web} is true:
+- Check whether `## Web Guardrails` already exists in CLAUDE.md. If it does, skip (never duplicate).
+- Otherwise, append the full contents of `{skills_path}/.claude/skills/setup/stubs/modern-web.md` to CLAUDE.md, preceded by a `---` separator.
+
+### Step 3d — Scaffold Web Reference Docs (conditional)
+
+If {is_web} is true:
+- Create `docs/setup/web/` if it does not exist.
+- Copy the following **shared** files from `{skills_path}/.claude/skills/setup/stubs/web/` into `docs/setup/web/`. Skip any file that already exists (never overwrite):
+  - `css-design-system.md`
+  - `accessibility-seo.md`
+  - `anti-patterns.md`
+- If {web_surface} is **Astro**: also copy `astro.md`.
+- If {web_surface} is **Hugo**: also copy `hugo.md`.
+- If {web_surface} is **other SSG** or **web app**: shared files only; note that framework-specific guidance can be added via `/refresh-web`.
 
 ### Step 4 — Wire up auto-loading hook
 

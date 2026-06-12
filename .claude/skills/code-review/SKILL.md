@@ -24,9 +24,11 @@ If empty diff: stop. If >3000 lines: warn, offer to chunk by file.
 - If story file identified: read fully.
 - Read CLAUDE.md if exists.
 - **If `docs/setup/swift/` exists** (Apple platform project): read `docs/setup/swift/anti-patterns.md` and `docs/setup/swift/state-management.md` before beginning passes — use them as the rejection criteria for Pass A and Pass C. Also read `docs/setup/swift/ipados-specific.md` if present and the diff touches navigation, split view, or multi-window code; read `docs/setup/swift/macos-specific.md` if present and the diff touches menus, windows, settings, or toolbar code.
+- **If `docs/setup/web/` exists** (web/SSG project) and the diff touches templates, markup, or styles: read `docs/setup/web/anti-patterns.md` and `docs/setup/web/css-design-system.md` — use them as rejection criteria.
+- **If the diff touches user-visible UI** and `docs/ux/DESIGN.md` exists: read its frontmatter token block (and the story's `### Design Contract` if present) — required input for Pass E.
 - Confirm: "Reviewing {N} files, {+/-lines}. Story context: {yes/no}."
 
-## Step 3 — Four Review Passes
+## Step 3 — Five Review Passes
 
 Work each pass independently. Look for what's *missing* (absent behavior, unhandled path) as hard as what's *wrong*.
 
@@ -61,6 +63,14 @@ Work each pass independently. Look for what's *missing* (absent behavior, unhand
 - ACs that contradict each other or the architecture
 - Constraints in Dev Notes that were ignored
 - Files the story said would be touched that weren't (missing implementation)
+
+**Pass E: Design Compliance** (only if the diff touches user-visible UI and `docs/ux/DESIGN.md` or a `### Design Contract` exists)
+- Hardcoded colors/spacing/type values where a DESIGN.md token exists (near-miss hex counts)
+- Required states from EXPERIENCE.md missing: empty, loading, error, offline
+- Dark mode: load-bearing surfaces missing the second appearance
+- Platform checklist: Apple — tap targets, Dynamic Type, safe areas, SF Symbols; web — semantic elements, focus visibility, `alt`, heading hierarchy, off-token `!important`/inline styles
+- New component that near-duplicates one in `docs/ux/components-built.md`
+- Unresolved findings in the story's `### Design Verification` section
 
 ## Step 4 — Triage and Severity
 
@@ -103,6 +113,18 @@ Merge duplicates. Drop `dismiss`. If zero remain: write `Clean review — no pat
 - Any "we learned X the hard way" that isn't obvious from the code
 
 If a story file was loaded, identify its epic (e.g., `epic-2` from `epic-2-story-3.md`). Check whether `docs/epics/epic-<n>-context.md` exists. If discoveries exist, append them under a `## Story {id} Learnings` heading. If no discoveries worth capturing, skip silently.
+
+**Update component inventory:** If the diff introduced a new reusable UI component (a view/element designed to be used in more than one place), append a row to `docs/ux/components-built.md` — create the file with this header if missing:
+
+```markdown
+# Components Built
+*Auto-maintained by /code-review. /create-story injects this into UI stories — reuse these, never create near-duplicates.*
+
+| Component | File | Purpose | Variants/Props |
+|---|---|---|---|
+```
+
+One-off layout subviews don't qualify; only components future stories should reuse. Skip silently if no new reusable component shipped.
 
 **Update status:**
 - All resolved: Status `done` → **CLOSE-ISSUE**

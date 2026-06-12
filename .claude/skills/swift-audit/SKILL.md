@@ -155,6 +155,17 @@ grep -rn "^import XCTest\|XCTestCase" \
   --exclude-dir="{DerivedData,.build,Pods,Packages}" .
 ```
 
+**Design token compliance (if `docs/ux/DESIGN.md` exists):** read its frontmatter token block, then grep for hardcoded colors that bypass it:
+
+```bash
+# Hardcoded colors in views (should come from the design token layer / asset catalog)
+grep -rn "Color(red:\|Color(hex:\|Color(#colorLiteral\|UIColor(red:" \
+  --include="*.swift" \
+  --exclude-dir="{DerivedData,.build,Pods,Packages}" .
+```
+
+Flag each hit where a DESIGN.md token covers the value (MEDIUM). Values with no corresponding token are a DESIGN.md gap finding rather than a code finding.
+
 For each `onAppear` hit, read surrounding lines (±5) to determine if it contains a `Task {` — only flag if it does. For `DispatchQueue` hits, read surrounding lines to determine if the file is a legacy wrapper (acceptable) or new code (flagged). Use judgment — do not flag things that are clearly intentional compatibility shims with a comment explaining why.
 
 ---

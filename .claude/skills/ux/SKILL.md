@@ -22,14 +22,24 @@ description: Plan UX design and produce DESIGN.md + EXPERIENCE.md. Use when the 
 
 Before Discovery begins, resolve the platform surface. Ask once if not clear from PRD or first message:
 
-> "What platforms are we designing for? (e.g. responsive web, iOS, iPadOS, macOS, or a combination)"
+> "What platforms are we designing for? (e.g. responsive web app, content site / SSG like Astro or Hugo, iOS, iPadOS, macOS, or a combination)"
 
 Then apply the matching preset below. On multi-platform, apply all that match.
 
-### Web preset
+### Web app preset
 - UI system candidates: shadcn/ui + Tailwind, MUI, or none (custom).
 - DESIGN.md tokens: explicit hex colors, px spacing scale, named breakpoints.
 - EXPERIENCE.md must include **Responsive & Platform** section (breakpoints, mobile-as-secondary-surface rules, keyboard/pointer interaction delta).
+- Accessibility floor: WCAG 2.2 AA.
+
+### Content site (SSG) preset — Astro, Hugo, and similar
+Use when the product is primarily content (blog, docs, marketing, portfolio) built with a static site generator. Differs from the web app preset in what's load-bearing:
+- **Typography first.** The type system carries the design: fluid scale (`clamp()` values as tokens), reading measure (~65ch), vertical rhythm. Probe typography before color.
+- **Tokens:** CSS custom property names alongside hex values (e.g. `--color-primary`), light/dark pairs mandatory, dark mode via `prefers-color-scheme` (state explicitly if a manual toggle is also required).
+- **Content model → layout mapping.** EXPERIENCE.md IA maps each content type (post, doc page, project, landing) to a layout, listing surface, and URL pattern. This replaces app-style screen flows.
+- **Performance budget is a design decision.** EXPERIENCE.md must state it: Core Web Vitals green; JS budget per page type (default: zero JS on content pages — every island/script must be named and justified here, at design time).
+- **SEO/meta as design surface:** OG image template, title patterns, RSS scope — decided here, not improvised per page.
+- EXPERIENCE.md must include a **Content & Performance** section covering the four bullets above.
 - Accessibility floor: WCAG 2.2 AA.
 
 ### Apple platform preset
