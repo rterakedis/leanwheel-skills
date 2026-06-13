@@ -66,7 +66,44 @@ A manual theme toggle, if the product needs one, sets `color-scheme` on `:root` 
 - Root font size stays at the browser default. All type sizes in `rem`. **Never `px` for font-size.**
 - Fluid scale with `clamp()` for headings: `font-size: clamp(1.5rem, 1.2rem + 1.5vw, 2.25rem);`
 - Body line-height is unitless (`1.5`–`1.7`). Reading measure constrained to `45–75ch` (`max-width: 65ch` on prose containers).
-- Load at most 2 font families; use `font-display: swap` and preload the primary woff2.
+
+### Fonts: System First, Self-Hosted Only
+
+**Default is the system font stack** — zero bytes, zero swap, zero layout shift:
+
+```css
+/* ✅ The default for every new project */
+:root {
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+```
+
+A custom font is a deliberate brand decision that must be justified in `docs/ux/DESIGN.md` typography rationale. When justified:
+
+- **Self-hosted on the same origin as the site — no exceptions.** Fonts live in the site's own asset pipeline as subsetted woff2. Google Fonts, Adobe Fonts, any font CDN, or `@import url(https://...)` is a **hard rejection** (performance: extra origin on the critical path; privacy: leaks visitor IPs to a third party).
+- Max 2 families, max ~4 weight/style files total; variable font preferred over multiple static weights.
+
+**No visible font swap — ever.** A mid-read glyph flash or reflow when the font arrives is a defect, not a trade-off. Two failure modes, two mandatory fixes:
+
+1. **`font-display: optional` is the default** (not `swap`). Either the font makes first paint (it will on most visits — see below) or the page stays on the fallback for this view and uses the cached font from the next navigation on. The font never pops in mid-read. `font-display: swap` is allowed only as a documented DESIGN.md exception, only for headings — body text never swaps after paint.
+2. **Metric-matched fallback is mandatory** regardless of strategy, so any fallback rendering occupies identical space (use a generator — e.g. fontaine or Capsize — rather than eyeballing the overrides):
+
+```css
+@font-face {
+  font-family: "Brand";
+  src: url("/fonts/brand-var.woff2") format("woff2");
+  font-display: optional;
+}
+@font-face {
+  font-family: "Brand-fallback";
+  src: local("Arial");
+  size-adjust: 105%; ascent-override: 92%; descent-override: 24%; line-gap-override: 0%;
+}
+/* --font-body: "Brand", "Brand-fallback", system-ui, sans-serif; */
+```
+
+Make the font win its ~100ms block window so `optional` shows the brand font on first paint, not just repeat visits: `<link rel="preload" as="font" type="font/woff2" crossorigin>` in `<head>`, subset aggressively (latin-only is typically 70–90% smaller), and keep the file on the same origin (no extra connection setup). A preloaded same-origin subsetted woff2 routinely beats the window; a 300 KB full-unicode font from a CDN never will.
 
 ---
 
@@ -103,18 +140,35 @@ Before writing JS for a UI behavior, check this table. Each row is a rejection i
 
 ---
 
+## Stylesheet Architecture: Lean CSS
+
+Two layers — a page never downloads CSS for components it doesn't render:
+
+| Layer | Contains | Delivery |
+|---|---|---|
+| **Shared core** (one small file) | Token layer (`:root`), modern reset, base element styles, reusable classes used on **3+ page types** (`.prose`, `.card`, `.btn`, nav/footer) | Cached site-wide. Budget: **≤ 30 KB minified**; if ≤ ~10 KB, inline it in `<head>` and skip the request entirely |
+| **Page/component CSS** | Formatting specific to one page type or component | Scoped with the page: Astro scoped `<style>` blocks; Hugo per-template resources concatenated via Pipes for that template only |
+
+Rules:
+- The shared core is **not** a dumping ground. New page-specific styles go in the page layer; a class is promoted to core only once a third page type needs it (and gets a token review on the way in).
+- One ever-growing `main.css` that every page loads is the anti-pattern — but so is a separate request per page that defeats caching. Small cached core + scoped page CSS is the balance.
+- No CSS frameworks (Bootstrap, full Tailwind via CDN) on content sites; the token layer + a few utilities is the design system.
+- One source of truth per component's styles — co-locate, never spread across files.
+
 ## Selectors & Structure
 
 - Use native CSS nesting; keep nesting ≤ 2 levels deep.
 - Specificity stays flat: single class selectors. No ID selectors for styling, no `!important` (see anti-patterns).
-- One source of truth per component's styles — co-locate (component file or one stylesheet section), never spread across files.
 - Respect user preferences: wrap all non-essential animation in `@media (prefers-reduced-motion: no-preference)`.
 
 ---
 
 ## Performance Floor
 
+Target: **PageSpeed/Lighthouse 100** and Core Web Vitals green (LCP < 2.5s, CLS < 0.1, INP < 200ms) on a mid-range phone, not a dev laptop. The mechanics:
+
+- **Zero third-party origins on the critical path.** No CDN fonts, scripts, or styles — self-host everything through the site's asset pipeline. Analytics, if any: lightweight, `defer`/async or server-side; never a tag manager on a content site.
 - No layout-shifting media: every `<img>`/`<video>` has `width`/`height` (or `aspect-ratio`).
+- The LCP element (usually the hero image or heading) is **never** lazy-loaded; preload the LCP image with `fetchpriority="high"`.
+- One stylesheet request (or zero, when the core is inlined) for above-the-fold rendering; no `@import` chains; minify + fingerprint via the SSG pipeline.
 - Animate only `transform` and `opacity`; never `top/left/width/height`.
-- One stylesheet request for above-the-fold rendering; no `@import` chains.
-- Target: Core Web Vitals green (LCP < 2.5s, CLS < 0.1, INP < 200ms) on a mid-range phone, not a dev laptop.

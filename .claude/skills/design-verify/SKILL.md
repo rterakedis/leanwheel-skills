@@ -45,6 +45,8 @@ Navigate to the changed surface first if it isn't the launch screen — use the 
 ```
 Use whatever browser/screenshot tooling the session has (browser MCP, preview tool, Playwright if installed: `npx playwright screenshot --viewport-size=390,844 {url} /tmp/dv-mobile.png`). Capture both `prefers-color-scheme` values if the site supports dark mode.
 
+If the site uses a custom font, check for visible font swap: load a changed page with cache disabled (or first visit in a fresh browser context) and compare a screenshot at first paint vs. after load — text changing glyphs or shifting position is a HIGH finding (guidance requires `font-display: optional` + metric-matched fallback). If tooling can't capture first paint, add "hard-reload with cache disabled and watch body text for flash/reflow" to the manual checklist.
+
 **Nothing available:** Don't fake it. Write a **MANUAL VERIFICATION** checklist instead (concrete tap/click paths per surface and state, derived from the ACs) and mark the verification `manual-required`.
 
 ## Step 3 — Compare

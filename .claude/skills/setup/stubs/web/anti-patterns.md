@@ -146,7 +146,25 @@
 
 ---
 
-## 12. Meta/SEO Afterthoughts
+## 12. Remote Fonts and Third-Party CDN Calls
+
+**Symptom:** `<link href="https://fonts.googleapis.com/...">`, `@import url(https://fonts...)`, `cdn.jsdelivr.net` / `unpkg.com` script or style tags.
+
+**Why it's wrong:** Every third-party origin on the critical path costs a DNS + TLS round trip and caps the PageSpeed score; remote fonts also leak visitor IPs to the provider (a GDPR finding in several jurisdictions). The default is the **system font stack** (zero bytes). A brand-justified custom font is **self-hosted on the same origin** as subsetted woff2 through the site's asset pipeline — never fetched from a font CDN. Same rule for any script or stylesheet: if the site needs it, it ships from the site's own domain.
+
+```html
+<!-- ❌ Banned -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/somelib@3/dist/somelib.min.js"></script>
+
+<!-- ✅ Replace with -->
+<link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossorigin>
+<!-- or better: no font files at all — font-family: system-ui, ... -->
+```
+
+---
+
+## 13. Meta/SEO Afterthoughts
 
 **Symptom:** Pages shipping with default or missing `<title>`, no meta description, no canonical, no OG image.
 

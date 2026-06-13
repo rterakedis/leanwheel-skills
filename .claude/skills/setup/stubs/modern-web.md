@@ -15,6 +15,8 @@ Full reference patterns live in `docs/setup/web/`. This section contains only th
 | `client:load` on static content (Astro) | No directive — render static; justify every `client:*` |
 | Raw `<img>` for local assets | `astro:assets` `<Image />` / Hugo page resources + render hook |
 | jQuery, Moment.js, Bootstrap, icon-font CDNs | Native DOM, `Intl`, CSS Grid, inline SVG |
+| Remote fonts (Google Fonts etc.) / any third-party CDN on critical path | System font stack; self-hosted same-origin subsetted woff2 if brand-justified |
+| New styles dumped into one global `main.css` | Small shared core (≤30 KB) + page/component-scoped CSS |
 | `px` font sizes; `user-scalable=no` | `rem` + `clamp()` fluid scale |
 | Absolute positioning / fixed heights for layout | Grid / flex + `gap`; `min-height` |
 | Hardcoded site URLs in templates/markdown | `relref`/`relURL` (Hugo), `Astro.site`-derived |
@@ -31,6 +33,7 @@ Full reference patterns live in `docs/setup/web/`. This section contains only th
 | Page adapts to viewport | Media query in `rem` |
 | Sibling spacing | `gap` |
 | Heading sizes | `clamp()` fluid scale, `rem` |
+| Fonts | `system-ui` stack by default; custom = self-hosted subsetted woff2, `font-display: optional` + preload, metric-matched fallback — no visible swap |
 | Interactivity on a static site | `<script>` tag / native HTML first; framework island only with justification |
 
 ### Pre-Implementation Checklist
@@ -42,6 +45,7 @@ Before marking any story done, verify:
 - [ ] Every page: unique `<title>`, meta description, canonical, OG tags
 - [ ] Keyboard: focus visible everywhere, no `outline: none` without replacement
 - [ ] Zero unjustified `client:*` directives / no JS where HTML+CSS suffices
+- [ ] Zero third-party origins: no CDN fonts/scripts/styles; LCP element not lazy-loaded
 - [ ] Animation gated behind `prefers-reduced-motion: no-preference`
 
 > Full patterns, code examples, and SSG guidance: `docs/setup/web/`

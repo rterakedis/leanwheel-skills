@@ -98,6 +98,14 @@ grep -rn '<div[^>]*onclick\|<span[^>]*onclick\|role="button"' --include="*.astro
 # Legacy libraries
 grep -rn 'jquery\|moment\.js\|font-awesome\|bootstrap' --include="*.astro" --include="*.html" --include="package.json" $EXC .
 
+# Remote fonts / third-party CDN origins (HIGH — must be self-hosted same-origin)
+grep -rn 'fonts\.googleapis\|fonts\.gstatic\|use\.typekit\|fonts\.bunny\|cdn\.jsdelivr\|unpkg\.com\|cdnjs\.cloudflare' \
+  --include="*.astro" --include="*.html" --include="*.css" --include="*.scss" $EXC . layouts/ 2>/dev/null
+
+# Visible font swap risk: swap is exception-only; @font-face needs optional + metric fallback
+grep -rn 'font-display:\s*swap\|@font-face' \
+  --include="*.css" --include="*.scss" --include="*.astro" $EXC . 2>/dev/null
+
 # Focus suppression
 grep -rn 'outline:\s*none\|outline:\s*0' --include="*.css" --include="*.scss" --include="*.astro" $EXC .
 
@@ -116,7 +124,7 @@ grep -rn '<img\([^>]*\)>' --include="*.astro" --include="*.html" $EXC . | grep -
 
 **Token compliance (if `docs/ux/DESIGN.md` exists):** grep stylesheets for raw hex colors (`#[0-9a-fA-F]{3,8}`) outside the `:root` token declaration block. Each raw value that duplicates or approximates an existing token is a finding; values with no corresponding token are a DESIGN.md gap finding.
 
-**Judgment pass:** For each `client:*` hit, read the component — only flag if the component has no genuine interactivity. For each `<img>` hit in Astro, only flag local assets (external URLs are fine). Do not flag intentional, commented compatibility shims.
+**Judgment pass:** For each `client:*` hit, read the component — only flag if the component has no genuine interactivity. For each `<img>` hit in Astro, only flag local assets (external URLs are fine). Do not flag intentional, commented compatibility shims. For font hits: `font-display: swap` is a finding unless DESIGN.md documents it as a heading-only exception (MEDIUM; HIGH if applied to body text); an `@font-face` block with no `font-display` or no metric-matched fallback companion (`size-adjust`/`ascent-override`) is a MEDIUM visible-swap/CLS finding.
 
 **Page-level checks:** Open the base layout(s) and verify: single `<h1>` pattern, meta description required (not defaulted), canonical present, `lang` attribute set, OG tags present. Each missing item is one finding.
 
@@ -127,7 +135,7 @@ grep -rn '<img\([^>]*\)>' --include="*.astro" --include="*.html" $EXC . | grep -
 **Scope tags:** `[DOC-ARCH]` `[DOC-PRD]` `[DOC-EPICS]` `[STORY]` `[CODE]`
 
 **Severity:**
-- `HIGH` — accessibility failure (keyboard/focus/alt/contrast), SEO-blocking gap (missing title/description/canonical), unjustified framework runtime on content pages, runtime fetching of build content
+- `HIGH` — accessibility failure (keyboard/focus/alt/contrast), SEO-blocking gap (missing title/description/canonical), unjustified framework runtime on content pages, runtime fetching of build content, remote font or third-party CDN origin on the critical path
 - `MEDIUM` — off-token values, raw `<img>` on local assets, `!important`, legacy library usage, hardcoded URLs
 - `LOW` — style/convention gaps (nesting depth, missing `partialCached`, px media queries)
 
