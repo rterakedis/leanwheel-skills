@@ -1,6 +1,6 @@
 # Testing Conventions
 
-> Updated: 2026-06-08 — iOS/iPadOS 19+
+> Updated: 2026-06-14 — iOS/iPadOS 19+
 > iOS 18+ / Swift 6.2 | Swift Testing framework, Core Data test setup, and concurrency-safe tests.
 
 ---
@@ -61,6 +61,20 @@ struct CustomerServiceTests {
 
 // ❌ Real persistent store — leaves state between tests, slow
 let controller = PersistenceController.shared
+```
+
+### Asserting deletion — never check `isDeleted` after a save
+
+`NSManagedObject.isDeleted` is `true` **only** in the window between `context.delete(obj)` and the next `context.save()`. After the save the object is evicted from the context: `isDeleted` reverts to `false` and `managedObjectContext` becomes `nil`. A test that deletes (or calls a service that saves internally) and then asserts `isDeleted == true` fails even though the delete was correct — a common source of phantom bug hunts.
+
+```swift
+// ❌ Wrong — isDeleted is false again after save()
+service.delete(order, context: context)   // saves internally
+#expect(order.isDeleted == true)           // FAILS despite a correct delete
+
+// ✅ Re-fetch (best — proves the store state), or assert eviction from the context
+#expect(try context.count(for: Order.fetchRequest()) == 0)
+#expect(order.managedObjectContext == nil)
 ```
 
 ---
