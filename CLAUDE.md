@@ -54,6 +54,8 @@ Added mandatory **cross-epic runtime dependency check** before writing a story: 
 
 Added **design contract extraction** for UI stories: reads `docs/ux/DESIGN.md` frontmatter + relevant EXPERIENCE.md sections and embeds tokens, component specs, required states, reuse list (from `docs/ux/components-built.md`), and platform checklist items into a `### Design Contract` section in Dev Notes (template updated to match). Dev sessions never read `docs/ux/` directly. UI stories with no EXPERIENCE.md coverage are flagged as design gaps before writing.
 
+Added **edge-case enumeration + Behavior Contract + Clarification Gate** (fix for thin ACs / downstream rework). Step 3 sets a story complexity (stateful/multi-step vs simple) that scales the rest of the step. Stateful stories draft a `### Behavior Contract` section in Dev Notes (flows, states & valid/illegal transitions, expected outcomes, invariants, enumerated edge cases) *before* writing ACs; every non-obvious edge case must become its own Given/When/Then AC. A new **Clarification Gate** before the write step blocks on *material* ambiguities (forks that would change an AC or task) — the model stops and asks rather than writing speculative ACs — while recording one-default ambiguities as stated assumptions; simple stories skip the gate. In the autonomous flywheel the gate surfaces as a normal Phase 1 human-decision pause. Template (`template.md`) gained the `### Behavior Contract` section as the first Dev Notes block.
+
 ### `deferred`
 - `d_id` is a required parameter in `LOG-AND-SCHEDULE` (upstream treats it as optional).
 - SCHEDULE return message includes `slotted into Story {epic}.{N}` phrasing; upstream uses slightly different wording.
@@ -66,6 +68,7 @@ Richer task-tracking instructions:
 
 Guidance routing and design loop (not in upstream):
 - Activation step 4 reads relevant `docs/setup/swift/` files by story topic; step 4b does the same for `docs/setup/web/` (css-design-system / accessibility-seo / astro / hugo / anti-patterns); step 4c makes the story's `### Design Contract` the design source of truth (falls back to reading `docs/ux/` only when a UI story lacks one, and logs the gap).
+- On Completion: stateful stories whose `### Behavior Contract` lists invariants run an **evidence-bound invariant verification** step before the inline review — each invariant must be backed by a test or a cited assertion/guard (`file:line`), recorded under `### Invariant Verification`; an invariant with no test and no enforcing code is left `[ ]` UNVERIFIED and fed into review Pass C (never a prose "it holds" claim). Skipped for simple stories / no invariants. Mirrored by a DoD checklist item.
 - On Completion: UI stories run **VERIFY** from `skills/design-verify/SKILL.md` (render + screenshot + compare against the contract) before the inline review; results recorded under `### Design Verification` and fed into review triage.
 - Inline review gains **Pass E — Design Compliance** (mirrors the standalone code-review pass).
 

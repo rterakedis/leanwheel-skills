@@ -57,6 +57,7 @@ Modify only:
 - Tasks/Subtasks — check off `[ ]` → `[x]` as each task completes
 - Acceptance Criteria — check off `[ ]` → `[x]` as each AC is satisfied; do this during implementation, not after
 - Architecture Compliance Checklist (if present in Dev Notes) — check off each item before marking done
+- Invariant Verification (stateful stories) — record evidence per Behavior Contract invariant on completion
 - Debug Log — log issues
 - Completion Notes — key decisions
 - File List — files created/modified/deleted
@@ -73,8 +74,9 @@ Before review, verify all items in `checklist.md` pass. Fix any failures first.
 
 When tasks done and DoD passes:
 
-1. **Design verification (UI stories):** if the story changed user-visible UI, execute **VERIFY** from `skills/design-verify/SKILL.md` — render the changed surfaces (simulator or dev server + screenshots), compare against the Design Contract, and write results to `### Design Verification` in the story file. Mismatches feed into the inline review triage below as findings. If no rendering tooling is available, record the manual checklist and continue. Skip entirely for stories with no user-visible surface.
-2. Run code-review inline (don't stop). Continue directly to Code Review below.
+1. **Invariant verification (stateful stories):** if the story's `### Behavior Contract` lists invariants, verify each one holds in the built code with **evidence** — a test that exercises it, or a cited assertion/guard in the source (`file:line`). Record results under `### Invariant Verification` in the story file: each invariant as `- [x] {invariant} — {test name | file:line}` or `- [ ] {invariant} — UNVERIFIED: {why}`. An invariant with no test and no enforcing code is **not** a pass — add a one-test cover if cheap, otherwise leave it `[ ]` and let it feed the inline review as a finding. Never assert an invariant holds without citing the evidence. Skip entirely for simple stories or stories with no invariants.
+2. **Design verification (UI stories):** if the story changed user-visible UI, execute **VERIFY** from `skills/design-verify/SKILL.md` — render the changed surfaces (simulator or dev server + screenshots), compare against the Design Contract, and write results to `### Design Verification` in the story file. Mismatches feed into the inline review triage below as findings. If no rendering tooling is available, record the manual checklist and continue. Skip entirely for stories with no user-visible surface.
+3. Run code-review inline (don't stop). Continue directly to Code Review below.
 
 ---
 
@@ -88,7 +90,7 @@ The diff is uncommitted changes. Story file is loaded. Go straight to three pass
 
 **Pass B — Edge Case & Regression:** Boundary checks, error paths, callers outside diff, unchecked assumptions.
 
-**Pass C — Acceptance Audit:** Unimplemented/partial ACs, AC contradictions, ignored constraints, files touched/not touched.
+**Pass C — Acceptance Audit:** Unimplemented/partial ACs, AC contradictions, ignored constraints, files touched/not touched. Include any `[ ]` UNVERIFIED invariants from `### Invariant Verification` as findings.
 
 **Pass D — Security (conditional):** If Dev Notes has `Security Sensitivity:`, run matching categories from `skills/security-review/skill.md`. Skip if blank.
 

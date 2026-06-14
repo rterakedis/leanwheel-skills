@@ -52,6 +52,20 @@ Extract from documents:
 - Edge cases and error conditions?
 - Required tests (from testing strategy)?
 
+**Story complexity (set this first — it scales the rest of this step):**
+- **Stateful / multi-step** — has a state machine, a multi-step flow, concurrent actions, an async lifecycle, or non-trivial failure handling. Gets the full Behavior Contract + edge-case enumeration below and passes through the Clarification Gate.
+- **Simple** — CRUD, config, copy, styling, or a pure refactor/migration with one obvious path. Behavior Contract is one line or omitted; the edge-case pass is a quick sanity check, not a full enumeration; the Clarification Gate is a no-op unless a real fork surfaces. Do not manufacture ceremony for simple stories.
+
+**Behavior Contract & edge-case enumeration (stateful/multi-step stories):**
+Before writing any ACs, draft the `### Behavior Contract` section (template) and enumerate edge cases explicitly. Do not lean on the passive "edge cases?" bullet above — produce a real list:
+- **Flows:** each user/system flow as a step sequence — happy path plus every alternate path.
+- **States & transitions:** the states involved, the valid transitions, and the **illegal** transitions that must be rejected.
+- **Edge cases:** empty/boundary inputs; concurrent or duplicate actions; partial failure and retry/idempotency; offline/timeout; permission/auth edges; first-run vs returning.
+- **Expected outcomes:** for each flow and edge case, the observable result (state change, message, side effect).
+- **Invariants:** what must always hold regardless of path (e.g. "balance never negative", "exactly one active session").
+
+Every enumerated edge case with a non-obvious outcome must become its own Given/When/Then AC — the enumeration is worthless if it stays in prose. Dev sessions test ACs, not Behavior Contract narrative.
+
 **Cross-epic runtime dependency check (mandatory):**
 Before writing, explicitly answer: does this story require a runtime artifact — database table, seed data row, API endpoint, migration, or service — that lives in a *different* epic and may not be complete yet?
 
@@ -97,12 +111,23 @@ After user approves, append to cache's `## Prior Story Learnings`:
 - Gotchas discovered: {surprises or deviations}
 ```
 
+## Clarification Gate (before writing)
+
+Do not write the story while any **material** flow is ambiguous — one whose resolution would change an AC or a task. This gate is the fix for thin ACs and downstream rework. From the Behavior Contract and edge-case enumeration, separate:
+
+- **Stated assumptions** — ambiguities with one sensible default. Record the assumption inline (e.g. "assuming soft-delete") and proceed; the user corrects at review if wrong.
+- **Material ambiguities** — genuine forks where you cannot pick a default without guessing at product intent (which state wins on conflict? is partial success allowed? what happens on re-entry?).
+
+If any material ambiguity exists, **stop and ask the user** — list them concisely and wait for answers. Do not write speculative ACs around an unresolved fork. Trivial or simple stories with no material ambiguity skip straight to writing — do not invent questions to satisfy the gate.
+
+In the autonomous flywheel this gate surfaces as a normal human-decision pause (Phase 1 blocks until create-story returns the story file).
+
 ## Write Story File
 
 Use template. Rules:
 - Tasks ordered by dependency, map to file + action
 - Dev Notes: everything dev session needs (extract content, don't say "see docs")
-- ACs: Given/When/Then format, independently testable
+- ACs: Given/When/Then format, independently testable; every material edge case from the Behavior Contract has its own AC
 - References: cite specific files/sections
 
 Output: `docs/epics/{epic}-{story}-{slug}.md`

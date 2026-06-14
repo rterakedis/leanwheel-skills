@@ -7,6 +7,7 @@ All items must pass before status is set to `review`.
 - [ ] Every AC is satisfied — can trace each AC to specific code
 - [ ] No placeholder code, TODOs, or stubbed implementations left
 - [ ] Edge cases from Dev Notes are handled
+- [ ] Behavior Contract invariants (if any) verified with cited evidence — test or assertion/guard at `file:line` (not a prose claim)
 - [ ] Only dependencies listed in Dev Notes or CLAUDE.md were used
 
 ## Tests

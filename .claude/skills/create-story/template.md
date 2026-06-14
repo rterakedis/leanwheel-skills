@@ -34,6 +34,15 @@ so that {benefit}.
 
 ## Dev Notes
 
+### Behavior Contract
+*Stateful/multi-step stories — drafted by `/create-story` before the ACs. One line or omit for simple CRUD / styling / refactors. This is the dev session's north star for the end goal; every non-obvious edge case below also appears as an AC.*
+
+- **Flows:** {each flow as a step sequence — happy path + alternates}
+- **States & transitions:** {states; valid transitions; illegal transitions that must be rejected}
+- **Expected outcomes:** {per flow / edge case — the observable result}
+- **Invariants:** {what must always hold on every path}
+- **Edge cases:** {enumerated — empty/boundary, concurrent/duplicate, partial failure & retry, offline/timeout, permission, first-run vs returning}
+
 ### Security Sensitivity
 *Set by `/create-story`. Leave blank if none apply. Present = Pass D runs automatically during inline review.*
 - **Categories:** {none | auth | data-access | api | secrets | llm | payments | file-upload}
