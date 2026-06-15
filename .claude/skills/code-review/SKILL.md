@@ -104,6 +104,8 @@ Merge duplicates. Drop `dismiss`. If zero remain: write `Clean review — no pat
 
 **Auto-patch:** Apply immediately, mark `[x]`. If can't auto-apply, leave `[ ]`.
 
+**Verify green:** If any patch changed code and a toolchain is present, **run a real build + test** before marking the review done (`xcodebuild … build test` / `swift build && swift test` / `npm run build && npm test` / documented command). A patch is only resolved once the toolchain confirms it compiles and tests stay green — never close a review on a fix verified by reading alone. If red, fix and re-run, or leave the finding `[ ]` and set Status `in-progress`. Skip only on a clean review or when no toolchain exists (state which).
+
 **Pull deferred forward:** If any `[ ] [Defer]`, execute **LOG-AND-SCHEDULE** from `skills/deferred/skill.md` for each deferred item (title = finding title, detail = finding detail, source = file:line).
 
 **Update epic context:** Before updating status, check for discoveries made during review or fix application that future stories/epics should know about. Look for:

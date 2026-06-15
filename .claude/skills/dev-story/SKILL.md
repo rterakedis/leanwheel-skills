@@ -52,6 +52,7 @@ Stop if:
 - Required file/dependency missing and can't infer
 - AC contradictory or impossible
 - Task requires out-of-scope changes risking breakage
+- **Build or test suite cannot be made green** after a reasonable number of fix attempts (see Build & Test Gate). Do not mark the story `review` over a red build — report the failing output and HALT.
 
 ## Story File Updates
 
@@ -72,9 +73,27 @@ Don't modify: User Story statement, Dev Notes prose, References.
 
 Before review, verify all items in `checklist.md` pass. Fix any failures first.
 
+## Build & Test Gate
+
+**Verification is by running, not by reading.** Static reasoning is not a substitute for the toolchain — especially for Swift, where result builders, macros (`@Observable`/`@Model`), actor isolation, and `some View` produce errors that cannot be reliably predicted by reading. Before the story can leave `in-progress`, the project must **compile clean and its tests must pass this session** — verified by actually invoking the toolchain, not by inspection.
+
+1. Detect the toolchain and run a real build + test:
+   - **Apple / Swift** (`docs/setup/swift/` exists, or an `.xcodeproj`/`Package.swift` is present): mandatory.
+     ```bash
+     # Xcode project/workspace
+     xcodebuild -scheme {scheme} -destination 'platform=iOS Simulator,name=iPhone 16' build test
+     # or SwiftPM
+     swift build && swift test
+     ```
+   - **Web / SSG** (`package.json` present): run the project's build + test scripts (e.g. `npm run build && npm test`, or the lint/typecheck script if no tests).
+   - **Other toolchains:** run the project's documented build + test command.
+   - **No toolchain detected:** record a `Build & Test Gate: manual-required` note in the Debug Log with the exact command a human should run, and continue. Never fake a green result.
+2. **Red build or failing test = not done.** Read the compiler/test output, fix the cause, and re-run. Loop until green. Do not patch the story file to `review` over a failure. If it cannot be made green after a reasonable number of attempts, **HALT** (see HALT Conditions).
+3. Record the result in the Debug Log: the command run and `build+test green` (or the manual-required note). This is the executable regression net that prevents a later story from silently reverting a prior fix — it only works if it actually runs every story.
+
 ## On Completion
 
-When tasks done and DoD passes:
+When tasks done, DoD passes, **and the Build & Test Gate is green** (or manual-required is recorded):
 
 1. **Invariant verification (stateful stories):** if the story's `### Behavior Contract` lists invariants, verify each one holds in the built code with **evidence** — a test that exercises it, or a cited assertion/guard in the source (`file:line`). Record results under `### Invariant Verification` in the story file: each invariant as `- [x] {invariant} — {test name | file:line}` or `- [ ] {invariant} — UNVERIFIED: {why}`. An invariant with no test and no enforcing code is **not** a pass — add a one-test cover if cheap, otherwise leave it `[ ]` and let it feed the inline review as a finding. Never assert an invariant holds without citing the evidence. Skip entirely for simple stories or stories with no invariants.
 2. **Design verification (UI stories):** if the story changed user-visible UI, execute **VERIFY** from `skills/design-verify/SKILL.md` — render the changed surfaces (simulator or dev server + screenshots), compare against the Design Contract, and write results to `### Design Verification` in the story file. Mismatches feed into the inline review triage below as findings. If no rendering tooling is available, record the manual checklist and continue. Skip entirely for stories with no user-visible surface.
@@ -126,9 +145,13 @@ Write non-dismissed findings to `### Review Findings` subsection:
 
 After patches, check for `[ ] [Defer]` items in story file. If found, execute **RESOLVE** from `skills/deferred/skill.md`. Surfaces immediately with fresh context.
 
+### Re-verify Green
+
+After patches and deferred-item resolution touch the code, **re-run the Build & Test Gate** (build + tests). A static "this fix looks right" is not acceptance — a patch is only resolved once the toolchain confirms it compiles and tests stay green. If the re-run is red, the patch is not done: fix and re-run, or leave the finding `[ ]` and keep Status `in-progress`. Skip only if no code changed during review (clean review) or the gate was `manual-required`.
+
 ### Wrap Up
 
-**All resolved:**
+**All resolved (and Build & Test Gate green):**
 1. Status = `done`
 2. **CLOSE-ISSUE** (skip if unavailable)
 3. Report: "{epic}.{story} complete. {P} patches, {D} decisions, {W} deferred."

@@ -11,10 +11,11 @@ All items must pass before status is set to `review`.
 - [ ] Touched files respect the decomposition targets in `docs/setup/swift|web/` guidance (if present) — over-target files are split by responsibility, or carry a one-line cohesion justification
 - [ ] Only dependencies listed in Dev Notes or CLAUDE.md were used
 
-## Tests
+## Build & Tests
+- [ ] Project **builds clean this session** by actually running the toolchain (`xcodebuild … build` / `swift build` / `npm run build` / documented command) — not asserted from reading. Cite the command in the Debug Log, or record `Build & Test Gate: manual-required` if no toolchain exists.
 - [ ] Unit tests written/updated for all changed logic
 - [ ] Integration tests written/updated where Dev Notes require them
-- [ ] All existing tests pass (no regressions)
+- [ ] Test suite **executed this session and green** (no regressions) — cite the run; a passing build is not a passing test suite
 - [ ] Test framework and patterns from Dev Notes followed
 
 ## Story File
