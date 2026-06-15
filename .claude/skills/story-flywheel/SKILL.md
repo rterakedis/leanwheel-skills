@@ -42,6 +42,39 @@ description: Run the full story development loop (create → dev → review) rep
 
 3. Announce: "Starting flywheel for Epic {N}: {title}. {X} stories remaining. First up: {epic}.{story} — {story_title}."
 
+4. **Determine model-routing mode.** Set `swift_project = true` if `docs/setup/swift/` exists OR an `.xcodeproj` / `.xcworkspace` / `Package.swift` is present in the repo; otherwise `false`.
+   - **`swift_project = true`:** model-switch gates are **on** (see Model Routing). Tell the user up front:
+     > This is an Apple/Swift project. Swift can't be reliably verified by reading, so I'll pause before each phase to have you switch models for token efficiency: **Sonnet** for story creation & review, **Opus (medium)** for implementation. Two switches per story. Set your model to **Sonnet** now before I create the first story.
+     Wait for the user to confirm before Phase 1.
+   - **`swift_project = false`:** model-switch gates are **off** — the flywheel runs fully automated as before. Note once: "Non-Swift project — running fully automated; Sonnet/Haiku handles this surface well. Switch up to Opus yourself only if a specific story proves stubborn." Do not pause for model changes.
+
+---
+
+## Model Routing (Apple/Swift projects only)
+
+Active only when `swift_project = true`. The model can't change its own model — these are **hard stops** that wait for the user to switch it in the Claude Code UI (`/model`), then confirm. Switching preserves session context, so the loop continues seamlessly after each switch.
+
+Per-story model plan (2 switches per story):
+
+| Phase | Model | Reasoning | Why |
+|---|---|---|---|
+| 1 — Create Story | **Sonnet** | medium | Story authoring doesn't need Opus; Sonnet is cost-efficient here. |
+| 2 — Dev Story | **Opus** | medium (high for concurrency / complex SwiftUI state) | Highest per-attempt Swift accuracy — fewest build-gate iterations, where the tokens are actually saved. |
+| 3 — Code Review | **Sonnet** | high | Adversarial reading; the Build & Test Gate is the correctness backstop, not the model. |
+
+A **MODEL SWITCH GATE** looks like:
+
+```
+─────────────────────────────────────────────
+MODEL SWITCH — before {phase}
+Set your model to: {model} ({reasoning} reasoning)
+  • Run /model and select it
+  • Type "ready" when switched
+─────────────────────────────────────────────
+```
+
+Wait for "ready" (or equivalent). If the user says to skip switching ("just keep going", "stay on current"), honor it for the rest of the run and stop prompting — they've opted out of the token optimization. Skip a gate when the target model already matches the last one set (e.g. Phase 1 of the next story is already Sonnet after Phase 3).
+
 ---
 
 ## The Loop
@@ -49,6 +82,8 @@ description: Run the full story development loop (create → dev → review) rep
 Repeat until the epic is complete (see **Exit Conditions**):
 
 ### Phase 1 — Create Story
+
+**If `swift_project`:** issue a MODEL SWITCH GATE for **Sonnet (medium)** and wait for "ready" — unless Sonnet was already the last model set (e.g. carried over from the previous story's Phase 3). See Model Routing.
 
 Execute `skills/create-story/skill.md` for the current story.
 
@@ -58,6 +93,8 @@ Execute `skills/create-story/skill.md` for the current story.
 
 ### Phase 2 — Dev Story
 
+**If `swift_project`:** issue a MODEL SWITCH GATE for **Opus (medium** — high reasoning if the story touches concurrency, actor isolation, or complex SwiftUI state**)** and wait for "ready" before executing. See Model Routing.
+
 Execute `skills/dev-story/skill.md` with the story file path from Phase 1.
 
 - Dev story runs implementation only: all tasks, DoD check, and story file updates.
@@ -66,6 +103,8 @@ Execute `skills/dev-story/skill.md` with the story file path from Phase 1.
 **On HALT:** Stop the flywheel. Report: "Flywheel paused — dev-story halted on {epic}.{story}: {reason}. Resolve the blocker and resume with `/story-flywheel {epic}.{story}`."
 
 ### Phase 3 — Code Review
+
+**If `swift_project`:** issue a MODEL SWITCH GATE for **Sonnet (high)** and wait for "ready" before executing. The Build & Test Gate (re-run after patches) is the correctness backstop, so review does not need Opus. See Model Routing.
 
 Execute `skills/code-review/skill.md` for the story completed in Phase 2.
 
