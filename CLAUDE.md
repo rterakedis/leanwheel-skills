@@ -39,7 +39,7 @@ Scaffold question 3 changed from a yes/no Apple platform question to a multi-sel
 
 Added scaffold question 4: "Does this project ship a web surface? (none / web app / Astro / Hugo / other SSG)". Step 3c appends the web guardrails block (`stubs/modern-web.md`, checks for `## Web Guardrails`). Step 3d scaffolds `docs/setup/web/` from `stubs/web/` — shared files (`css-design-system.md`, `accessibility-seo.md`, `anti-patterns.md`) always, plus `astro.md` or `hugo.md` per the answer.
 
-Added agentic-engineering scaffolding: Step 1 also creates `docs/evals/` + `docs/metrics/` (from `stubs/evals/` and `stubs/metrics/`). New **Step 3e** copies the deterministic guardrail hooks (`stubs/hooks/*.sh`) into `.claude/hooks/` and chmod +x. **Step 4** now merges the hook wiring from `stubs/hooks/hooks-settings.json` into `.claude/settings.json` (PreToolUse/PostToolUse) alongside the skills `add-dir` startup hook. **Step 5** writes `.bmad-lite/manifest.json` (skills_path, surfaces, asset flags) for `/upgrade-project` to sync against. Subagents need no scaffolding — they ship plugin-level in `.claude/agents/`.
+Added agentic-engineering scaffolding: Step 1 also creates `docs/evals/` + `docs/metrics/` (from `stubs/evals/` and `stubs/metrics/`). New **Step 3e** copies the deterministic guardrail hooks (`stubs/hooks/*.sh`) into `.claude/hooks/` and chmod +x. **Step 4** now merges the hook wiring from `stubs/hooks/hooks-settings.json` into `.claude/settings.json` (PreToolUse/PostToolUse) alongside the skills `add-dir` startup hook. **Step 5** writes `.bmad-lite/manifest.json` (skills_path, surfaces, asset flags) for `/upgrade-project` to sync against. Subagents need no scaffolding — they ship plugin-level in `agents/` (the plugin-standard location at repo root).
 
 ### `check-readiness`
 Added **Check 7** (cross-epic runtime dependency analysis), **Check 8** (testing targets derived from architecture, with codification into `CLAUDE.md`), and **Check 9** (UX alignment — conditional on `docs/ux/` existing: design specs final before UI stories, every UI story maps to an EXPERIENCE.md surface, state coverage, token readiness). These checks are not in upstream.
@@ -106,7 +106,7 @@ Also uses `gh api` with `--jq` for more precise issue filtering within a milesto
 
 Phase 4 checkpoint includes a **TESTING PLAN** section (between DEFERRED ITEMS and UNRESOLVED ITEMS): concrete manual steps derived from the story's ACs and changed code — tap/click paths, API calls, edge cases. Writes "none — no user-visible surface changed." for pure refactors or migrations.
 
-**Subagent Delegation & Model Routing** (not in upstream): the default mode delegates each phase to a bmad subagent (`bmad-story-creator`, `bmad-story-developer`, `bmad-story-reviewer` in `.claude/agents/`) via the Agent tool. Two Pro-plan wins: **automatic model routing** (no manual `/model` switching) and **context isolation** (each phase's heavy doc/code reading runs in a throwaway subagent window; the orchestrating thread only accumulates short structured reports). Routing is Conserve-Opus baseline with a dynamic Swift exception: create-story=Sonnet, dev-story=**Sonnet on Python/web but Opus on Swift** (`swift_project` = `docs/setup/swift/` exists OR an `.xcodeproj`/`.xcworkspace`/`Package.swift` present), code-review=Sonnet. The flywheel passes a per-spawn `model: opus` override only for Phase 2 on Swift. Because dev-story already runs an **inline** review, Phase 3 spawns a separate reviewer only when there are unresolved items / a FAIL gate / a security-sensitive story — otherwise it carries the Phase 2 findings straight to the checkpoint (saves an extra review's tokens). Human touch-points collapse to three: Phase-1 clarification surfacing, the Phase-4 checkpoint, the epic-boundary gate; an opt-in **auto-pilot** ("auto-continue on clean stories") advances past checkpoints that are fully green with no unresolved items while always stopping on red/HALT. **Fallback** (subagents unavailable): the old **MODEL SWITCH GATE** hard-stops, Swift-only, documented under "Fallback: Manual Model Switching." Rationale for Swift→Opus even under Conserve-Opus: a Sonnet Swift dev-story pass tends to fail the Build & Test Gate and loop, and each failed `xcodebuild` retry costs more than one accurate Opus pass — so Opus is the token-conserving choice there; on Python/web Sonnet passes first-try often enough that Opus is overspend. Phase 4 checkpoint gained a **VERIFICATION** line (Build & Test · evals P/T · rubric gate · invariants · iterations) and writes a story-level roll-up to `docs/metrics/flywheel-ledger.jsonl`.
+**Subagent Delegation & Model Routing** (not in upstream): the default mode delegates each phase to a bmad subagent (`bmad-story-creator`, `bmad-story-developer`, `bmad-story-reviewer` in `agents/`) via the Agent tool. Two Pro-plan wins: **automatic model routing** (no manual `/model` switching) and **context isolation** (each phase's heavy doc/code reading runs in a throwaway subagent window; the orchestrating thread only accumulates short structured reports). Routing is Conserve-Opus baseline with a dynamic Swift exception: create-story=Sonnet, dev-story=**Sonnet on Python/web but Opus on Swift** (`swift_project` = `docs/setup/swift/` exists OR an `.xcodeproj`/`.xcworkspace`/`Package.swift` present), code-review=Sonnet. The flywheel passes a per-spawn `model: opus` override only for Phase 2 on Swift. Because dev-story already runs an **inline** review, Phase 3 spawns a separate reviewer only when there are unresolved items / a FAIL gate / a security-sensitive story — otherwise it carries the Phase 2 findings straight to the checkpoint (saves an extra review's tokens). Human touch-points collapse to three: Phase-1 clarification surfacing, the Phase-4 checkpoint, the epic-boundary gate; an opt-in **auto-pilot** ("auto-continue on clean stories") advances past checkpoints that are fully green with no unresolved items while always stopping on red/HALT. **Fallback** (subagents unavailable): the old **MODEL SWITCH GATE** hard-stops, Swift-only, documented under "Fallback: Manual Model Switching." Rationale for Swift→Opus even under Conserve-Opus: a Sonnet Swift dev-story pass tends to fail the Build & Test Gate and loop, and each failed `xcodebuild` retry costs more than one accurate Opus pass — so Opus is the token-conserving choice there; on Python/web Sonnet passes first-try often enough that Opus is overspend. Phase 4 checkpoint gained a **VERIFICATION** line (Build & Test · evals P/T · rubric gate · invariants · iterations) and writes a story-level roll-up to `docs/metrics/flywheel-ledger.jsonl`.
 
 ### `ux`
 Added a **Content site (SSG) preset** (Astro/Hugo) alongside the web-app and Apple presets: typography-first token probing, CSS custom property token names, content-model → layout mapping in IA, a mandatory **Content & Performance** section in EXPERIENCE.md (CWV target + per-page-type JS budget with named/justified islands), and SEO/meta as design decisions. `checklist.md` gained a matching section 7 (Content Site / SSG); platform question text mentions SSGs explicitly.
@@ -146,7 +146,7 @@ Pure bash/grep — **never call a model**, so zero token cost. Scaffolded into a
 - `guard-design-tokens.sh` — PostToolUse. **Advisory** warning when a UI file gains a hardcoded color literal while `docs/ux/DESIGN.md` exists (mirrors swift-audit/web-audit color checks, moved to write-time). Never blocks.
 - `log-activity.sh` — PostToolUse (`*`). Appends one JSON line per tool use to `docs/metrics/activity.jsonl` (capped at 2000 lines); backs observability.
 
-### Flywheel subagents (`.claude/agents/`)
+### Flywheel subagents (`agents/`)
 Ship plugin-level (available wherever `bmad-lite` is installed; no per-project scaffolding). `bmad-story-creator` (Sonnet), `bmad-story-developer` (Sonnet default; flywheel overrides to Opus on Swift), `bmad-story-reviewer` (Sonnet). Each runs its skill in an isolated context and returns a terse structured report — see the story-flywheel **Subagent Delegation & Model Routing** notes above.
 
 ### Observability ledger (`setup/stubs/metrics/`)
@@ -177,9 +177,36 @@ No local changes — safe to overwrite from upstream on sync:
   skills/
     <skill-name>/
       SKILL.md        # skill prompt (uppercase — plugin convention)
+agents/               # flywheel subagents (plugin-standard location, root)
+  bmad-story-creator.md
+  bmad-story-developer.md
+  bmad-story-reviewer.md
 .claude-plugin/
-  plugin.json         # plugin manifest (name, description, author)
+  plugin.json         # plugin manifest — declares "skills": "./.claude/skills/"
+  marketplace.json    # marketplace catalog — plugin source is "./"
 ```
+
+## Plugin Packaging
+
+This repo is both a plugin and its own single-plugin marketplace, installable via
+`/plugin marketplace add <repo>` then `/plugin install bmad-lite@bmad-lite`.
+
+- **Skills** stay in the non-standard `.claude/skills/` (preserves the personal-symlink
+  + `additionalDirectories` + upstream-sync workflow). `plugin.json` exposes them with
+  `"skills": "./.claude/skills/"` — a custom directory scanned *in addition to* the
+  default `skills/`. Verified: all 26 load when installed.
+- **Agents** must live in the plugin-standard `agents/` at the repo root. The `agents`
+  manifest field pointing at files inside `.claude/agents/` validates but the agents do
+  **not** register (confirmed via `claude plugin details` showing `Agents (0)`), so they
+  were moved to `agents/` and the custom field dropped.
+- **marketplace.json** plugin `source` is `"./"` (must start with `./`; bare `"."` fails
+  schema validation). Relative sources resolve for git-based and local-dir marketplace
+  adds, but NOT direct-URL-to-`marketplace.json` distribution — share via the GitHub repo.
+- **No `version`** in `plugin.json` is intentional: relative-path sources in a git
+  marketplace use the commit SHA, so testers get every pushed commit on
+  `/plugin marketplace update`. Add+bump a `version` only if you want explicit releases.
+- After any packaging change run `claude plugin validate ./` (passes with only the
+  version warning).
 
 ## Conventions
 

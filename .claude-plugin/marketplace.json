@@ -1,5 +1,4 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "bmad-lite",
   "description": "BMAD-LITE agile workflow skills for Claude Code",
   "owner": {
@@ -13,7 +12,7 @@
         "name": "Robert Terakedis"
       },
       "category": "productivity",
-      "source": "."
+      "source": "./"
     }
   ]
 }
