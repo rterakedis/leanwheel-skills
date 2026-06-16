@@ -18,7 +18,6 @@ This is a standalone skills library for [Claude Code](https://claude.ai/code). I
 - The activation ceremony that ran on every skill invocation (~700 tokens/call)
 - Three-tier TOML customization infrastructure
 - Agent persona overhead
-- Subagent pipelines (not available on Claude Pro)
 - Sprint-status.yaml (replaced by GitHub issue labels)
 
 **BMAD-LITE-SKILLS keeps:**
@@ -41,6 +40,11 @@ This is a standalone skills library for [Claude Code](https://claude.ai/code). I
 - `/web-audit` — audits planning docs, story files, templates, styles, and markup against `docs/setup/web/` guidance and `docs/ux/DESIGN.md` tokens; produces a triaged remediation file in `docs/maintainer/` ready for `/dev-story`
 - **Closed design loop**: `/create-story` extracts a per-story **Design Contract** (tokens, component specs, required states, reuse list) from `docs/ux/` into Dev Notes; `/dev-story` implements against it and runs `/design-verify` (build + screenshots, light/dark, Dynamic Type / responsive widths) before review; `/code-review` runs a Design Compliance pass and maintains a `docs/ux/components-built.md` inventory so later stories reuse components instead of reinventing them; `/check-readiness` blocks UI stories that have no design coverage
 - `/ux` content-site (SSG) preset for Astro/Hugo sites — typography-first tokens, content-model → layout mapping, and a performance budget (Core Web Vitals + per-page JS budget) decided at design time
+- **Subagent delegation via `/story-flywheel`**: spawns isolated `bmad-story-creator`, `bmad-story-developer`, and `bmad-story-reviewer` agents — each phase runs in its own context window so heavy reads (PRD, architecture, story files) never accumulate in the main thread
+- **Deterministic guardrail hooks** (zero model tokens): `guard-secrets.sh` blocks hardcoded secrets at write time; `guard-design-tokens.sh` warns on off-token colors; `log-activity.sh` streams tool-call telemetry to `docs/metrics/activity.jsonl`; wired via `.claude/hooks/` by `/setup`
+- **Observability ledger** (`docs/metrics/flywheel-ledger.jsonl`): each `/dev-story` and `/code-review` pass appends a structured line (story, model, build result, evals pass rate, finding counts) — queryable with `jq` to track per-story quality and model cost over time
+- **Cumulative eval regression net** (`docs/evals/`): `/create-story` seeds `type: command` eval cases from ACs; `/dev-story` runs them (zero-token shell execution) and enables the case when the test lands; a failing eval on a later story is a regression and blocks close just like a red build
+- `/upgrade-project` — detection-based sync for existing projects: scans for missing hooks, stubs, evals/metrics dirs, and CLAUDE.md sections; classifies each item as ADD / REFRESH / CONFLICT / OK; previews before applying; never overwrites locally edited content; writes `.bmad-lite/manifest.json` for future runs
 
 ---
 
@@ -119,6 +123,9 @@ Once the directory is added, invoke skills by name:
 | `/design-verify` | Render changed UI (simulator or dev server + screenshots) and compare against the design contract; runs inline at the end of `/dev-story` for UI stories |
 | `/github-tracking setup` | One-time GitHub auth + create status labels |
 | `/github-tracking backfill` | Retroactively create GitHub issues for existing stories |
+| `/story-flywheel` | Automated create → dev → review loop using isolated subagents; each phase runs in its own context with automatic model routing (Opus for Swift dev, Sonnet elsewhere) |
+| `/evals` | Build, run, and score the cumulative eval regression net for a story's epic — zero-token shell execution of accumulated `type: command` cases |
+| `/upgrade-project` | Sync an existing project to the latest hooks, stubs, evals/metrics dirs, and CLAUDE.md sections — previews plan before applying, never clobbers local edits |
 | `/discover` | Brownfield: reverse-engineer a codebase into docs |
 | `/setup migrate` | Migrate a full-BMAD project to BMAD-LITE layout |
 | `/setup clean` | Remove BMAD infrastructure after migration |
@@ -406,6 +413,15 @@ Context accumulates silently. If you run `/prd` → `/architecture` → `/epics`
 your-project/
 ├── AGENTS.md              ← AI conventions for all tools (Copilot, Cursor, Claude)
 ├── CLAUDE.md              ← Claude-specific rules and project conventions
+├── .bmad-lite/
+│   └── manifest.json      ← scaffold record (skills_path, surfaces, asset flags); written by /setup and /upgrade-project
+├── .claude/
+│   ├── settings.json      ← startup hook (add-dir) + guardrail hook wiring
+│   └── hooks/             ← zero-token guardrail scripts (installed by /setup)
+│       ├── guard-secrets.sh        ← blocks hardcoded secrets at write time
+│       ├── guard-design-tokens.sh  ← warns on off-token colors (active when docs/ux/DESIGN.md exists)
+│       ├── log-activity.sh         ← streams tool-call events to docs/metrics/activity.jsonl
+│       └── README.md
 ├── docs/
 │   ├── project/           ← YOUR UPSTREAM INPUTS (briefs, research, notes, ADRs)
 │   ├── prd.md             ← What we're building and why (generated from project/)
@@ -448,6 +464,12 @@ your-project/
 │   │       ├── anti-patterns.md
 │   │       ├── astro.md             ← present if Astro selected
 │   │       └── hugo.md              ← present if Hugo selected
+│   ├── evals/             ← Cumulative eval regression net (from /evals and /create-story)
+│   │   └── README.md      ← accumulated type:command cases; each story appends enabled cases
+│   ├── metrics/           ← Flywheel observability ledger
+│   │   ├── README.md
+│   │   ├── flywheel-ledger.jsonl   ← one line per /dev-story and /code-review pass (queryable with jq)
+│   │   └── activity.jsonl          ← raw tool-call stream from log-activity.sh
 │   ├── maintainer/        ← Deployment, runbooks, operational procedures
 │   │   ├── swift-audit-{date}.md   ← output of /swift-audit runs
 │   │   └── web-audit-{date}.md     ← output of /web-audit runs
@@ -520,6 +542,7 @@ All GitHub operations are skipped silently if `gh auth` is not configured — th
 | `/setup clean` | Remove BMAD infrastructure after a successful migrate — confirms before deleting each target: `_bmad/`, `sprint-status.yaml`, and optionally `src/bmm-skills/` |
 | `/github-tracking setup` | One-time: GitHub auth + create the four status labels |
 | `/github-tracking backfill` | Retroactively create GitHub issues for stories written before tracking was configured |
+| `/upgrade-project` | Detection-based sync for projects scaffolded by older versions of bmad-lite-skills. Scans for missing hooks, stubs, evals/metrics dirs, and CLAUDE.md sections; classifies each as ADD / REFRESH / CONFLICT / OK; shows a plan table and waits for confirmation before applying anything. CONFLICT = locally edited file — left untouched, flagged for manual merge. Writes `.bmad-lite/manifest.json` for future runs. Run whenever you pull new bmad-lite-skills changes. |
 
 **Planning**
 | Invocation | What it does |
@@ -542,6 +565,11 @@ All GitHub operations are skipped silently if `gh auth` is not configured — th
 **Dev Flywheel**
 | Invocation | What it does |
 |------------|-------------|
+| `/story-flywheel` | Fully automated create → dev → review loop. Spawns isolated subagents (`bmad-story-creator` → `bmad-story-developer` → `bmad-story-reviewer`) so each phase's heavy reads stay in a throwaway context, keeping the main thread lean. On Swift projects, emits **MODEL SWITCH GATE** hard-stops before each phase with a per-story model plan (Sonnet for create, Opus for dev, Sonnet for review); user types "ready" after switching in the UI. On non-Swift projects, runs fully automated with no gates. Pauses for human decisions surfaced by the Clarification Gate in Phase 1. |
+| `/story-flywheel {epic}-{story}` | Run the flywheel on a specific story, e.g. `/story-flywheel 2-3` |
+| `/evals build` | Append (or flip `enabled: true` on) `type: command` eval cases derived from a story's ACs and Behavior Contract invariants — run by `/create-story` and `/dev-story` automatically |
+| `/evals run` | Execute all enabled eval cases for a story's epic — zero-token shell execution; failing case = regression, blocks story close |
+| `/evals score` | Score the last run and emit a pass/fail rubric line — integrated into `/code-review`'s final gate |
 | `/create-story` | Spec the next `ready-for-dev` story (auto-detected from `docs/epics.md`); performs a cross-epic runtime dependency check before writing. For UI stories, extracts a **Design Contract** from `docs/ux/` into Dev Notes (tokens, component specs, required states, reuse list from `components-built.md`) so dev sessions never re-read the UX specs |
 | `/create-story {epic}-{story}` | Spec a specific story, e.g. `/create-story 2-3` |
 | `/create-story refresh-cache` | Force-regenerate the epic context cache even if timestamps look fresh — use after editing `prd.md` or `architecture.md` mid-epic |
@@ -623,6 +651,10 @@ Estimates based on a typical project: 3 epics × 4 stories each = 12 stories.
 
 Original BMAD typically runs multi-phase sessions, so the PRD and architecture sit in context during `create-story` and `dev-story` even though they're not needed. BMAD-LITE's one-session-per-phase rule eliminates this accumulated context tax — conservatively another **10–20%** reduction on top of the numbers above.
 
+### What subagent isolation adds on top
+
+When using `/story-flywheel`, each phase runs in a throwaway context. The story creator reads PRD + architecture + epics, distills the story, and exits — those docs never enter the main thread. The developer reads only the story file. The reviewer reads only the diff. This is an additional **10–15%** reduction on the main thread versus running the same phases manually in a single long session.
+
 ### Bottom line
 
 BMAD-LITE uses roughly **half the tokens** of original BMAD for the same 12-story project — primarily by eliminating the activation ceremony, caching epic context, inlining code review, and enforcing session hygiene. The Claude Pro $15/month plan includes ~1.5M input tokens/month on Sonnet; a 12-story project in BMAD-LITE costs roughly **~70K tokens**, leaving substantial budget for iteration and experimentation.
@@ -636,10 +668,9 @@ BMAD-LITE uses roughly **half the tokens** of original BMAD for the same 12-stor
 | Activation ceremony (config.yaml, resolve_customization.py, 6-step boot) | Ran on every skill invocation even with zero customizations — pure overhead |
 | Three-tier TOML customization surface | Replaced by plain-English rules in `CLAUDE.md` |
 | Sprint-status.yaml | Replaced by GitHub issue labels — same visibility, no extra file |
-| Subagent spawning | Not available on Claude Pro; replaced with inline passes |
+| BMAD agent personas (bmad-agent-pm, bmad-agent-architect, etc.) | Extra persona tokens on every skill invocation — not needed for solo use |
 | Step-file JIT architecture (8 files for architecture alone) | Collapsed to single inline workflow |
-| Agent personas (bmad-agent-pm, bmad-agent-architect, etc.) | Extra persona tokens on top of skill tokens — not needed for solo use |
-| 1,512-line retrospective | Replaced with 5 focused questions |
+| 1,512-line retrospective | Replaced with 7 focused questions (5 upstream + 2 local additions) |
 | PRD decision log + addendum | Captured inline in story Dev Notes instead |
 | HTML validation reports | Overkill for personal workflow |
 | Pre-PRD analysis phase (brainstorming, PRFAQ, market research) | Out of scope for the build flywheel — use a regular Claude conversation before `/prd` |
@@ -658,6 +689,11 @@ BMAD-LITE uses roughly **half the tokens** of original BMAD for the same 12-stor
 | Session hygiene guidance | Prevents silent context accumulation across planning phases |
 | `/check-readiness` planning gate | Validates FR coverage, AC quality, and architecture alignment before coding starts |
 | `/deferred` direct view command | Single-file log replaces error-prone project-wide grep |
+| Subagent delegation via `/story-flywheel` | Each phase (create/dev/review) runs in an isolated context — heavy reads never accumulate in the main thread; model routing (Opus for Swift dev, Sonnet elsewhere) is automatic |
+| Deterministic guardrail hooks (`.claude/hooks/`) | Secret prevention, off-token color warnings, and telemetry move from "the model remembers" to "the harness enforces" — zero model tokens |
+| Observability ledger (`docs/metrics/flywheel-ledger.jsonl`) | Per-story quality and cost data queryable with `jq` — tracks build results, eval pass rates, and finding counts across the project lifetime |
+| Cumulative eval regression net (`docs/evals/`) | AC-derived eval cases accumulate across stories; a failing eval on a later story surfaces a regression before review, exactly like a red build |
+| `/upgrade-project` | Keeps existing projects in sync with new skills/hooks/stubs without manual file hunting or overwriting local edits |
 
 ---
 
