@@ -208,8 +208,32 @@ This repo is both a plugin and its own single-plugin marketplace, installable vi
 - After any packaging change run `claude plugin validate ./` (passes with only the
   version warning).
 
+## Local Development — symlink consumption (maintainer's machine)
+
+The maintainer does **not** install the marketplace plugin locally — that's a frozen
+snapshot for testers. Instead the skills/agents are consumed live via personal-dir
+**symlinks** into this repo, so edits propagate to every project on the next session
+with no commit/update/restart:
+
+- `~/.claude/skills/<name>` → `…/bmad-lite-skills/.claude/skills/<name>`
+- `~/.claude/agents/<name>.md` → `…/bmad-lite-skills/agents/<name>.md`
+
+This matters because the macOS app does **not** auto-load skills from a project's
+`additionalDirectories`; the personal-dir symlinks are what make them load everywhere.
+
+> ⚠️ **REMINDER — after adding a NEW skill or agent, re-run the symlink sync.** Editing
+> existing files needs nothing (symlinks are live), but a newly-*added* skill/agent has no
+> symlink yet and will silently fail to load in the app (this is exactly how `swift-audit`
+> went missing). Re-run:
+> ```bash
+> for d in /Users/rterakedis/Git-Repos/bmad-lite-skills/.claude/skills/*/; do ln -sfn "$d" ~/.claude/skills/"$(basename "$d")"; done
+> for a in /Users/rterakedis/Git-Repos/bmad-lite-skills/agents/*.md; do ln -sfn "$a" ~/.claude/agents/"$(basename "$a")"; done
+> ```
+> Then restart the session. (Don't touch `~/.claude/skills/reset-git-staging-branch` — not from this repo.)
+
 ## Conventions
 
 - Skill files are always named `SKILL.md` (uppercase). Upstream uses `skill.md`.
 - No `settings.json` in `.claude/` — this repo is a plugin, not a project config.
 - Do not add project-level docs (`docs/`, story files, etc.) — this repo ships skills only.
+- When adding a new skill or agent, also re-run the symlink sync (see **Local Development**) so it loads on the maintainer's machine.
