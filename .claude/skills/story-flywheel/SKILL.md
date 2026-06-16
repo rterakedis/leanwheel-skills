@@ -42,38 +42,55 @@ description: Run the full story development loop (create → dev → review) rep
 
 3. Announce: "Starting flywheel for Epic {N}: {title}. {X} stories remaining. First up: {epic}.{story} — {story_title}."
 
-4. **Determine model-routing mode.** Set `swift_project = true` if `docs/setup/swift/` exists OR an `.xcodeproj` / `.xcworkspace` / `Package.swift` is present in the repo; otherwise `false`.
-   - **`swift_project = true`:** model-switch gates are **on** (see Model Routing). Tell the user up front:
-     > This is an Apple/Swift project. Swift can't be reliably verified by reading, so I'll pause before each phase to have you switch models for token efficiency: **Sonnet** for story creation & review, **Opus (medium)** for implementation. Two switches per story. Set your model to **Sonnet** now before I create the first story.
-     Wait for the user to confirm before Phase 1.
-   - **`swift_project = false`:** model-switch gates are **off** — the flywheel runs fully automated as before. Note once: "Non-Swift project — running fully automated; Sonnet/Haiku handles this surface well. Switch up to Opus yourself only if a specific story proves stubborn." Do not pause for model changes.
+4. **Determine delegation mode + model routing.** Set `swift_project = true` if `docs/setup/swift/` exists OR an `.xcodeproj` / `.xcworkspace` / `Package.swift` is present in the repo; otherwise `false`.
+
+   Check whether the bmad subagents are available (the plugin ships `bmad-story-creator`, `bmad-story-developer`, `bmad-story-reviewer` as agent types).
+   - **Subagents available (default, preferred):** run in **subagent-delegation mode** — each phase is spawned as its subagent via the Agent tool, with the model selected automatically (see Subagent Delegation & Model Routing). No manual model switching. Announce once:
+     > Running the flywheel with subagent delegation — each phase runs in its own context with its model chosen automatically (Conserve-Opus baseline{, Opus for dev-story since this is a Swift project if swift_project}). You'll only be asked to weigh in at clarifications, the per-story checkpoint, and epic boundaries.
+   - **Subagents unavailable (fallback):** run inline and fall back to **manual model switching** (see Fallback: Manual Model Switching). Only Swift projects get switch gates; non-Swift runs fully automated on the current model.
 
 ---
 
-## Model Routing (Apple/Swift projects only)
+## Subagent Delegation & Model Routing
 
-Active only when `swift_project = true`. The model can't change its own model — these are **hard stops** that wait for the user to switch it in the Claude Code UI (`/model`), then confirm. Switching preserves session context, so the loop continues seamlessly after each switch.
+Default mode. Each phase is delegated to its subagent via the Agent tool. Two wins on the Pro plan: **model routing is automatic** (no `/model` dance), and **context is isolated** — each phase's heavy doc/code reading happens in a throwaway subagent window, so this orchestrating thread only accumulates each subagent's short structured report, not three phases of file reads.
 
-Per-story model plan (2 switches per story):
+Per-phase routing (Conserve-Opus baseline, dynamic Swift exception):
 
-| Phase | Model | Reasoning | Why |
-|---|---|---|---|
-| 1 — Create Story | **Sonnet** | medium | Story authoring doesn't need Opus; Sonnet is cost-efficient here. |
-| 2 — Dev Story | **Opus** | medium (high for concurrency / complex SwiftUI state) | Highest per-attempt Swift accuracy — fewest build-gate iterations, where the tokens are actually saved. |
-| 3 — Code Review | **Sonnet** | high | Adversarial reading; the Build & Test Gate is the correctness backstop, not the model. |
+| Phase | subagent_type | Python / Web | Swift / SwiftUI | Why |
+|---|---|---|---|---|
+| 1 — Create Story | `bmad-story-creator` | Sonnet | Sonnet | Story authoring doesn't need Opus. |
+| 2 — Dev Story | `bmad-story-developer` | **Sonnet** | **Opus** | On Swift, a Sonnet pass tends to fail the Build & Test Gate and loop — each failed `xcodebuild` retry costs more than one accurate Opus pass, so Opus is the *token-conserving* choice. On Python/web, Sonnet passes first-try often enough that Opus is overspend. |
+| 3 — Code Review | `bmad-story-reviewer` | Sonnet | Sonnet | Adversarial reading; the Build & Test Gate is the correctness backstop, not the model. (Dev-story already runs an inline review — see Phase 3.) |
+
+**How to set the model:** the subagent defs default to Sonnet. Pass a per-spawn `model` override on the Agent call **only** for Phase 2 when `swift_project = true` (`model: opus`). All other spawns use the default. If the user opts out for the run ("conserve everything", "stay on Sonnet"), drop the Opus override too and note it.
+
+**Spawning a phase:** call the Agent tool with the phase's `subagent_type`, the model override if applicable, and a prompt containing the story identifier/path plus any context the subagent needs (it starts cold). Wait for the subagent's report, then act on its structured fields. Do **not** re-do the phase's work in this thread — the subagent owns it.
+
+---
+
+## Fallback: Manual Model Switching (only when subagents unavailable)
+
+Used only when the bmad subagents can't be spawned. Active only when `swift_project = true`; non-Swift runs fully automated on the current model. The model can't change its own model — these are **hard stops** that wait for the user to switch it in the UI (`/model`), then confirm.
+
+| Phase | Model | Why |
+|---|---|---|
+| 1 — Create Story | **Sonnet** | Cost-efficient for authoring. |
+| 2 — Dev Story | **Opus** (high for concurrency / complex SwiftUI state) | Fewest build-gate iterations. |
+| 3 — Code Review | **Sonnet** | Build & Test Gate is the backstop. |
 
 A **MODEL SWITCH GATE** looks like:
 
 ```
 ─────────────────────────────────────────────
 MODEL SWITCH — before {phase}
-Set your model to: {model} ({reasoning} reasoning)
+Set your model to: {model}
   • Run /model and select it
   • Type "ready" when switched
 ─────────────────────────────────────────────
 ```
 
-Wait for "ready" (or equivalent). If the user says to skip switching ("just keep going", "stay on current"), honor it for the rest of the run and stop prompting — they've opted out of the token optimization. Skip a gate when the target model already matches the last one set (e.g. Phase 1 of the next story is already Sonnet after Phase 3).
+Wait for "ready". If the user opts out ("just keep going"), honor it for the rest of the run. Skip a gate when the target already matches the last model set.
 
 ---
 
@@ -83,38 +100,37 @@ Repeat until the epic is complete (see **Exit Conditions**):
 
 ### Phase 1 — Create Story
 
-**If `swift_project`:** issue a MODEL SWITCH GATE for **Sonnet (medium)** and wait for "ready" — unless Sonnet was already the last model set (e.g. carried over from the previous story's Phase 3). See Model Routing.
+**Subagent mode:** spawn `bmad-story-creator` (default model: Sonnet) via the Agent tool. Prompt it with the story identifier (`{epic}.{story}`) so create-story skips identification.
+**Fallback mode:** if `swift_project`, issue a MODEL SWITCH GATE for **Sonnet**, then execute `skills/create-story/skill.md` inline.
 
-Execute `skills/create-story/skill.md` for the current story.
-
-- Pass the story identifier (epic.story) so create-story skips the identification step.
-- Wait for the story file to be written and GitHub issue to be updated.
-- Do not proceed to Phase 2 until create-story completes and returns the story file path.
+- Wait for the story file to be written and GitHub issue updated.
+- From the subagent report, capture `STORY FILE`, `COMPLEXITY`, `CLARIFICATIONS NEEDED`, `PREREQUISITES`, `DESIGN GAP`.
+- **Clarification surfacing:** if the report lists material clarifications (the subagent assumed defaults rather than guessing silently), present them to the user now as a human-decision pause before Phase 2 — this is the Clarification Gate surfacing at the orchestration layer. Record the user's answers back into the story file (or confirm the assumed defaults) before proceeding.
+- Do not proceed to Phase 2 until the story file path is in hand and clarifications are resolved.
 
 ### Phase 2 — Dev Story
 
-**If `swift_project`:** issue a MODEL SWITCH GATE for **Opus (medium** — high reasoning if the story touches concurrency, actor isolation, or complex SwiftUI state**)** and wait for "ready" before executing. See Model Routing.
+**Subagent mode:** spawn `bmad-story-developer` via the Agent tool with the story file path. Pass `model: opus` **only if `swift_project`** (otherwise the default Sonnet). Instruct it to run the full dev-story workflow including the Build & Test Gate, the evals RUN (if `docs/evals/` exists), invariant/design verification, and the inline review.
+**Fallback mode:** if `swift_project`, MODEL SWITCH GATE for **Opus**; then execute `skills/dev-story/skill.md` inline.
 
-Execute `skills/dev-story/skill.md` with the story file path from Phase 1.
-
-- Dev story runs implementation only: all tasks, DoD check, and story file updates.
-- Do not proceed to Phase 3 until dev-story reports all tasks complete and DoD passes.
+- Note: in subagent mode the developer subagent already runs dev-story's **inline** code review (Pass A–E). Phase 3 below becomes a *light confirmation* of its report rather than a second full review — only spawn a separate reviewer if the developer reported `UNRESOLVED` items or you want an independent adversarial pass.
+- From the report capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `FINDINGS`, `INVARIANTS`, `UNRESOLVED`.
+- Do not proceed until `STATUS` is `review`/`done` (or HALT).
 
 **On HALT:** Stop the flywheel. Report: "Flywheel paused — dev-story halted on {epic}.{story}: {reason}. Resolve the blocker and resume with `/story-flywheel {epic}.{story}`."
 
 ### Phase 3 — Code Review
 
-**If `swift_project`:** issue a MODEL SWITCH GATE for **Sonnet (high)** and wait for "ready" before executing. The Build & Test Gate (re-run after patches) is the correctness backstop, so review does not need Opus. See Model Routing.
+The developer subagent already ran the inline review in Phase 2. Decide:
+- **Clean report (no `UNRESOLVED`, gate PASS):** skip a separate review pass — carry the Phase 2 findings/rubric straight into the checkpoint. (Saves a full extra review's tokens.)
+- **`UNRESOLVED` items, FAIL gate, or security-sensitive story:** spawn `bmad-story-reviewer` (default model: Sonnet) for an independent adversarial pass. **Fallback mode:** MODEL SWITCH GATE for **Sonnet**, then execute `skills/code-review/skill.md` inline.
 
-Execute `skills/code-review/skill.md` for the story completed in Phase 2.
+When a separate review runs:
+- Pass the story file path so it skips auto-detection.
+- It runs Passes A–E, emits the **SCORE rubric line**, auto-patches `patch` findings, logs `defer` via the deferred skill, and **re-verifies green**.
+- `decision-needed` findings surface in its report — present them to the user and wait for answers, then have the patches applied.
 
-- Pass the story file path so code-review loads it as context (skips Steps 1–2 auto-detection).
-- Code review runs its three passes (Pass A: Blind Correctness, Pass B: Edge Cases, Pass C: AC Audit) plus Pass D if security-sensitive.
-- When `decision-needed` findings surface, pause and wait for answers before continuing — these are the primary human input points during review.
-- After decisions are resolved, auto-patch all `patch` findings. Log any `defer` findings via `skills/deferred/skill.md`.
-- Wait for code-review to report completion before proceeding to Phase 4.
-
-**On unresolvable patches:** Do not proceed to Phase 4. Leave story status `in-progress`, report which items need attention, and stop the flywheel. Resume with `/story-flywheel {epic}.{story}` after the issues are addressed.
+**On unresolvable patches:** Do not proceed to Phase 4. Leave story status `in-progress`, report which items need attention, and stop the flywheel. Resume with `/story-flywheel {epic}.{story}`.
 
 ### Phase 4 — Human Checkpoint
 
@@ -125,6 +141,9 @@ After code review completes, surface a consolidated checkpoint before any commit
 STORY {epic}.{story} CHECKPOINT
 ─────────────────────────────────────────────
 Status: code review complete
+
+VERIFICATION
+{Build & Test: green | manual-required | red} · {evals: P/T or n/a} · {rubric gate: PASS/FAIL or n/a} · {invariants: V/T or n/a} · build/test iterations: {n}
 
 DECISIONS MADE THIS STORY
 {list each [Decision] finding and the answer recorded — "none" if clean}
@@ -149,6 +168,8 @@ Review the changes above, then:
   • Type "retry" to re-run code review on this story
 ─────────────────────────────────────────────
 ```
+
+**Observability:** before presenting the checkpoint, append a `story-flywheel` summary line to `docs/metrics/flywheel-ledger.jsonl` (if `docs/metrics/` exists) capturing this story's verification fields and per-phase models used. One shell-redirect append — never read the ledger into context. The per-phase `dev-story` / `code-review` lines are written by those skills/subagents; this is the story-level roll-up.
 
 **Wait for user response.** Do not proceed until user explicitly types one of the above commands or equivalent.
 
@@ -248,7 +269,8 @@ Reported inline as described in Phase 2. Flywheel does not auto-resume.
 
 ## Notes
 
-- The flywheel does not commit. You own the commit gate between stories.
+- **Toward hands-off runs.** Subagent delegation already collapses the human touch-points to three: the Phase-1 clarification surfacing, the Phase-4 checkpoint, and the epic-boundary gate. To go further, the user may pre-authorize **auto-pilot**: at the start they say "auto-continue on clean stories" — then for any story whose checkpoint has *no* `UNRESOLVED` items, a PASS rubric gate, and a green Build & Test Gate, the flywheel commits (if the user also pre-authorized commits) or pauses only to let the user commit, then advances without waiting for "continue". Any story with unresolved items, a FAIL gate, a red build, or a HALT **always** stops for the human regardless of auto-pilot. This is how the user gets "the app builds while I just steer at checkpoints" without losing the safety gates. Default remains: pause every checkpoint.
+- The flywheel does not commit unless the user pre-authorizes it. You own the commit gate between stories.
 - GitHub tracking is handled by the sub-skills (create-story, dev-story, code-review) — flywheel does not call tracking ops directly.
 - If GitHub is unavailable, flywheel falls back to `docs/epics.md` Status fields for all story discovery.
 - Deferred items are logged and scheduled by `skills/deferred/SKILL.md` (called via code-review). SCHEDULE tries SLOT-INTO-BACKLOG first — injecting the item as an AC on the best matching not-started backlog story — and only creates a new remediation story if no suitable slot exists. The flywheel surfaces deferred items in the Phase 4 checkpoint with their D-ID and the story they were slotted into or created as.

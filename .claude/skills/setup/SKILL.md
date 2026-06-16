@@ -51,9 +51,11 @@ docs/
   setup/            ← index.md, resources.md, scripts.md
   maintainer/       ← index.md, runbook.md
   sql/              ← index.md, schema.md, migrations.md
+  evals/            ← README.md (the cumulative regression net — see /evals)
+  metrics/          ← README.md (flywheel observability ledger)
 ```
 
-Populate from `stubs/`. Use {project_name} + today's date in frontmatter.
+Populate from `stubs/`. Use {project_name} + today's date in frontmatter. Copy `stubs/evals/README.md` → `docs/evals/README.md` and `stubs/metrics/README.md` → `docs/metrics/README.md` (skip if they exist).
 
 ### Step 2 — Write AGENTS.md
 
@@ -102,27 +104,46 @@ If {is_web} is true:
 - If {web_surface} is **Hugo**: also copy `hugo.md`.
 - If {web_surface} is **other SSG** or **web app**: shared files only; note that framework-specific guidance can be added via `/refresh-web`.
 
-### Step 4 — Wire up auto-loading hook
+### Step 3e — Scaffold deterministic guardrail hooks
 
-Create or update `.claude/settings.json` to add the startup hook for the skills directory:
+Copy the **zero-token** guardrail hook scripts from `{skills_path}/.claude/skills/setup/stubs/hooks/` into the project's `.claude/hooks/` (create the dir; skip any file that already exists, never overwrite):
+- `guard-secrets.sh` — blocks hardcoded secrets at write/commit time (the one mandatory enforcement hook)
+- `guard-design-tokens.sh` — advisory off-token color warning (active only when `docs/ux/DESIGN.md` exists)
+- `log-activity.sh` — appends the raw tool-call stream to `docs/metrics/activity.jsonl`
+- `README.md` — hook reference
+
+Make the `.sh` files executable (`chmod +x .claude/hooks/*.sh`). These pair with the agentic guardrails: secret prevention moves from "the model remembers" to "the harness enforces."
+
+> **Subagents need no scaffolding.** The flywheel's `bmad-story-creator` / `bmad-story-developer` / `bmad-story-reviewer` agents ship with the `bmad-lite` plugin and are available wherever it's installed. Nothing to copy per-project.
+
+### Step 4 — Wire up settings.json (skills dir + guardrail hooks)
+
+Create or update `.claude/settings.json` (create `.claude/` if absent). Merge — never clobber existing keys.
+
+1. **Skills auto-load** — add the startup hook for the skills directory if not already present:
+   ```json
+   { "hooks": { "startup": ["add-dir {skills_path}"] } }
+   ```
+   If a `startup` entry already points at a skills directory, skip.
+
+2. **Guardrail hooks** — merge the `PreToolUse` / `PostToolUse` blocks from `{skills_path}/.claude/skills/setup/stubs/hooks/hooks-settings.json` into `.claude/settings.json`. Append to the existing `hooks` arrays (don't replace `startup` or any user-added hooks). If a bmad guard hook command is already wired, skip it (idempotent).
+
+### Step 5 — Write manifest + Done
+
+Write `.bmad-lite/manifest.json` (create `.bmad-lite/` if absent) recording what was scaffolded, so `/upgrade-project` can sync precisely later:
 
 ```json
 {
-  "hooks": {
-    "startup": [
-      "add-dir {skills_path}"
-    ]
-  }
+  "skills_path": "{skills_path}",
+  "scaffolded_at": "{today}",
+  "surfaces": { "apple": {is_apple_platform}, "platforms": {platforms}, "web": {is_web}, "web_surface": "{web_surface}" },
+  "assets": { "hooks": true, "evals": true, "metrics": true, "agents": "plugin-level" }
 }
 ```
 
-If `.claude/settings.json` already exists and has a `startup` entry pointing at a skills directory, skip (never overwrite). If the file exists with other content, merge — add the `hooks.startup` key without touching existing keys.
+If the file exists, update its fields (don't discard unknown keys).
 
-Create `.claude/` if it doesn't exist.
-
-### Step 5 — Done
-
-Report created/skipped lists. Note the skills path wired into the startup hook.
+Report created/skipped lists. Note the skills path wired into the startup hook, the guardrail hooks installed, and that the eval set + metrics ledger are ready.
 
 Next:
   Greenfield → `/prd`

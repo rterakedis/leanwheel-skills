@@ -104,7 +104,15 @@ Merge duplicates. Drop `dismiss`. If zero remain: write `Clean review — no pat
 
 **Auto-patch:** Apply immediately, mark `[x]`. If can't auto-apply, leave `[ ]`.
 
-**Verify green:** If any patch changed code and a toolchain is present, **run a real build + test** before marking the review done (`xcodebuild … build test` / `swift build && swift test` / `npm run build && npm test` / documented command). A patch is only resolved once the toolchain confirms it compiles and tests stay green — never close a review on a fix verified by reading alone. If red, fix and re-run, or leave the finding `[ ]` and set Status `in-progress`. Skip only on a clean review or when no toolchain exists (state which).
+**Verify green:** If any patch changed code and a toolchain is present, **run a real build + test** before marking the review done (`xcodebuild … build test` / `swift build && swift test` / `npm run build && npm test` / documented command). A patch is only resolved once the toolchain confirms it compiles and tests stay green — never close a review on a fix verified by reading alone. If red, fix and re-run, or leave the finding `[ ]` and set Status `in-progress`. Skip only on a clean review or when no toolchain exists (state which). If `docs/evals/` exists, also execute **RUN** from `skills/evals/SKILL.md` for the story's epic — a failing eval is a regression and blocks closing just like a red build.
+
+**Eval Scorecard:** Emit a structured pass/fail line — this is just turning the passes you already ran into scored output, **no extra model calls**. Execute **SCORE** from `skills/evals/SKILL.md`: one verdict per applicable dimension and an overall gate. Append to `### Review Findings`:
+
+```
+RUBRIC: correctness PASS · edge-cases PASS · ac-coverage PASS · design PASS · security n/a → GATE PASS
+```
+
+A dimension is FAIL if any unresolved `[ ]` finding maps to it; GATE is PASS only when every applicable dimension is PASS. The gate feeds the flywheel checkpoint and the ledger.
 
 **Pull deferred forward:** If any `[ ] [Defer]`, execute **LOG-AND-SCHEDULE** from `skills/deferred/skill.md` for each deferred item (title = finding title, detail = finding detail, source = file:line).
 
@@ -127,6 +135,8 @@ If a story file was loaded, identify its epic (e.g., `epic-2` from `epic-2-story
 ```
 
 One-off layout subviews don't qualify; only components future stories should reuse. Skip silently if no new reusable component shipped.
+
+**Ledger:** If `docs/metrics/` exists, append one `code-review` line to `docs/metrics/flywheel-ledger.jsonl` (single shell redirect — do not read the file into context): `{ts, story, phase:"code-review", model, build_test, evals:"P/T", findings:{patched,decisions,deferred}, rubric_gate}`.
 
 **Update status:**
 - All resolved: Status `done` → **CLOSE-ISSUE**

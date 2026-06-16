@@ -89,7 +89,9 @@ Before review, verify all items in `checklist.md` pass. Fix any failures first.
    - **Other toolchains:** run the project's documented build + test command.
    - **No toolchain detected:** record a `Build & Test Gate: manual-required` note in the Debug Log with the exact command a human should run, and continue. Never fake a green result.
 2. **Red build or failing test = not done.** Read the compiler/test output, fix the cause, and re-run. Loop until green. Do not patch the story file to `review` over a failure. If it cannot be made green after a reasonable number of attempts, **HALT** (see HALT Conditions).
-3. Record the result in the Debug Log: the command run and `build+test green` (or the manual-required note). This is the executable regression net that prevents a later story from silently reverting a prior fix — it only works if it actually runs every story.
+3. **Run the cumulative eval set.** If `docs/evals/` exists, execute **RUN** from `skills/evals/SKILL.md` for this story's epic (zero-token: it just runs the accumulated `type: command` cases). A failing case is a **regression** of an earlier story — treat it exactly like a red build: fix and re-run, or HALT. This is what makes the regression net *cumulative* across stories, not just per-story.
+4. **Update the eval set.** If `docs/evals/` exists and this story added tests that cover an AC or invariant, execute **BUILD** from `skills/evals/SKILL.md` to append (or flip `enabled: true` on) the corresponding `type: command` cases, so the next story inherits them.
+5. Record the result in the Debug Log: the command run and `build+test green` (or the manual-required note), plus `evals: P/T`. This is the executable regression net that prevents a later story from silently reverting a prior fix — it only works if it actually runs every story.
 
 ## On Completion
 
@@ -154,7 +156,8 @@ After patches and deferred-item resolution touch the code, **re-run the Build & 
 **All resolved (and Build & Test Gate green):**
 1. Status = `done`
 2. **CLOSE-ISSUE** (skip if unavailable)
-3. Report: "{epic}.{story} complete. {P} patches, {D} decisions, {W} deferred."
+3. **Ledger:** if `docs/metrics/` exists, append one `dev-story` line to `docs/metrics/flywheel-ledger.jsonl` (single shell redirect — do not read the file into context): `{ts, story, phase:"dev-story", model, build_test, bt_iterations, evals:"P/T", findings:{patched,decisions,deferred}, invariants:"V/T", duration_min}`.
+4. Report: "{epic}.{story} complete. {P} patches, {D} decisions, {W} deferred."
 
 **Unresolved patches remain:**
 1. Status = `in-progress`
