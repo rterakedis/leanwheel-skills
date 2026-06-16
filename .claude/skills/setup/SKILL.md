@@ -116,6 +116,12 @@ Make the `.sh` files executable (`chmod +x .claude/hooks/*.sh`). These pair with
 
 > **Subagents need no scaffolding.** The flywheel's `bmad-story-creator` / `bmad-story-developer` / `bmad-story-reviewer` agents ship with the `bmad-lite` plugin and are available wherever it's installed. Nothing to copy per-project.
 
+### Step 3f — Scaffold commit workflow script
+
+Copy `{skills_path}/scripts/commit-push.sh` into the project's `scripts/commit-push.sh` (create `scripts/` if absent; skip if the file already exists). Make it executable (`chmod +x scripts/commit-push.sh`).
+
+Then append the git workflow instruction block to CLAUDE.md: check whether `## Git Workflow` already exists in CLAUDE.md. If it does, skip (never duplicate). Otherwise, append a `---` separator followed by the full contents of `{skills_path}/.claude/skills/setup/stubs/commit-workflow.md`.
+
 ### Step 4 — Wire up settings.json (skills dir + guardrail hooks)
 
 Create or update `.claude/settings.json` (create `.claude/` if absent). Merge — never clobber existing keys.
@@ -137,7 +143,7 @@ Write `.bmad-lite/manifest.json` (create `.bmad-lite/` if absent) recording what
   "skills_path": "{skills_path}",
   "scaffolded_at": "{today}",
   "surfaces": { "apple": {is_apple_platform}, "platforms": {platforms}, "web": {is_web}, "web_surface": "{web_surface}" },
-  "assets": { "hooks": true, "evals": true, "metrics": true, "agents": "plugin-level" }
+  "assets": { "hooks": true, "evals": true, "metrics": true, "agents": "plugin-level", "commit_script": true }
 }
 ```
 
