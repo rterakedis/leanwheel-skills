@@ -61,7 +61,11 @@ cmd_transition() {
     [[ "$l" == "$target" ]] || remove_args+=(--remove-label "$l")
   done
 
-  gh issue edit "$issue" --add-label "$target" "${remove_args[@]}" >/dev/null
+  if [[ ${#remove_args[@]} -gt 0 ]]; then
+    gh issue edit "$issue" --add-label "$target" "${remove_args[@]}" >/dev/null
+  else
+    gh issue edit "$issue" --add-label "$target" >/dev/null
+  fi
 
   # Verify: target present, no other status label remains.
   local after extra=()
