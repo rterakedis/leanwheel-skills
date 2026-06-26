@@ -114,7 +114,8 @@ Repeat until the epic is complete (see **Exit Conditions**):
 **Fallback mode:** if `swift_project`, MODEL SWITCH GATE for **Opus**; then execute `skills/dev-story/skill.md` inline.
 
 - Note: in subagent mode the developer subagent already runs dev-story's **inline** code review (Pass A–E). Phase 3 below becomes a *light confirmation* of its report rather than a second full review — only spawn a separate reviewer if the developer reported `UNRESOLVED` items or you want an independent adversarial pass.
-- From the report capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `FINDINGS`, `INVARIANTS`, `DOCS UPDATED`, `UNRESOLVED`.
+- From the report capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `FINDINGS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`.
+- **Operational doc sync (cheap, orchestrator-owned):** the developer does **not** run docs-sync (it would land on the dev model — Opus on Swift). If the report's `INFRA TOUCHED` is `yes`, spawn **`bmad-docs-sync`** (Haiku) via the Agent tool with the story file path and op `OPERATIONAL`; capture its `DOCS UPDATED` return for the checkpoint/ledger. Skip the spawn entirely when `INFRA TOUCHED: no` (zero cost). Fallback if subagents are unavailable: execute the docs-sync OPERATIONAL op inline.
 - Do not proceed until `STATUS` is `review`/`done` (or HALT).
 
 **On HALT:** Stop the flywheel. Report: "Flywheel paused — dev-story halted on {epic}.{story}: {reason}. Resolve the blocker and resume with `/story-flywheel {epic}.{story}`."

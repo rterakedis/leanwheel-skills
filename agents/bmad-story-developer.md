@@ -46,5 +46,5 @@ message short; don't paste large build logs (cite the result + the key failing l
 - `EVALS: pass <p>/<total> | n/a`
 - `FINDINGS: <patches> patched, <decisions> decisions, <deferred> deferred`
 - `INVARIANTS: <verified>/<total> | n/a`
-- `DOCS UPDATED: <comma-list of operational docs synced, e.g. setup/index.md, sql/migrations.md> | none`
+- `INFRA TOUCHED: yes(<which: dependency|env|migration|script|deploy/CI|service>) | no` — whether the File List includes an infra-shaped file. **You do not run docs-sync** — the orchestrator spawns `bmad-docs-sync` (Haiku) when this is `yes`. (If you were run standalone, you handle it per dev-story step 3 and report it here instead.)
 - `UNRESOLVED:` bulleted items needing human attention, or `none`

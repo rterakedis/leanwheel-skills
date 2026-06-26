@@ -67,10 +67,11 @@ Spawn `bmad-story-creator` with `{epic}.{story}`. Capture `STORY FILE`, `COMPLEX
 - **Commit:** `story {epic}.{story}: create` (stages the story file + any tracking/epics edits).
 
 ### Step 2 — Dev Story → commit
-**Track first:** `gh-track.sh transition {issue#} in-progress` before spawning, so a long dev pass shows the right state. Then spawn `bmad-story-developer` (model `opus` only if `swift_project`) with the story file path. It runs the full dev-story workflow: implementation, **Build & Test Gate** (verify by running), **evals RUN** (if `docs/evals/`), invariant + design verification, and the inline review. Capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `FINDINGS`, `INVARIANTS`, `DOCS UPDATED`, `UNRESOLVED`, `TESTING PLAN`.
+**Track first:** `gh-track.sh transition {issue#} in-progress` before spawning, so a long dev pass shows the right state. Then spawn `bmad-story-developer` (model `opus` only if `swift_project`) with the story file path. It runs the full dev-story workflow: implementation, **Build & Test Gate** (verify by running), **evals RUN** (if `docs/evals/`), invariant + design verification, and the inline review. Capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `FINDINGS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`, `TESTING PLAN`.
 - **On HALT or red gate:** stop the loop. Report which story and why; do **not** commit a red story. Resume with `/epic-flywheel {N}` after the blocker is fixed.
+- **Operational doc sync (cheap, orchestrator-owned):** the developer does **not** run docs-sync (it would land on the dev model — Opus on Swift). If `INFRA TOUCHED: yes`, spawn **`bmad-docs-sync`** (Haiku) with the story path and op `OPERATIONAL`; capture `DOCS UPDATED`. Skip the spawn when `INFRA TOUCHED: no`. The doc edits land in the dev commit below.
 - **Track:** on green, `gh-track.sh transition {issue#} review`.
-- **Commit (only if gate green):** `story {epic}.{story}: dev`.
+- **Commit (only if gate green):** `story {epic}.{story}: dev` (includes any docs-sync edits).
 - **Stash the TESTING PLAN** for the boundary roll-up (keep just the text — append it to a scratch list `docs/epics/.epic-{N}-test-plans.md`, one block per story, so the orchestrator never has to hold all plans in context at once).
 
 ### Step 3 — Code Review + patch → commit
@@ -118,8 +119,8 @@ bash scripts/gh-track.sh sync "<story-glob>" --apply    # if the diff is non-emp
 ```
 A clean diff (`0 to-change`) is the proof every issue landed in the right state. Report the count fixed in the boundary report. (If the project predates the script, call the github-tracking SYNC op instead.)
 
-### 4c. Architecture promotion (canonical-doc sync)
-Execute **PROMOTE** from `skills/docs-sync/SKILL.md` for Epic {N}. It harvests project-canonical learnings (schema realities, new/changed services & integrations, cross-cutting invariants, architectural decisions) from `docs/epics/epic-{N}-context.md` and appends the durable ones to `docs/architecture.md` (idempotent; also `docs/sql/` / `docs/maintainer/` when present) — so the next epic plans against live docs, not a stale architecture. Zero-token when the context file has nothing canonical (pure-refactor epics often don't); never touches `docs/setup/*` guidance. Report the count promoted in the boundary report.
+### 4c. Architecture promotion (canonical-doc sync, cheap)
+Spawn **`bmad-docs-sync`** (Haiku) with op `PROMOTE` and Epic {N} (fallback: execute the docs-sync **PROMOTE** op inline if subagents are unavailable). It harvests project-canonical learnings (schema realities, new/changed services & integrations, cross-cutting invariants, architectural decisions) from `docs/epics/epic-{N}-context.md` and appends the durable ones to `docs/architecture.md` (idempotent; also `docs/sql/` / `docs/maintainer/` when present) — so the next epic plans against live docs, not a stale architecture. Zero-token when the context file has nothing canonical (pure-refactor epics often don't); never touches `docs/setup/*` guidance. Report the count promoted in the boundary report.
 
 ### 5. Rolled-up, deduplicated Test Plan (the manual pass)
 This is the payoff of deferring manual testing to here. Read the accumulated `docs/epics/.epic-{N}-test-plans.md` scratch list (collected plan text only — no source). Then, in a **single LLM pass**:

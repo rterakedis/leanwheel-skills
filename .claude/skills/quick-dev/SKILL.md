@@ -56,7 +56,7 @@ Security pass (conditional): If intent/files touch auth/data-access/api/secrets/
 
 **CLAUDE.md:** Gotcha/footgun discovered? New project rule? Add it.
 
-**Operational guides:** execute **OPERATIONAL** from `skills/docs-sync/SKILL.md` with this change's changed-file list — keeps the human stand-up / run-it / database guides current if the change touched a dependency, env var, migration, script, or deploy/CI file; zero-cost otherwise.
+**Operational guides:** if this change touched an infra-shaped file (dependency, env var, migration, script, deploy/CI, new service), spawn **`bmad-docs-sync`** (Haiku) with op `OPERATIONAL` and the changed-file list to keep the human stand-up / run-it / database guides current — off the session model (fallback: execute the docs-sync **OPERATIONAL** op inline if subagents are unavailable). Zero-cost / skip when no infra file changed.
 
 If no updates needed, confirm: "No doc updates required."
 
