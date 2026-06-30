@@ -20,7 +20,12 @@ your-project/
 │       ├── log-activity.sh         ← streams tool-call events to docs/metrics/activity.jsonl
 │       └── README.md
 ├── docs/
-│   ├── project/           ← YOUR UPSTREAM INPUTS (briefs, research, notes, ADRs)
+│   ├── project/           ← YOUR UPSTREAM INPUTS (read silently by /prd)
+│   │   ├── brief.md             ← from /product-brief — read by /prd Step 1
+│   │   ├── brief-addendum.md    ← overflow detail that didn't fit the 1-2 page brief
+│   │   ├── forged-idea-{slug}.md ← Hardened output from /forge-idea
+│   │   └── research/            ← cited research docs from /research
+│   │       └── {type}-{slug}-{date}.md
 │   ├── prd.md             ← What we're building and why (generated from project/)
 │   ├── architecture.md    ← How we're building it (tech stack, patterns)
 │   ├── epics.md           ← Epic and story breakdown

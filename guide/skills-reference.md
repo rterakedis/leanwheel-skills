@@ -12,10 +12,17 @@
 | `/github-tracking backfill` | Retroactively create GitHub issues for stories written before tracking was configured |
 | `/upgrade-project` | Detection-based sync for projects scaffolded by older versions of bmad-lite-skills. Scans for missing hooks, stubs, evals/metrics dirs, and CLAUDE.md sections; classifies each as ADD / REFRESH / CONFLICT / OK; shows a plan table and waits for confirmation before applying anything. CONFLICT = locally edited file — left untouched, flagged for manual merge. Writes `.bmad-lite/manifest.json` for future runs. Run whenever you pull new bmad-lite-skills changes. |
 
+**Pre-Planning** *(optional — for when the idea isn't formed yet)*
+| Invocation | What it does |
+|------------|-------------|
+| `/product-brief` | Two motions in one skill: **diverge** (brainstorm, only if the user has no formed idea yet — stance choice, 3-4 techniques, explicit Converge phase) then **distill** (write `docs/project/brief.md`, Fast/Coaching path, `[ASSUMPTION]` tagging, overflow detail to `brief-addendum.md`). Ends by offering `/forge-idea` as a pressure-test before finalizing. Auto-detects create/update/validate like `/ux`. |
+| `/forge-idea` | Adversarially pressure-tests a formed idea via persona cross-examination (one outside-skeptic voice per turn — competitor, buyer, domain expert, support engineer) until it resolves to **Hardened** (writes `docs/project/forged-idea-{slug}.md`), **Killed** (idea didn't hold up, loops back to `/product-brief`'s diverge flow), or **Clearer** (no artifact). Invocable standalone or chained from the end of `/product-brief`. |
+| `/research` | Cited, web-grounded research — technical (stack/integration/architecture), domain (industry/regulatory/competitive), or market (customers/decision journey) — writes `docs/project/research/{type}-{slug}-{date}.md` to ground `/product-brief`, `/prd`, or `/architecture` in real external facts instead of model assumptions. |
+
 **Planning**
 | Invocation | What it does |
 |------------|-------------|
-| `/prd` | Auto-detects intent: **create** (no PRD yet), **update** (PRD exists), or **validate** (critique only) |
+| `/prd` | Auto-detects intent: **create** (no PRD yet), **update** (PRD exists), or **validate** (critique only). On create, reads `docs/project/brief.md` if present and confirms it back instead of asking the user to describe the product cold. |
 | `/prd update` | Explicit update — reads `docs/project/` for upstream changes, then checks for in-progress/done stories and recommends `/correct-course` if any are affected |
 | `/prd validate` | Critique only — runs the PRD checklist and reports findings without modifying the file |
 | `/architecture` | Create or update `docs/architecture.md` — reads `docs/project/` for technical inputs |
@@ -59,7 +66,7 @@
 | `/investigate` | Start a new investigation — accepts a description, error message, stack trace, ticket ID, or file/module name |
 | `/investigate {slug}` | Resume an existing investigation from `docs/investigations/{slug}.md` |
 | `/correct-course` | Triggered by a known change — updates docs, schedules remediation stories forward, clears deferred items |
-| `/deferred` | Show the full `docs/deferred-items.md` log with status of each scheduled story |
+| `/deferred` | Show the full `docs/deferred-items.md` log with status of each scheduled story. See [guide/deferred-items.md](deferred-items.md) for the full lifecycle (logging, scheduling, re-homing). |
 
 **Swift / Apple Platform**
 | Invocation | What it does |

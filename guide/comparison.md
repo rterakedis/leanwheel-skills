@@ -12,7 +12,6 @@
 | 1,512-line retrospective | Replaced with 7 focused questions (5 upstream + 2 local additions) |
 | PRD decision log + addendum | Captured inline in story Dev Notes instead |
 | HTML validation reports | Overkill for personal workflow |
-| Pre-PRD analysis phase (brainstorming, PRFAQ, market research) | Out of scope for the build flywheel — use a regular Claude conversation before `/prd` |
 | UX/design agent persona (Sally) | Agent persona tokens not needed; UX workflow ported as `/ux` skill with Apple HIG + SwiftUI + responsive web support |
 | Checkpoint preview | Covered by code-review's 3-pass inline review |
 | E2E test generation | Handled by story-level testing requirements in Dev Notes |
@@ -35,6 +34,7 @@
 | `/upgrade-project` | Keeps existing projects in sync with new skills/hooks/stubs without manual file hunting or overwriting local edits |
 | `/epic-flywheel` | Drives a whole epic end-to-end semi-autonomously — granular commits per story phase, within-epic auto-advance on green, Epic Boundary Gate, deferred re-homing, and a physical-device-backlog that persists across epics |
 | `scripts/commit-push.sh` | Zero-reasoning commit helper scaffolded by `/setup` into every project — one call to stage, commit (with Co-Authored-By), and push; eliminates the multi-command git dance inside AI sessions |
+| `/product-brief`, `/forge-idea`, `/research` | A pre-PRD idea-formation layer, reintroduced after initially being cut as ceremony-only (see prior revision of this table). `/prd`'s "describe the product, one prompt" Step 1 was a real gap when the user doesn't have a formed idea yet — `/product-brief` diverges (brainstorm) then distills (writes `docs/project/brief.md`) in one skill; `/forge-idea` adversarially pressure-tests it; `/research` grounds decisions in cited web research. All three are lean single-pass ports, not direct copies — upstream's three separate research-variant skills collapse into one with a type selector, upstream's CSV-served 100+-technique brainstorming catalog collapses into a small inline list |
 
 ---
 

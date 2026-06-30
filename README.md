@@ -88,6 +88,7 @@ Prefer to clone and symlink the skills locally instead of installing the plugin?
 | [guide/project-knowledge.md](guide/project-knowledge.md) | Feeding existing docs/research into the PRD, and session hygiene |
 | [guide/project-layout.md](guide/project-layout.md) | Full `docs/` folder layout a scaffolded project ends up with |
 | [guide/github-tracking.md](guide/github-tracking.md) | How milestones, issues, and status labels work |
+| [guide/deferred-items.md](guide/deferred-items.md) | How deferred findings get logged, scheduled, and re-homed so nothing rots |
 | [guide/skills-reference.md](guide/skills-reference.md) | Every skill and sub-command, grouped by phase |
 | [guide/comparison.md](guide/comparison.md) | What was cut vs original BMAD, what was added, and how upstream syncing works |
 

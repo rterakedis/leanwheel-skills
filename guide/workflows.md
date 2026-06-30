@@ -12,10 +12,21 @@ flowchart TD
         B --> C["/github-tracking setup\nConnect to GitHub\nCreate status labels"]
     end
 
-    C --> D
+    C --> IDEA
+
+    subgraph IDEA ["Idea Phase — optional, only if the idea isn't formed yet"]
+        PB["/product-brief\nBrainstorm (if needed) then distill\ninto docs/project/brief.md"]
+        PB -.->|"optional pressure-test"| FI["/forge-idea\nAdversarially stress-test the idea\nHardened / Killed / Clearer"]
+        FI -.->|"Hardened, no changes"| PB
+        FI -.->|"Killed"| PB
+        RS["/research\nCited web research —\ntechnical / domain / market"]
+        RS -.-> PB
+    end
+
+    IDEA --> D
 
     subgraph PLAN ["Planning Phase — do this before writing any code"]
-        D["/prd\nWrite the Product Requirements Doc\nWhat are we building and why?"]
+        D["/prd\nWrite the Product Requirements Doc\nReads docs/project/brief.md if present"]
         D --> DU["/ux\nWrite UX design specs\nDESIGN.md + EXPERIENCE.md\n(optional — skip for pure backend)"]
         DU --> E["/architecture\nWrite the Architecture Doc\nWhat tech stack, patterns, and structure?"]
         E --> F["/epics\nBreak the PRD into Epics and Stories\nCreates GitHub milestones automatically"]
@@ -40,6 +51,7 @@ flowchart TD
     J -->|"Start next epic"| G
 
     style ONCE fill:#e8f4f8,stroke:#2196F3
+    style IDEA fill:#f3e8fc,stroke:#9C27B0
     style PLAN fill:#e8f8e8,stroke:#4CAF50
     style LOOP fill:#fff8e8,stroke:#FF9800
     style RETRO fill:#f8e8f8,stroke:#9C27B0

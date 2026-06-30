@@ -13,12 +13,12 @@ description: Create, update, or validate a PRD. Use when the user wants to produ
 
 1. Detect intent: **Create**, **Update**, or **Validate**. Ask if unclear.
 2. For **Update/Validate**, read `docs/prd.md`.
-3. For **Create**, check `docs/project/` for upstream inputs. If found, read them silently (no summary). If absent, proceed.
+3. For **Create**, check `docs/project/` for upstream inputs — `brief.md` and `brief-addendum.md` (from `/product-brief`) first, then anything else found (research, notes). Read silently (no summary). If absent, proceed straight to Step 1 (a missing brief isn't an error — `/product-brief` is optional, not required).
 
 ## Create Flow
 
 ### Step 1 — Brain dump
-Ask user to describe the product. One prompt.
+Ask user to describe the product. One prompt. If `docs/project/brief.md` was found in Activation, skip the open prompt — confirm the brief's summary back to the user instead and ask what's changed or needs adding, rather than starting cold.
 
 ### Step 2 — Stakes calibration
 One question: hobby/internal/launch?

@@ -15,13 +15,14 @@ This is a standalone skills library for [Claude Code](https://claude.ai/code). I
 - Sprint-status.yaml (replaced by GitHub issue labels)
 
 **BMAD-LITE-SKILLS keeps:**
-- The full planning flywheel: PRD → UX → Architecture → Epics → Stories → Dev → Review
+- The full planning flywheel: (Idea →) PRD → UX → Architecture → Epics → Stories → Dev → Review
 - Epic context caching (~76% token reduction on `/create-story` after the first story)
 - Inline code review (no separate session startup cost)
 - GitHub issue + milestone tracking
 - Security review, investigate, retrospective, correct-course
 
 **BMAD-LITE-SKILLS adds:**
+- **Pre-PRD idea-formation layer**: `/product-brief` (diverge — brainstorm if no idea yet — then distill into `docs/project/brief.md`, which `/prd` reads automatically), `/forge-idea` (adversarial pressure-test, standalone or chained from `/product-brief`, resolves to Hardened/Killed/Clearer), and `/research` (cited technical/domain/market web research feeding any planning skill)
 - `/ux` skill with Apple platform support (SwiftUI, HIG compliance checklist, multi-target cascade iPhone → iPad → Mac) and responsive web
 - Epic-scoped retrospectives with output in `docs/epics/`
 - BMAD migration flow (`/setup migrate` + `/setup clean`)

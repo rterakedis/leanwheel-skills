@@ -28,6 +28,7 @@ Then apply the matching preset below. On multi-platform, apply all that match.
 
 ### Web app preset
 - UI system candidates: shadcn/ui + Tailwind, MUI, or none (custom).
+- **When a named UI system is in scope, DESIGN.md specifies only the delta** — brand tokens that override the system's defaults (primary color, radius scale, type family). Don't restate values the system already provides; unlisted tokens inherit from the system as-is.
 - DESIGN.md tokens: explicit hex colors, px spacing scale, named breakpoints.
 - EXPERIENCE.md must include **Responsive & Platform** section (breakpoints, mobile-as-secondary-surface rules, keyboard/pointer interaction delta).
 - Accessibility floor: WCAG 2.2 AA.
@@ -157,10 +158,11 @@ Rules:
 
 1. Triage `[ASSUMPTION]` tags. Resolve phase-blockers; log others.
 2. Resolve all `[OPEN]` items in the HIG checklist (Apple platform) or Responsive breakpoints (web).
-3. Run the checklist in `checklist.md`. Surface critical/high findings only.
-4. Write `docs/ux/DESIGN.md` and `docs/ux/EXPERIENCE.md`.
-5. Set `status: final` and `updated: {date}` in both frontmatters.
-6. Output: file paths + next step (`/architecture` if not done, or `/epics`).
+3. **Mock coverage confirmation:** walk every IA surface named in EXPERIENCE.md and classify each as mocked (a visual aid exists for it) or spine-only (tables/prose alone). For any spine-only surface, ask once: "These will be built from spine tables alone — any need a visual reference?" Log the answer either way so closure isn't silently skipped.
+4. Run the checklist in `checklist.md`. Surface critical/high findings only.
+5. Write `docs/ux/DESIGN.md` and `docs/ux/EXPERIENCE.md`.
+6. Set `status: final` and `updated: {date}` in both frontmatters.
+7. Output: file paths + next step (`/architecture` if not done, or `/epics`).
 
 ## Update Flow
 
