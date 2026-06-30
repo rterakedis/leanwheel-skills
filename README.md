@@ -72,7 +72,7 @@ BMad™ and BMad Method™ are trademarks of BMad Code, LLC. This project is not
 
 Already have an existing codebase instead of starting fresh? Run `/discover` first to reverse-engineer it into `docs/prd.md` + `docs/architecture.md`, then continue from step 3. See **[guide/workflows.md](guide/workflows.md)** for the full greenfield/brownfield flowcharts, and **[guide/skills-reference.md](guide/skills-reference.md)** for every skill and sub-command.
 
-Prefer the original workspace-directory install (clone + `/add-dir`) over the plugin? See **[guide/installation.md](guide/installation.md)**.
+Prefer to clone and symlink the skills locally instead of installing the plugin? See **[guide/installation.md](guide/installation.md)**.
 
 ---
 
