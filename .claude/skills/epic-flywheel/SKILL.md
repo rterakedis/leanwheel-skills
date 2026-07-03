@@ -154,6 +154,19 @@ _To log a finding: add an **indented** plain bullet (`-` or `*`, no checkbox) di
 
 Also **append section B's items to a persistent cross-epic backlog** `docs/testing/physical-device-backlog.md` (create if absent), tagged with the epic — so when the org account lands the user has one consolidated physical-test checklist instead of hunting through per-epic plans. Delete the `.epic-{N}-test-plans.md` scratch file after writing.
 
+### 5b. Squash-merge to main — Apple / manual-test epics (conditional)
+
+**Only when the manual test pass needs a build the user drives** (`apple_project = true`, or any epic whose test plan must be built/run outside the agent — e.g. Xcode/TestFlight, a native desktop app). Skip for web/library epics where the agent runs the tests itself.
+
+If the project's `CLAUDE.md` prescribes merge-at-boundary (look for an "Epic-boundary merge" rule), **do it now**, after gates 1–4c are green and the test plan (step 5) is written: squash-merge the epic branch to `main`, then remove the worktree. Rationale — manual-test findings become a **new remediation story** (`{N}.{last+1}`) via `/harvest-findings`, so nothing rides the epic PR regardless of when the user tests; merging first puts the full app **and** `docs/epics/epic-{N}-test-plan.md` on `main`, where the user builds it directly and the editor/file-browser can open the test plan for inline findings.
+
+```bash
+gh pr create --fill --base main --head feature/<epic-slug>
+gh pr merge --squash --delete-branch                       # run from the PRIMARY tree, not the worktree
+git -C <primary> worktree remove <worktree-path>; git -C <primary> pull --ff-only origin main
+```
+Note: `gh pr merge` may fail its local checkout step if run from inside the worktree (main is checked out in the primary tree) — the remote merge still lands; finish the worktree-remove + `pull` from the primary tree. If the project's `CLAUDE.md` has **no** merge-at-boundary rule, do NOT merge — leave the branch open and only **offer** the PR in the boundary report (legacy behavior).
+
 ### 6. Boundary report
 ```
 ─────────────────────────────────────────────
