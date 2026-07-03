@@ -135,7 +135,7 @@ Write the result to `docs/epics/epic-{N}-test-plan.md`:
 ```markdown
 # Epic {N} — {title}: Test Plan
 _Rolled up and deduplicated from {X} story plans on {date}._
-_Record findings as an indented bullet under the relevant step, then run `/harvest-findings {N}` to capture and schedule them._
+_To log a finding: add an **indented** plain bullet (`-` or `*`, no checkbox) directly under the relevant step — e.g. `  - shows wrong total`. Leave the `- [ ]` step lines as checkboxes (check them off as you pass them). Then run `/harvest-findings {N}` to capture and schedule the findings._
 
 ## A. Simulator / local-runnable (do now)
 ### Flow: {name}

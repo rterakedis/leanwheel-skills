@@ -49,7 +49,7 @@ flowchart TD
     subgraph RETRO ["End of Epic"]
         MT["🧪 Manual test pass\nWork through the epic test plan\nRecord findings inline"]
         MT -.->|"optional: automate the plan"| AT["/e2e-tests\nConvert local-runnable scenarios\ninto automated tests + eval cases\nManual pass shrinks permanently"]
-        MT --> HF["/harvest-findings {N}\nCapture findings to backlog\nIn-scope → remediation story {N}.{last+1}\nDefer the rest · reset the plan"]
+        MT --> HF["/harvest-findings {N}\nCapture + triage by kind\nbug/tweak in-scope → story {N}.{last+1}\nenhancements → backlog · questions → decide\nreset the plan"]
         HF --> J["/retrospective\nWhat worked? What didn't?\nUpdates CLAUDE.md with new conventions"]
     end
 
