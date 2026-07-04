@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bmad-lite guard-secrets — deterministic, zero-token secret guard.
+# leanwheel guard-secrets — deterministic, zero-token secret guard.
 # Wired as a PreToolUse hook on Edit|Write|MultiEdit and on Bash `git commit`.
 # Blocks (exit 2) when about-to-be-written content or a staged diff contains a
 # hardcoded secret. Pure grep — never calls a model.
@@ -67,7 +67,7 @@ if [ -n "$hit" ]; then
   if printf '%s' "$match_line" | grep -Eiq '(your[_-]?|example|placeholder|xxx+|<[^>]+>|\$\{?[A-Z_]+\}?|process\.env|os\.environ|ENV\[|getenv|Secrets\.|Keychain)'; then
     exit 0
   fi
-  echo "BLOCKED by bmad-lite guard-secrets: a hardcoded secret was detected (pattern: ${hit})." >&2
+  echo "BLOCKED by leanwheel guard-secrets: a hardcoded secret was detected (pattern: ${hit})." >&2
   echo "Move it to an environment variable, secret manager, or keychain and reference it by name." >&2
   echo "If this is a false positive (test fixture, placeholder), rename it to an obvious placeholder or commit it manually outside the agent." >&2
   exit 2

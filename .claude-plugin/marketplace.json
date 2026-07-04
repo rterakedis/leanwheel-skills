@@ -1,13 +1,13 @@
 {
-  "name": "bmad-lite",
-  "description": "BMAD-LITE agile workflow skills for Claude Code",
+  "name": "leanwheel",
+  "description": "Leanwheel agile workflow skills for Claude Code",
   "owner": {
     "name": "Robert Terakedis"
   },
   "plugins": [
     {
-      "name": "bmad-lite",
-      "description": "BMAD-LITE agile workflow skills: product discovery, PRD, epics, stories, UX, architecture, dev workflow, code review, retrospectives, and GitHub tracking.",
+      "name": "leanwheel",
+      "description": "Leanwheel agile workflow skills: product discovery, PRD, epics, stories, UX, architecture, dev workflow, code review, retrospectives, and GitHub tracking.",
       "author": {
         "name": "Robert Terakedis"
       },

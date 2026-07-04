@@ -1,4 +1,4 @@
-# bmad-lite-skills
+# leanwheel-skills
 
 A lean, token-efficient set of Claude Code skills for structured AI-assisted software development — designed to fit comfortably within Claude Pro's context budget while keeping the full value of the BMAD planning flywheel.
 
@@ -29,8 +29,8 @@ BMad™, BMad Method™, and BMad Core™ are trademarks of BMad Code, LLC (all 
 1. **Install the plugin** — skills are then available in every Claude Code session automatically, no `/add-dir` needed:
 
    ```
-   /plugin marketplace add https://github.com/rterakedis/bmad-lite-skills
-   /plugin install bmad-lite@bmad-lite
+   /plugin marketplace add https://github.com/rterakedis/leanwheel-skills
+   /plugin install leanwheel@leanwheel
    ```
 
 2. **Scaffold your project** — creates `docs/`, `AGENTS.md`, and `CLAUDE.md`:
@@ -85,7 +85,7 @@ Prefer to clone and symlink the skills locally instead of installing the plugin?
 | [guide/features.md](guide/features.md) | Full list of what was removed, kept, and added vs original BMAD |
 | [guide/installation.md](guide/installation.md) | Workspace-directory install option, keeping skills up to date |
 | [guide/workflows.md](guide/workflows.md) | Greenfield and brownfield process flowcharts |
-| [guide/migration.md](guide/migration.md) | Migrating an existing full-BMAD project to BMAD-LITE |
+| [guide/migration.md](guide/migration.md) | Migrating an existing full-BMAD project to Leanwheel |
 | [guide/token-budget.md](guide/token-budget.md) | How the epic-context cache works, and measured token savings |
 | [guide/project-knowledge.md](guide/project-knowledge.md) | Feeding existing docs/research into the PRD, and session hygiene |
 | [guide/project-layout.md](guide/project-layout.md) | Full `docs/` folder layout a scaffolded project ends up with |

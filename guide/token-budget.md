@@ -40,7 +40,7 @@ Estimates based on a typical project: 3 epics × 4 stories each = 12 stories.
 
 ### Per-invocation savings
 
-| Source of waste | Original BMAD | BMAD-LITE | Saved |
+| Source of waste | Original BMAD | Leanwheel | Saved |
 |----------------|--------------|-----------|-------|
 | Activation ceremony (per skill call) | ~700 tokens | 0 | 700/call |
 | Architecture skill (8 JIT step files) | ~4,500 tokens | ~1,200 tokens | 3,300 |
@@ -52,7 +52,7 @@ Estimates based on a typical project: 3 epics × 4 stories each = 12 stories.
 
 ### Across a 12-story project
 
-| Phase | Original BMAD | BMAD-LITE | Reduction |
+| Phase | Original BMAD | Leanwheel | Reduction |
 |-------|--------------|-----------|-----------|
 | Planning (PRD + arch + epics) | ~18,000 | ~8,000 | ~55% |
 | `/ux` (1 Create run per project) | ~12,600 | ~4,100 | ~67% |
@@ -65,7 +65,7 @@ Estimates based on a typical project: 3 epics × 4 stories each = 12 stories.
 
 ### What session hygiene adds on top
 
-Original BMAD typically runs multi-phase sessions, so the PRD and architecture sit in context during `create-story` and `dev-story` even though they're not needed. BMAD-LITE's one-session-per-phase rule eliminates this accumulated context tax — conservatively another **10–20%** reduction on top of the numbers above.
+Original BMAD typically runs multi-phase sessions, so the PRD and architecture sit in context during `create-story` and `dev-story` even though they're not needed. Leanwheel's one-session-per-phase rule eliminates this accumulated context tax — conservatively another **10–20%** reduction on top of the numbers above.
 
 ### What subagent isolation adds on top
 
@@ -73,4 +73,4 @@ When using `/story-flywheel`, each phase runs in a throwaway context. The story 
 
 ### Bottom line
 
-BMAD-LITE uses roughly **half the tokens** of original BMAD for the same 12-story project — primarily by eliminating the activation ceremony, caching epic context, inlining code review, and enforcing session hygiene. The Claude Pro $15/month plan includes ~1.5M input tokens/month on Sonnet; a 12-story project in BMAD-LITE costs roughly **~70K tokens**, leaving substantial budget for iteration and experimentation.
+Leanwheel uses roughly **half the tokens** of original BMAD for the same 12-story project — primarily by eliminating the activation ceremony, caching epic context, inlining code review, and enforcing session hygiene. The Claude Pro $15/month plan includes ~1.5M input tokens/month on Sonnet; a 12-story project in Leanwheel costs roughly **~70K tokens**, leaving substantial budget for iteration and experimentation.

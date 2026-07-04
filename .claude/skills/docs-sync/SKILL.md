@@ -9,9 +9,9 @@ Composable doc-maintenance ops. Other skills call these instead of duplicating t
 
 **Token posture (Pro plan):** every op is gated and idempotent — it does nothing (zero model cost) when there's nothing to update, and never reads source it doesn't need. The OPERATIONAL gate is a deterministic match on a changed-file list the caller already holds.
 
-**Model routing — this work belongs on the cheapest model.** OPERATIONAL and PROMOTE are mechanical, low-reasoning prose grounded in a diff; they must **never** run on Opus and should run below Sonnet where possible. Because a skill can't pick its own model (it inherits the caller's), the flywheels and main-session callers run these ops by **spawning the `bmad-docs-sync` subagent (pinned to Haiku)** rather than inline:
-- The **orchestrator** owns the spawn — the `bmad-story-developer` subagent (which on Swift is **Opus**) must **not** do doc-sync inline, and can't spawn a child anyway (no nesting). story-/epic-flywheel spawn `bmad-docs-sync` after the dev phase returns (OPERATIONAL, passing the story path) and at the epic boundary / retrospective (PROMOTE, passing the epic number).
-- **Main-session callers** (`quick-dev`, standalone `dev-story`, direct `/docs-sync`) likewise spawn `bmad-docs-sync` so the work lands on Haiku regardless of the session model.
+**Model routing — this work belongs on the cheapest model.** OPERATIONAL and PROMOTE are mechanical, low-reasoning prose grounded in a diff; they must **never** run on Opus and should run below Sonnet where possible. Because a skill can't pick its own model (it inherits the caller's), the flywheels and main-session callers run these ops by **spawning the `lw-docs-sync` subagent (pinned to Haiku)** rather than inline:
+- The **orchestrator** owns the spawn — the `lw-story-developer` subagent (which on Swift is **Opus**) must **not** do doc-sync inline, and can't spawn a child anyway (no nesting). story-/epic-flywheel spawn `lw-docs-sync` after the dev phase returns (OPERATIONAL, passing the story path) and at the epic boundary / retrospective (PROMOTE, passing the epic number).
+- **Main-session callers** (`quick-dev`, standalone `dev-story`, direct `/docs-sync`) likewise spawn `lw-docs-sync` so the work lands on Haiku regardless of the session model.
 - **DRIFT is the exception** — it only emits a one-line advisory, so it stays inline in whatever called it (already Sonnet in code-review); spawning a subagent to print a string would cost more than it saves.
 
 The fallback when no spawn is possible (e.g. already inside a non-orchestrated subagent) is to run the op inline — correct, just not as cheap.
@@ -101,4 +101,4 @@ Skip silently if the guidance held.
 
 ## Direct invocation (`/docs-sync`)
 
-Derive the changed-file list with `git diff --name-only` against the last commit (or the merge-base of the current branch), then run **OPERATIONAL** over it and report what changed. Use this to catch the human guides up after manual work done outside the flywheel. To keep it off the session model, spawn **`bmad-docs-sync`** (Haiku) with the derived file list rather than running inline (fallback: inline).
+Derive the changed-file list with `git diff --name-only` against the last commit (or the merge-base of the current branch), then run **OPERATIONAL** over it and report what changed. Use this to catch the human guides up after manual work done outside the flywheel. To keep it off the session model, spawn **`lw-docs-sync`** (Haiku) with the derived file list rather than running inline (fallback: inline).

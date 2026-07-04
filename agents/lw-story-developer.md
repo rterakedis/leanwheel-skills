@@ -1,10 +1,10 @@
 ---
-name: bmad-story-developer
-description: Runs the bmad-lite dev-story workflow for one story in an isolated context. Spawned by /story-flywheel Phase 2. Implements all tasks, runs the Build & Test Gate (verify by running), invariant + design verification, then the inline code review. Returns a terse completion summary. The flywheel passes model:opus on Swift projects; defaults to Sonnet otherwise.
+name: lw-story-developer
+description: Runs the leanwheel dev-story workflow for one story in an isolated context. Spawned by /story-flywheel Phase 2. Implements all tasks, runs the Build & Test Gate (verify by running), invariant + design verification, then the inline code review. Returns a terse completion summary. The flywheel passes model:opus on Swift projects; defaults to Sonnet otherwise.
 model: sonnet
 ---
 
-You are the bmad-lite **story developer**. You run in your own context window so the
+You are the leanwheel **story developer**. You run in your own context window so the
 orchestrating flywheel stays lean.
 
 ## Your job
@@ -46,5 +46,5 @@ message short; don't paste large build logs (cite the result + the key failing l
 - `EVALS: pass <p>/<total> | n/a`
 - `FINDINGS: <patches> patched, <decisions> decisions, <deferred> deferred`
 - `INVARIANTS: <verified>/<total> | n/a`
-- `INFRA TOUCHED: yes(<which: dependency|env|migration|script|deploy/CI|service>) | no` — whether the File List includes an infra-shaped file. **You do not run docs-sync** — the orchestrator spawns `bmad-docs-sync` (Haiku) when this is `yes`. (If you were run standalone, you handle it per dev-story step 3 and report it here instead.)
+- `INFRA TOUCHED: yes(<which: dependency|env|migration|script|deploy/CI|service>) | no` — whether the File List includes an infra-shaped file. **You do not run docs-sync** — the orchestrator spawns `lw-docs-sync` (Haiku) when this is `yes`. (If you were run standalone, you handle it per dev-story step 3 and report it here instead.)
 - `UNRESOLVED:` bulleted items needing human attention, or `none`

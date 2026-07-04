@@ -1,11 +1,11 @@
 ---
 name: upgrade-project
-description: Bring an existing bmad-lite project up to the latest skills/stubs/hooks/framework. Detection-based — works even on projects scaffolded before this skill existed. Use when the user says "upgrade project", "sync bmad", "update scaffolding", or after pulling new bmad-lite-skills changes.
+description: Bring an existing leanwheel project up to the latest skills/stubs/hooks/framework. Detection-based — works even on projects scaffolded before this skill existed. Use when the user says "upgrade project", "sync leanwheel", "update scaffolding", or after pulling new leanwheel-skills changes.
 ---
 
 # Upgrade Project Skill
 
-**Goal:** Reconcile a project that was scaffolded by an older `bmad-lite-skills`
+**Goal:** Reconcile a project that was scaffolded by an older `leanwheel-skills`
 against the current version — add new assets (hooks, agents wiring, evals, metrics),
 refresh stubs that the project hasn't locally edited, and append any new guardrail/
 doc sections — **without ever clobbering the user's own edits.**
@@ -22,9 +22,12 @@ by **presence and content**, then writes a manifest going forward.
 ## Step 1 — Locate the skills source
 
 Resolve `{skills_path}`:
-1. `.bmad-lite/manifest.json` → `skills_path` if present.
-2. Else the `add-dir` target in `.claude/settings.json` startup hook.
-3. Else ask the user (e.g. `~/repos/bmad-lite-skills`).
+1. `.leanwheel/manifest.json` → `skills_path` if present.
+2. Else `.bmad-lite/manifest.json` (legacy — projects scaffolded before the leanwheel
+   rename). If found, use its `skills_path` and flag the directory for migration in
+   Step 4 (renamed to `.leanwheel/`; contents carried over unchanged).
+3. Else the `add-dir` target in `.claude/settings.json` startup hook.
+4. Else ask the user (e.g. `~/repos/leanwheel-skills`).
 
 Confirm `{skills_path}/.claude/skills/setup/stubs/` exists. If not, stop — wrong path.
 
@@ -38,7 +41,7 @@ Determine what this project uses (so we only sync relevant assets):
 ## Step 3 — Build the upgrade plan (preview, don't apply yet)
 
 Scan for gaps. For each item, classify as **ADD** (missing), **REFRESH** (stub
-unchanged from an older bmad version — safe to update), **CONFLICT** (file exists and
+unchanged from an older leanwheel version — safe to update), **CONFLICT** (file exists and
 was locally edited — skip, flag for manual review), or **OK** (already current).
 
 Check these:
@@ -46,7 +49,7 @@ Check these:
 | Area | Detection |
 |---|---|
 | Guardrail hooks | `.claude/hooks/{guard-secrets,guard-design-tokens,log-activity}.sh` present + executable |
-| Hook wiring | `.claude/settings.json` `hooks.PreToolUse/PostToolUse` reference the bmad guard scripts |
+| Hook wiring | `.claude/settings.json` `hooks.PreToolUse/PostToolUse` reference the leanwheel guard scripts |
 | Eval set | `docs/evals/README.md` present |
 | Metrics ledger | `docs/metrics/README.md` present |
 | Swift stubs | each `docs/setup/swift/*.md` vs `{skills_path}/.../stubs/swift/*.md` (only if `is_apple`) |
@@ -82,7 +85,7 @@ In dependency order, applying only ADD and REFRESH items:
    `chmod +x` them. Never overwrite an existing hook script unless it's an unedited
    REFRESH (same git-provenance test as stubs).
 3. **Hook wiring:** merge the `hooks-settings.json` PreToolUse/PostToolUse blocks into
-   `.claude/settings.json` if the bmad guard commands aren't already wired. Preserve
+   `.claude/settings.json` if the leanwheel guard commands aren't already wired. Preserve
    `startup` and any user hooks.
 4. **Stubs (REFRESH only):** copy current swift/web stubs over unedited project copies.
    Leave CONFLICTs untouched.
@@ -94,8 +97,9 @@ In dependency order, applying only ADD and REFRESH items:
    if the project copy matches a historical committed version; CONFLICT otherwise).
 6. **CLAUDE.md sections:** append any missing guardrail/structure blocks (same logic as
    `/setup` Steps 3/3a/3c) — check-heading-then-append, never modify existing prose.
-6. **Manifest:** write/update `.bmad-lite/manifest.json` with the current
-   `scaffolded_at` date, surfaces, and asset flags.
+6. **Manifest:** if a legacy `.bmad-lite/` directory exists, rename it to `.leanwheel/`
+   first (contents unchanged). Then write/update `.leanwheel/manifest.json` with the
+   current `scaffolded_at` date, surfaces, and asset flags.
 
 ## Step 5 — Report
 
@@ -112,7 +116,7 @@ Print:
 ## Notes
 
 - **Token-safe:** this skill reads small files and runs `git log`/hash comparisons —
-  no model-heavy work. Run it whenever you pull new bmad-lite-skills changes.
+  no model-heavy work. Run it whenever you pull new leanwheel-skills changes.
 - It never touches `docs/epics/` story files, `docs/prd.md`, `docs/architecture.md`,
   or any planning content — only framework scaffolding.
 - The CONFLICT path is deliberately conservative: a locally-tuned stub is a feature,

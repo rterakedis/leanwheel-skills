@@ -17,7 +17,7 @@
 | Advanced-elicitation menu (CSV method registry, interactive 1-5/r/a/x loop) | The one high-value method for this workflow — pre-mortem — is folded into `/check-readiness` as Check 10; the menu/registry infrastructure is ceremony |
 | PRFAQ / working-backwards challenge | `/forge-idea` already covers the adversarial idea-validation function; PRFAQ is a format, not a capability |
 
-## What BMAD-LITE Added That Original BMAD Didn't Have
+## What Leanwheel Added That Original BMAD Didn't Have
 
 | Added | Why |
 |-------|-----|
@@ -57,7 +57,7 @@ git clone https://github.com/bmad-code-org/BMAD-METHOD /tmp/BMAD-METHOD
 Because the file structures don't match (different filenames, ceremony-wrapped skill files vs. this repo's single-pass `SKILL.md`), a mechanical `diff` isn't useful. The practical approach is to hand the comparison to an AI assistant — but lead it with this repo's token-minimization philosophy first, or it will surface upstream's ceremony and customization layers as "missing features" rather than recognizing them as the overhead this project intentionally cut. Example prompt to build from:
 
 ```
-I maintain bmad-lite-skills, a token-efficient port of the BMAD Method for Claude Code.
+I maintain leanwheel-skills, a token-efficient port of the BMAD Method for Claude Code.
 It deliberately strips: the per-invocation activation ceremony, three-tier TOML
 customization, agent persona overhead, and JIT step-file loading — replacing them with
 plain-English rules in CLAUDE.md and single-pass inline skill files. Full rationale is

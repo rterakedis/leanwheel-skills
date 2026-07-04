@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bmad-lite guard-design-tokens — deterministic, zero-token design-system guard.
+# leanwheel guard-design-tokens — deterministic, zero-token design-system guard.
 # Wired as a PostToolUse hook on Edit|Write|MultiEdit. ADVISORY (never blocks):
 # warns when a UI file gains a hardcoded color literal while the project has a
 # design system (docs/ux/DESIGN.md). Mirrors the swift-audit / web-audit color
@@ -48,7 +48,7 @@ else
 fi
 
 if [ -n "$warn" ]; then
-  echo "bmad-lite design-token note: ${file} added a ${warn}, but docs/ux/DESIGN.md defines a token system." >&2
+  echo "leanwheel design-token note: ${file} added a ${warn}, but docs/ux/DESIGN.md defines a token system." >&2
   echo "Prefer a named design token. If this is intentional (one-off, third-party embed), ignore — this is advisory only." >&2
 fi
 

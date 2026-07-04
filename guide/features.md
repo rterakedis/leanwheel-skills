@@ -8,20 +8,20 @@ This is a standalone skills library for [Claude Code](https://claude.ai/code). I
 > You write planning docs first, then AI helps you implement one small piece at a time.
 > Each "skill" is a command you give Claude — like `/prd` to write requirements or `/dev-story` to write code.
 
-**BMAD-LITE-SKILLS removes:**
+**LEANWHEEL-SKILLS removes:**
 - The activation ceremony that ran on every skill invocation (~700 tokens/call)
 - Three-tier TOML customization infrastructure
 - Agent persona overhead
 - Sprint-status.yaml (replaced by GitHub issue labels)
 
-**BMAD-LITE-SKILLS keeps:**
+**LEANWHEEL-SKILLS keeps:**
 - The full planning flywheel: (Idea →) PRD → UX → Architecture → Epics → Stories → Dev → Review
 - Epic context caching (~76% token reduction on `/create-story` after the first story)
 - Inline code review (no separate session startup cost)
 - GitHub issue + milestone tracking
 - Security review, investigate, retrospective, correct-course
 
-**BMAD-LITE-SKILLS adds:**
+**LEANWHEEL-SKILLS adds:**
 - **Pre-PRD idea-formation layer**: `/product-brief` (diverge — brainstorm if no idea yet — then distill into `docs/project/brief.md`, which `/prd` reads automatically), `/forge-idea` (adversarial pressure-test, standalone or chained from `/product-brief`, resolves to Hardened/Killed/Clearer), and `/research` (cited technical/domain/market web research feeding any planning skill)
 - `/ux` skill with Apple platform support (SwiftUI, HIG compliance checklist, multi-target cascade iPhone → iPad → Mac) and responsive web
 - Epic-scoped retrospectives with output in `docs/epics/`
@@ -35,7 +35,7 @@ This is a standalone skills library for [Claude Code](https://claude.ai/code). I
 - `/web-audit` — audits planning docs, story files, templates, styles, and markup against `docs/setup/web/` guidance and `docs/ux/DESIGN.md` tokens; produces a triaged remediation file in `docs/maintainer/` ready for `/dev-story`
 - **Closed design loop**: `/create-story` extracts a per-story **Design Contract** (tokens, component specs, required states, reuse list) from `docs/ux/` into Dev Notes; `/dev-story` implements against it and runs `/design-verify` (build + screenshots, light/dark, Dynamic Type / responsive widths) before review; `/code-review` runs a Design Compliance pass and maintains a `docs/ux/components-built.md` inventory so later stories reuse components instead of reinventing them; `/check-readiness` blocks UI stories that have no design coverage
 - `/ux` content-site (SSG) preset for Astro/Hugo sites — typography-first tokens, content-model → layout mapping, and a performance budget (Core Web Vitals + per-page JS budget) decided at design time
-- **Subagent delegation via `/story-flywheel`**: spawns isolated `bmad-story-creator`, `bmad-story-developer`, and `bmad-story-reviewer` agents — each phase runs in its own context window so heavy reads (PRD, architecture, story files) never accumulate in the main thread. A fourth agent, `bmad-docs-sync` (pinned to **Haiku**), keeps the project's docs current off the expensive model
+- **Subagent delegation via `/story-flywheel`**: spawns isolated `lw-story-creator`, `lw-story-developer`, and `lw-story-reviewer` agents — each phase runs in its own context window so heavy reads (PRD, architecture, story files) never accumulate in the main thread. A fourth agent, `lw-docs-sync` (pinned to **Haiku**), keeps the project's docs current off the expensive model
 - **Living documentation via `/docs-sync`**: dev/review discoveries flow back into the docs automatically — the human stand-up / operate / database guides (`docs/setup/`, `docs/maintainer/`, `docs/sql/`) grow as code changes, and durable architectural learnings are promoted into `docs/architecture.md` at the epic boundary. Runs on Haiku so it stays cheap
 - **Deterministic guardrail hooks** (zero model tokens): `guard-secrets.sh` blocks hardcoded secrets at write time; `guard-design-tokens.sh` warns on off-token colors; `log-activity.sh` streams tool-call telemetry to `docs/metrics/activity.jsonl`; wired via `.claude/hooks/` by `/setup`
 - **Observability ledger** (`docs/metrics/flywheel-ledger.jsonl`): each `/dev-story` and `/code-review` pass appends a structured line (story, model, build result, evals pass rate, finding counts) — queryable with `jq` to track per-story quality and model cost over time
@@ -43,7 +43,7 @@ This is a standalone skills library for [Claude Code](https://claude.ai/code). I
 - `/e2e-tests` — retro-fits automated API/E2E tests onto **already-built** features (brownfield code, features shipped before the eval net, manual test-plan scenarios worth automating); uses the project's existing framework, runs everything to green, and registers each suite as zero-token `command` eval cases in `docs/evals/e2e-{area}.md` — converted test-plan scenarios are marked automated so the manual pass permanently shrinks
 - `/doc-review` — reviews a doc **as writing** in three passes (structure cuts/reorganization, minimal prose fixes, adversarial gaps-and-ambiguities); planning docs are re-read by the model every downstream session, so tightening them is a token saving that recurs for the life of the project
 - **Pre-mortem readiness check**: `/check-readiness` ends by assuming the shipped project failed at month three and working backwards to specific causes in the actual plan — unaddressed material causes become blockers with mitigation stories scheduled before the first story is written
-- `/upgrade-project` — detection-based sync for existing projects: scans for missing hooks, stubs, evals/metrics dirs, and CLAUDE.md sections; classifies each item as ADD / REFRESH / CONFLICT / OK; previews before applying; never overwrites locally edited content; writes `.bmad-lite/manifest.json` for future runs
+- `/upgrade-project` — detection-based sync for existing projects: scans for missing hooks, stubs, evals/metrics dirs, and CLAUDE.md sections; classifies each item as ADD / REFRESH / CONFLICT / OK; previews before applying; never overwrites locally edited content; writes `.leanwheel/manifest.json` for future runs
 - `/epic-flywheel` — autonomous epic orchestration layer above `/story-flywheel`: drives a whole epic from "not started" to "implemented, reviewed, verified together" with granular commit-per-step (create → commit → dev → commit → review+patch → commit), within-epic auto-advance on green stories, an Epic Boundary Gate (whole-project build+test, cumulative evals RUN across all epics, invariant + deferred sweeps — HALTs for help on any failure), deferred-item re-homing, a rolled-up LLM-deduplicated test plan split into simulator/local-runnable vs physical-device-required cases (physical items persist to `docs/testing/physical-device-backlog.md`), and a mandatory retrospective reminder at the boundary
 - `/harvest-findings` — closes the manual-test-pass loop: after a tester records findings as inline bullets under each scenario in `docs/epics/epic-{N}-test-plan.md` (an indented, non-checkbox `-`/`*` bullet — a deterministic shape), this composable skill captures them to the `docs/epics.md` backlog (durable, idempotent per test-pass date) and triages each by **kind** (bug / tweak / enhancement / question) and **disposition** (in-scope / defer). Findings aren't assumed to be bugs: corrective bug/tweak findings that are in-scope become ACs in a single remediation story `{N}.{last+1}` (via `/create-story` + GitHub tracking); enhancements are always scheduled as backlog candidates (never remediation ACs — no scope creep in a "fix" story) and flagged for `/correct-course` when material; questions are surfaced for a human decision. Deferred items route through `/deferred`, then the plan is reset for re-test — **never** reopening a `done` story. Called at the boundary by `/epic-flywheel` and `/retrospective`
 - **`scripts/commit-push.sh`** — zero-reasoning commit helper scaffolded by `/setup` and `/upgrade-project` into every project: stages, commits (with the Co-Authored-By trailer), and pushes to the current branch in one call; supports staged-tracked-only (default), specific files, or `--all`

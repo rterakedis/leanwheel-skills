@@ -10,7 +10,7 @@ your-project/
 ├── CLAUDE.md              ← Claude-specific rules and project conventions
 ├── scripts/
 │   └── commit-push.sh     ← one-call commit helper (stage → commit → push); scaffolded by /setup
-├── .bmad-lite/
+├── .leanwheel/
 │   └── manifest.json      ← scaffold record (skills_path, surfaces, asset flags); written by /setup and /upgrade-project
 ├── .claude/
 │   ├── settings.json      ← startup hook (add-dir) + guardrail hook wiring

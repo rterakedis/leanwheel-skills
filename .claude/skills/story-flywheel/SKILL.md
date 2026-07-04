@@ -44,7 +44,7 @@ description: Run the full story development loop (create → dev → review) rep
 
 4. **Determine delegation mode + model routing.** Set `swift_project = true` if `docs/setup/swift/` exists OR an `.xcodeproj` / `.xcworkspace` / `Package.swift` is present in the repo; otherwise `false`.
 
-   Check whether the bmad subagents are available (the plugin ships `bmad-story-creator`, `bmad-story-developer`, `bmad-story-reviewer` as agent types).
+   Check whether the leanwheel subagents are available (the plugin ships `lw-story-creator`, `lw-story-developer`, `lw-story-reviewer` as agent types).
    - **Subagents available (default, preferred):** run in **subagent-delegation mode** — each phase is spawned as its subagent via the Agent tool, with the model selected automatically (see Subagent Delegation & Model Routing). No manual model switching. Announce once:
      > Running the flywheel with subagent delegation — each phase runs in its own context with its model chosen automatically (Conserve-Opus baseline{, Opus for dev-story since this is a Swift project if swift_project}). You'll only be asked to weigh in at clarifications, the per-story checkpoint, and epic boundaries.
    - **Subagents unavailable (fallback):** run inline and fall back to **manual model switching** (see Fallback: Manual Model Switching). Only Swift projects get switch gates; non-Swift runs fully automated on the current model.
@@ -59,9 +59,9 @@ Per-phase routing (Conserve-Opus baseline, dynamic Swift exception):
 
 | Phase | subagent_type | Python / Web | Swift / SwiftUI | Why |
 |---|---|---|---|---|
-| 1 — Create Story | `bmad-story-creator` | Sonnet | Sonnet | Story authoring doesn't need Opus. |
-| 2 — Dev Story | `bmad-story-developer` | **Sonnet** | **Opus** | On Swift, a Sonnet pass tends to fail the Build & Test Gate and loop — each failed `xcodebuild` retry costs more than one accurate Opus pass, so Opus is the *token-conserving* choice. On Python/web, Sonnet passes first-try often enough that Opus is overspend. |
-| 3 — Code Review | `bmad-story-reviewer` | Sonnet | Sonnet | Adversarial reading; the Build & Test Gate is the correctness backstop, not the model. (Dev-story already runs an inline review — see Phase 3.) |
+| 1 — Create Story | `lw-story-creator` | Sonnet | Sonnet | Story authoring doesn't need Opus. |
+| 2 — Dev Story | `lw-story-developer` | **Sonnet** | **Opus** | On Swift, a Sonnet pass tends to fail the Build & Test Gate and loop — each failed `xcodebuild` retry costs more than one accurate Opus pass, so Opus is the *token-conserving* choice. On Python/web, Sonnet passes first-try often enough that Opus is overspend. |
+| 3 — Code Review | `lw-story-reviewer` | Sonnet | Sonnet | Adversarial reading; the Build & Test Gate is the correctness backstop, not the model. (Dev-story already runs an inline review — see Phase 3.) |
 
 **How to set the model:** the subagent defs default to Sonnet. Pass a per-spawn `model` override on the Agent call **only** for Phase 2 when `swift_project = true` (`model: opus`). All other spawns use the default. If the user opts out for the run ("conserve everything", "stay on Sonnet"), drop the Opus override too and note it.
 
@@ -71,7 +71,7 @@ Per-phase routing (Conserve-Opus baseline, dynamic Swift exception):
 
 ## Fallback: Manual Model Switching (only when subagents unavailable)
 
-Used only when the bmad subagents can't be spawned. Active only when `swift_project = true`; non-Swift runs fully automated on the current model. The model can't change its own model — these are **hard stops** that wait for the user to switch it in the UI (`/model`), then confirm.
+Used only when the leanwheel subagents can't be spawned. Active only when `swift_project = true`; non-Swift runs fully automated on the current model. The model can't change its own model — these are **hard stops** that wait for the user to switch it in the UI (`/model`), then confirm.
 
 | Phase | Model | Why |
 |---|---|---|
@@ -100,7 +100,7 @@ Repeat until the epic is complete (see **Exit Conditions**):
 
 ### Phase 1 — Create Story
 
-**Subagent mode:** spawn `bmad-story-creator` (default model: Sonnet) via the Agent tool. Prompt it with the story identifier (`{epic}.{story}`) so create-story skips identification.
+**Subagent mode:** spawn `lw-story-creator` (default model: Sonnet) via the Agent tool. Prompt it with the story identifier (`{epic}.{story}`) so create-story skips identification.
 **Fallback mode:** if `swift_project`, issue a MODEL SWITCH GATE for **Sonnet**, then execute `skills/create-story/skill.md` inline.
 
 - Wait for the story file to be written and GitHub issue updated.
@@ -110,12 +110,12 @@ Repeat until the epic is complete (see **Exit Conditions**):
 
 ### Phase 2 — Dev Story
 
-**Subagent mode:** spawn `bmad-story-developer` via the Agent tool with the story file path. Pass `model: opus` **only if `swift_project`** (otherwise the default Sonnet). Instruct it to run the full dev-story workflow including the Build & Test Gate, the evals RUN (if `docs/evals/` exists), invariant/design verification, and the inline review.
+**Subagent mode:** spawn `lw-story-developer` via the Agent tool with the story file path. Pass `model: opus` **only if `swift_project`** (otherwise the default Sonnet). Instruct it to run the full dev-story workflow including the Build & Test Gate, the evals RUN (if `docs/evals/` exists), invariant/design verification, and the inline review.
 **Fallback mode:** if `swift_project`, MODEL SWITCH GATE for **Opus**; then execute `skills/dev-story/skill.md` inline.
 
 - Note: in subagent mode the developer subagent already runs dev-story's **inline** code review (Pass A–E). Phase 3 below becomes a *light confirmation* of its report rather than a second full review — only spawn a separate reviewer if the developer reported `UNRESOLVED` items or you want an independent adversarial pass.
 - From the report capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `FINDINGS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`.
-- **Operational doc sync (cheap, orchestrator-owned):** the developer does **not** run docs-sync (it would land on the dev model — Opus on Swift). If the report's `INFRA TOUCHED` is `yes`, spawn **`bmad-docs-sync`** (Haiku) via the Agent tool with the story file path and op `OPERATIONAL`; capture its `DOCS UPDATED` return for the checkpoint/ledger. Skip the spawn entirely when `INFRA TOUCHED: no` (zero cost). Fallback if subagents are unavailable: execute the docs-sync OPERATIONAL op inline.
+- **Operational doc sync (cheap, orchestrator-owned):** the developer does **not** run docs-sync (it would land on the dev model — Opus on Swift). If the report's `INFRA TOUCHED` is `yes`, spawn **`lw-docs-sync`** (Haiku) via the Agent tool with the story file path and op `OPERATIONAL`; capture its `DOCS UPDATED` return for the checkpoint/ledger. Skip the spawn entirely when `INFRA TOUCHED: no` (zero cost). Fallback if subagents are unavailable: execute the docs-sync OPERATIONAL op inline.
 - Do not proceed until `STATUS` is `review`/`done` (or HALT).
 
 **On HALT:** Stop the flywheel. Report: "Flywheel paused — dev-story halted on {epic}.{story}: {reason}. Resolve the blocker and resume with `/story-flywheel {epic}.{story}`."
@@ -124,7 +124,7 @@ Repeat until the epic is complete (see **Exit Conditions**):
 
 The developer subagent already ran the inline review in Phase 2. Decide:
 - **Clean report (no `UNRESOLVED`, gate PASS):** skip a separate review pass — carry the Phase 2 findings/rubric straight into the checkpoint. (Saves a full extra review's tokens.)
-- **`UNRESOLVED` items, FAIL gate, or security-sensitive story:** spawn `bmad-story-reviewer` (default model: Sonnet) for an independent adversarial pass. **Fallback mode:** MODEL SWITCH GATE for **Sonnet**, then execute `skills/code-review/skill.md` inline.
+- **`UNRESOLVED` items, FAIL gate, or security-sensitive story:** spawn `lw-story-reviewer` (default model: Sonnet) for an independent adversarial pass. **Fallback mode:** MODEL SWITCH GATE for **Sonnet**, then execute `skills/code-review/skill.md` inline.
 
 When a separate review runs:
 - Pass the story file path so it skips auto-detection.

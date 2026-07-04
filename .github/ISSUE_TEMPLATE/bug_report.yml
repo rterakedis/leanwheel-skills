@@ -36,7 +36,7 @@ body:
         - upgrade-project
         - ux
         - web-audit
-        - agent (bmad-story-creator / -developer / -reviewer / -docs-sync)
+        - agent (lw-story-creator / -developer / -reviewer / -docs-sync)
         - Other / not skill-specific
     validations:
       required: true

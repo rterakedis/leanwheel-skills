@@ -11,7 +11,7 @@ There are two ways to use these skills: **plugin install** (recommended for new 
 #### 1 — Clone once
 
 ```bash
-git clone https://github.com/rterakedis/bmad-lite-skills ~/repos/bmad-lite-skills
+git clone https://github.com/rterakedis/leanwheel-skills ~/repos/leanwheel-skills
 ```
 
 Put it wherever you keep shared tools. The path doesn't matter as long as it's consistent.
@@ -19,11 +19,11 @@ Put it wherever you keep shared tools. The path doesn't matter as long as it's c
 #### 2 — Symlink skills and agents into your personal Claude directory
 
 ```bash
-for d in ~/repos/bmad-lite-skills/.claude/skills/*/; do
+for d in ~/repos/leanwheel-skills/.claude/skills/*/; do
   ln -sfn "$d" ~/.claude/skills/"$(basename "$d")"
 done
 
-for a in ~/repos/bmad-lite-skills/agents/*.md; do
+for a in ~/repos/leanwheel-skills/agents/*.md; do
   ln -sfn "$a" ~/.claude/agents/"$(basename "$a")"
 done
 ```
@@ -35,7 +35,7 @@ Skills and agents now load automatically in every project — no `/add-dir`, no 
 ## Keeping skills up to date
 
 ```bash
-cd ~/repos/bmad-lite-skills
+cd ~/repos/leanwheel-skills
 git pull
 ```
 

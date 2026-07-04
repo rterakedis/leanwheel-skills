@@ -1,4 +1,4 @@
-# bmad-lite hooks
+# leanwheel hooks
 
 Deterministic, **zero-token** guardrails. These are pure bash/grep — they never
 call a model — so they cost nothing to run and enforce the rules the agent is

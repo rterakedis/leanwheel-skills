@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bmad-lite log-activity — deterministic, zero-token observability tap.
+# leanwheel log-activity — deterministic, zero-token observability tap.
 # Wired as a PostToolUse hook (matcher "*") AND optionally a Stop hook.
 # Appends one compact JSON line per tool use to the rolling activity log. No
 # model call; pure file append. The flywheel ledger (docs/metrics/) is the

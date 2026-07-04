@@ -2,7 +2,7 @@
 
 ## Deferred Items — Lifecycle and Re-Homing
 
-A "deferred" finding is something `/dev-story`, `/code-review`, `/correct-course`, `/investigate`, or `/quick-dev` noticed but decided not to fix in the moment — too big for the current story, out of scope, or a genuine "later" item. Original BMAD let these findings go nowhere once deferred. BMAD-LITE auto-schedules every one as real, trackable work and actively sweeps for items that fall through.
+A "deferred" finding is something `/dev-story`, `/code-review`, `/correct-course`, `/investigate`, or `/quick-dev` noticed but decided not to fix in the moment — too big for the current story, out of scope, or a genuine "later" item. Original BMAD let these findings go nowhere once deferred. Leanwheel auto-schedules every one as real, trackable work and actively sweeps for items that fall through.
 
 ### The model
 

@@ -63,7 +63,7 @@ Include a summary table in the retro doc:
 
 Before writing the retro, diff `docs/prd.md` and `docs/architecture.md` against stories shipped. List any required updates. Perform them in the same turn.
 
-**Promote epic learnings into the canonical docs.** Spawn **`bmad-docs-sync`** (Haiku) with op `PROMOTE` and this epic (`epic_num`) — keeping this mechanical work off the session model (fallback: execute the docs-sync **PROMOTE** op inline if subagents are unavailable). It appends durable project-canonical learnings from `docs/epics/epic-{epic_num}-context.md` into `docs/architecture.md` (idempotent, so safe to run alongside `/epic-flywheel`'s boundary PROMOTE). It never edits `docs/setup/*`; if implementation revealed the guidance itself is stale, record an action item recommending `/refresh-swift` / `/refresh-web` rather than a direct edit.
+**Promote epic learnings into the canonical docs.** Spawn **`lw-docs-sync`** (Haiku) with op `PROMOTE` and this epic (`epic_num`) — keeping this mechanical work off the session model (fallback: execute the docs-sync **PROMOTE** op inline if subagents are unavailable). It appends durable project-canonical learnings from `docs/epics/epic-{epic_num}-context.md` into `docs/architecture.md` (idempotent, so safe to run alongside `/epic-flywheel`'s boundary PROMOTE). It never edits `docs/setup/*`; if implementation revealed the guidance itself is stale, record an action item recommending `/refresh-swift` / `/refresh-web` rather than a direct edit.
 
 ## Metrics
 

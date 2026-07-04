@@ -1,10 +1,10 @@
-# Contributing to bmad-lite-skills
+# Contributing to leanwheel-skills
 
-This repo ships as a Claude Code plugin (`bmad-lite`). Skills live in `.claude/skills/<name>/SKILL.md`, flywheel subagents live in `agents/`, and scaffolding stubs live under `.claude/skills/setup/stubs/`. See [CLAUDE.md](CLAUDE.md) for the full architecture, local-customization notes, and packaging details before making changes.
+This repo ships as a Claude Code plugin (`leanwheel`). Skills live in `.claude/skills/<name>/SKILL.md`, flywheel subagents live in `agents/`, and scaffolding stubs live under `.claude/skills/setup/stubs/`. See [CLAUDE.md](CLAUDE.md) for the full architecture, local-customization notes, and packaging details before making changes.
 
 ## Ground rules
 
-- **Skill files are always `SKILL.md` (uppercase).** Upstream BMAD-LITE uses lowercase `skill.md` — this is an intentional, permanent divergence. Don't "fix" the casing.
+- **Skill files are always `SKILL.md` (uppercase).** Upstream Leanwheel uses lowercase `skill.md` — this is an intentional, permanent divergence. Don't "fix" the casing.
 - **Agents live in `agents/` at the repo root**, not `.claude/agents/`. The plugin manifest only registers agents from the root-level directory.
 - This repo ships skills only — don't add project-level docs (`docs/`, story files, `.claude/settings.json`, etc.) to the repo itself. Those belong in projects that *consume* this plugin.
 - Keep changes scoped to one skill/agent/stub at a time where possible — makes review and upstream-sync diffing easier.
@@ -23,8 +23,8 @@ If you add a **new** skill or agent (not just edit an existing one), re-run the 
 ## Making a change
 
 1. Edit the relevant `SKILL.md`, stub, or agent file.
-2. If you're editing a skill with a known upstream counterpart, check the **Local Customizations by Skill** section in [CLAUDE.md](CLAUDE.md) first — many skills carry intentional divergence from BMAD-LITE that should be preserved, not reverted.
-3. Test the change against a real (or scratch) bmad-lite project: invoke the skill via its slash command and confirm the behavior matches what you intended.
+2. If you're editing a skill with a known upstream counterpart, check the **Local Customizations by Skill** section in [CLAUDE.md](CLAUDE.md) first — many skills carry intentional divergence from Leanwheel that should be preserved, not reverted.
+3. Test the change against a real (or scratch) leanwheel project: invoke the skill via its slash command and confirm the behavior matches what you intended.
 4. If you touched packaging (`plugin.json`, `marketplace.json`), run `claude plugin validate ./` — it should pass with only the "no version" warning.
 
 ## Pulling upstream changes

@@ -2,11 +2,11 @@
 
 ## GitHub Tracking — Milestones, Issues, and Labels
 
-BMAD-LITE replaces `sprint-status.yaml` with native GitHub primitives. No separate status file to maintain — progress is visible directly in GitHub.
+Leanwheel replaces `sprint-status.yaml` with native GitHub primitives. No separate status file to maintain — progress is visible directly in GitHub.
 
 ### The model
 
-| GitHub concept | BMAD-LITE meaning |
+| GitHub concept | Leanwheel meaning |
 |---|---|
 | **Milestone** | One per epic — title matches the epic title from `docs/epics.md`; GitHub's built-in X/Y closed counter shows epic progress |
 | **Issue** | One per story — title is `Story {epic}.{story}: {title}`; body includes the story statement, acceptance criteria, and path to the story file |

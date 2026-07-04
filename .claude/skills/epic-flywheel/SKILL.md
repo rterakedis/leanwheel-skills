@@ -24,7 +24,7 @@ description: Drive an entire epic to completion semi-autonomously — runs the p
 
 1. **Pick the epic.** Same discovery as story-flywheel (sort by epic number embedded in milestone *title*, not GitHub milestone ID; fall back to `docs/epics.md`). Accept `/epic-flywheel {N}` to force one. Announce: "Epic-flywheel for Epic {N}: {title}. {X} stories. I'll run them with per-story gates, commit each step, then do one verification + test-planning pass at the end."
 
-2. **Delegation mode + model routing.** Identical to story-flywheel: set `swift_project = true` if `docs/setup/swift/` exists OR an `.xcodeproj`/`.xcworkspace`/`Package.swift` is present. Prefer subagent-delegation mode (spawn `bmad-story-creator` / `bmad-story-developer` / `bmad-story-reviewer`); pass `model: opus` only for Phase 2 (dev-story) on Swift. Fall back to inline + manual MODEL SWITCH GATE only when subagents are unavailable.
+2. **Delegation mode + model routing.** Identical to story-flywheel: set `swift_project = true` if `docs/setup/swift/` exists OR an `.xcodeproj`/`.xcworkspace`/`Package.swift` is present. Prefer subagent-delegation mode (spawn `lw-story-creator` / `lw-story-developer` / `lw-story-reviewer`); pass `model: opus` only for Phase 2 (dev-story) on Swift. Fall back to inline + manual MODEL SWITCH GATE only when subagents are unavailable.
 
 3. **Detect the Apple platform set.** Set `apple_project = true` if `swift_project`. Read `docs/setup/manifest` / `docs/setup/swift/` and `docs/ux/EXPERIENCE.md` only enough to learn which platforms ship (iOS/iPadOS/macOS). This governs the simulator-vs-physical split at the boundary. Non-Apple projects get a generic "automated/local-runnable vs manual" split instead.
 
@@ -60,16 +60,16 @@ bash scripts/gh-track.sh close {issue#} "Story {e}.{s} complete"   # final: done
 Get `{issue#}` from the create-story report or `grep '^github_issue:' {story_file}`. If it's `0`/missing the issue was never created — run github-tracking **CREATE-ISSUE** first, don't silently skip. If the script is absent, fall back to the github-tracking TRANSITION/CLOSE-ISSUE ops. If `gh` is unavailable the script prints `skip: gh unavailable` and exits 0 — note that once in the boundary report rather than claiming issues were updated.
 
 ### Step 1 — Create Story → commit
-Spawn `bmad-story-creator` with `{epic}.{story}`. Capture `STORY FILE`, `COMPLEXITY`, `CLARIFICATIONS NEEDED`, `PREREQUISITES`, `DESIGN GAP`.
+Spawn `lw-story-creator` with `{epic}.{story}`. Capture `STORY FILE`, `COMPLEXITY`, `CLARIFICATIONS NEEDED`, `PREREQUISITES`, `DESIGN GAP`.
 - **Clarification Gate (the one mandatory human pause inside a story):** if the report lists *material* clarifications, surface them now and wait for answers; record them into the story file. One-default ambiguities are recorded as stated assumptions and do **not** pause.
 - **Cross-story prerequisite check:** if `PREREQUISITES` names a runtime artifact owned by a *later* story in this or another epic, flag a sequencing risk — this is the legitimate "not built yet" case and must be handled at story-design time, not discovered as a fake bug later.
 - **Track:** `gh-track.sh transition {issue#} ready-for-dev`.
 - **Commit:** `story {epic}.{story}: create` (stages the story file + any tracking/epics edits).
 
 ### Step 2 — Dev Story → commit
-**Track first:** `gh-track.sh transition {issue#} in-progress` before spawning, so a long dev pass shows the right state. Then spawn `bmad-story-developer` (model `opus` only if `swift_project`) with the story file path. It runs the full dev-story workflow: implementation, **Build & Test Gate** (verify by running), **evals RUN** (if `docs/evals/`), invariant + design verification, and the inline review. Capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `FINDINGS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`, `TESTING PLAN`.
+**Track first:** `gh-track.sh transition {issue#} in-progress` before spawning, so a long dev pass shows the right state. Then spawn `lw-story-developer` (model `opus` only if `swift_project`) with the story file path. It runs the full dev-story workflow: implementation, **Build & Test Gate** (verify by running), **evals RUN** (if `docs/evals/`), invariant + design verification, and the inline review. Capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `FINDINGS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`, `TESTING PLAN`.
 - **On HALT or red gate:** stop the loop. Report which story and why; do **not** commit a red story. Resume with `/epic-flywheel {N}` after the blocker is fixed.
-- **Operational doc sync (cheap, orchestrator-owned):** the developer does **not** run docs-sync (it would land on the dev model — Opus on Swift). If `INFRA TOUCHED: yes`, spawn **`bmad-docs-sync`** (Haiku) with the story path and op `OPERATIONAL`; capture `DOCS UPDATED`. Skip the spawn when `INFRA TOUCHED: no`. The doc edits land in the dev commit below.
+- **Operational doc sync (cheap, orchestrator-owned):** the developer does **not** run docs-sync (it would land on the dev model — Opus on Swift). If `INFRA TOUCHED: yes`, spawn **`lw-docs-sync`** (Haiku) with the story path and op `OPERATIONAL`; capture `DOCS UPDATED`. Skip the spawn when `INFRA TOUCHED: no`. The doc edits land in the dev commit below.
 - **Track:** on green, `gh-track.sh transition {issue#} review`.
 - **Commit (only if gate green):** `story {epic}.{story}: dev` (includes any docs-sync edits).
 - **Stash the TESTING PLAN** for the boundary roll-up (keep just the text — append it to a scratch list `docs/epics/.epic-{N}-test-plans.md`, one block per story, so the orchestrator never has to hold all plans in context at once).
@@ -77,7 +77,7 @@ Spawn `bmad-story-creator` with `{epic}.{story}`. Capture `STORY FILE`, `COMPLEX
 ### Step 3 — Code Review + patch → commit
 Per story-flywheel's Phase 3 economy: the developer subagent already ran the inline review.
 - **Clean report (no `UNRESOLVED`, PASS gate, not security-sensitive):** skip a separate reviewer — carry Phase 2 findings forward. Saves a full review's tokens.
-- **Otherwise:** spawn `bmad-story-reviewer` for an independent adversarial pass. It emits the SCORE rubric line, auto-patches `patch` findings, logs `defer` via the `deferred` skill (re-homing each — slot as AC or remediation story), and **re-verifies green**. `decision-needed` findings surface to the user.
+- **Otherwise:** spawn `lw-story-reviewer` for an independent adversarial pass. It emits the SCORE rubric line, auto-patches `patch` findings, logs `defer` via the `deferred` skill (re-homing each — slot as AC or remediation story), and **re-verifies green**. `decision-needed` findings surface to the user.
 - **Deferred re-homing check:** confirm every `[Defer]` from this story landed in `docs/deferred-items.md` with a `Scheduled As` target. An orphan is a loop bug — fix before advancing.
 - **Track:** on green, `gh-track.sh close {issue#} "Story {epic}.{story} complete"` (applies `done` + closes — milestone progress ticks up here).
 - **Commit (only if green after patches):** `story {epic}.{story}: review+patch`. If patches couldn't resolve, leave status `in-progress`, don't commit, HALT.
@@ -120,7 +120,7 @@ bash scripts/gh-track.sh sync "<story-glob>" --apply    # if the diff is non-emp
 A clean diff (`0 to-change`) is the proof every issue landed in the right state. Report the count fixed in the boundary report. (If the project predates the script, call the github-tracking SYNC op instead.)
 
 ### 4c. Architecture promotion (canonical-doc sync, cheap)
-Spawn **`bmad-docs-sync`** (Haiku) with op `PROMOTE` and Epic {N} (fallback: execute the docs-sync **PROMOTE** op inline if subagents are unavailable). It harvests project-canonical learnings (schema realities, new/changed services & integrations, cross-cutting invariants, architectural decisions) from `docs/epics/epic-{N}-context.md` and appends the durable ones to `docs/architecture.md` (idempotent; also `docs/sql/` / `docs/maintainer/` when present) — so the next epic plans against live docs, not a stale architecture. Zero-token when the context file has nothing canonical (pure-refactor epics often don't); never touches `docs/setup/*` guidance. Report the count promoted in the boundary report.
+Spawn **`lw-docs-sync`** (Haiku) with op `PROMOTE` and Epic {N} (fallback: execute the docs-sync **PROMOTE** op inline if subagents are unavailable). It harvests project-canonical learnings (schema realities, new/changed services & integrations, cross-cutting invariants, architectural decisions) from `docs/epics/epic-{N}-context.md` and appends the durable ones to `docs/architecture.md` (idempotent; also `docs/sql/` / `docs/maintainer/` when present) — so the next epic plans against live docs, not a stale architecture. Zero-token when the context file has nothing canonical (pure-refactor epics often don't); never touches `docs/setup/*` guidance. Report the count promoted in the boundary report.
 
 ### 5. Rolled-up, deduplicated Test Plan (the manual pass)
 This is the payoff of deferring manual testing to here. Read the accumulated `docs/epics/.epic-{N}-test-plans.md` scratch list (collected plan text only — no source). Then, in a **single LLM pass**:

@@ -108,7 +108,7 @@ Author the story **only if there is ≥1 corrective (bug/tweak) `[in-scope]` fin
    - Dev Notes citing the test plan and the harvested block in `docs/epics.md` as the origin.
    - `status: ready-for-dev` in frontmatter (the pinned format).
    - **Definition of Done additions** (write these explicitly into the story so dev-story enforces them at close):
-     - [ ] Reconcile `docs/architecture.md`, `docs/prd.md`, and `docs/ux/*` for any behavior these changes affect (via `docs-sync` **OPERATIONAL** — spawn `bmad-docs-sync`, Haiku).
+     - [ ] Reconcile `docs/architecture.md`, `docs/prd.md`, and `docs/ux/*` for any behavior these changes affect (via `docs-sync` **OPERATIONAL** — spawn `lw-docs-sync`, Haiku).
      - [ ] Reset `docs/epics/epic-{N}-test-plan.md` (Step 4 below) so the plan is clean for the next re-test pass.
 
 3. **Append the story row to `docs/epics.md`** under Epic {N}'s stories and bump the epic's story count (mirror the `deferred` skill's new-story entry format). Do this **before** the tracking step so the milestone/issue is filed against a story that exists in the backlog.

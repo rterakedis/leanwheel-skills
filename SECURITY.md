@@ -2,9 +2,9 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in bmad-lite-skills, please report it privately rather than opening a public issue.
+If you discover a security vulnerability in leanwheel-skills, please report it privately rather than opening a public issue.
 
-Open a [GitHub private security advisory](https://github.com/rterakedis/bmad-lite-skills/security/advisories/new) for this repository with a description of the issue and reproduction steps.
+Open a [GitHub private security advisory](https://github.com/rterakedis/leanwheel-skills/security/advisories/new) for this repository with a description of the issue and reproduction steps.
 
 Please do not disclose the issue publicly until it has been addressed.
 

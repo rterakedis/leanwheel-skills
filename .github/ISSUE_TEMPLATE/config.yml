@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security vulnerability
-    url: https://github.com/rterakedis/bmad-lite-skills/security/advisories/new
+    url: https://github.com/rterakedis/leanwheel-skills/security/advisories/new
     about: Please report security issues privately rather than in a public issue — see SECURITY.md.

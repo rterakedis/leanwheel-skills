@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# gh-track.sh — deterministic GitHub issue status tracking for bmad-lite.
+# gh-track.sh — deterministic GitHub issue status tracking for leanwheel.
 #
 # Status labels are MUTUALLY EXCLUSIVE; an issue carries exactly one at a time:
 #   backlog → ready-for-dev → in-progress → review → done
@@ -81,7 +81,7 @@ cmd_transition() {
 
 cmd_close() {
   local issue="$1"; shift || true
-  local comment="${1:-Story complete — closed by bmad-lite.}"
+  local comment="${1:-Story complete — closed by leanwheel.}"
   [[ -n "$issue" ]] || die "usage: close <issue#> [comment]"
   cmd_transition "$issue" done >/dev/null
   # Idempotent: skip if already closed.

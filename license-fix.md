@@ -1,6 +1,8 @@
 # License & Trademark Remediation Plan
 
-**Status:** Phase 1 applied on branch `claude/bmad-license-compliance-ayjbem` · Phase 2 pending a naming decision
+**Status:** Phase 1 applied · **Name chosen: `leanwheel` (agent prefix `lw-`)** · Phase 2 content
+rename applied on branch `claude/bmad-license-compliance-ayjbem` · remaining: owner-only actions
+(GitHub repo rename, local clone/symlink cleanup, tester reinstall announcement, discussion #2540)
 **Prepared:** 2026-07-04
 
 ---
@@ -65,7 +67,7 @@ From `BMAD-METHOD/TRADEMARK.md` — **you may**:
 | # | Issue | Legal basis | Severity | Status |
 |---|-------|-------------|----------|--------|
 | F1 | `LICENSE` omitted upstream's copyright + permission notice despite the repo containing skills ported from (and several "identical to") upstream | MIT License condition ("The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software") | **Violation — must fix** | ✅ Fixed in Phase 1 |
-| F2 | "bmad" used as **product identity**: repo name `bmad-lite-skills`, plugin/marketplace name `bmad-lite`, agent names `bmad-*`, scaffolded manifest dir `.bmad-lite/`, "BMAD-LITE" branding throughout docs, hooks, and scripts | Trademark policy (outside the MIT grant) — prohibits BMad-derived product names | **Violation — must fix** | ⏳ Phase 2 (needs a name decision) |
+| F2 | "bmad" used as **product identity**: repo name `bmad-lite-skills`, plugin/marketplace name `bmad-lite`, agent names `bmad-*`, scaffolded manifest dir `.bmad-lite/`, "BMAD-LITE" branding throughout docs, hooks, and scripts | Trademark policy (outside the MIT grant) — prohibits BMad-derived product names | **Violation — must fix** | ✅ Content rename to `leanwheel`/`lw-*` applied; repo rename + external surfaces pending (owner actions below) |
 | F3 | Referential mentions: "port of the BMAD Method", credit section, migration guide for full-BMAD projects, `_bmad/` detection in `/setup migrate` | Nominative fair use — explicitly permitted by TRADEMARK.md | **Compliant — keep** | No action |
 
 Note on F1: CLAUDE.md's sync policy is "port ideas, never direct file copies," and ideas aren't
@@ -89,7 +91,32 @@ Nothing else in Phase 1 — partial renames before a name is chosen would just c
 
 ---
 
-## Phase 2 — Rename the product (requires one decision: the new name)
+## Phase 2 — Rename the product ✅ DECIDED: `leanwheel`, agent prefix `lw-`
+
+**Executed on this branch (2026-07-04):** all product-identity tokens renamed in-repo —
+plugin/marketplace `bmad-lite` → `leanwheel`, agents `bmad-story-creator|developer|reviewer` /
+`bmad-docs-sync` → `lw-story-creator|developer|reviewer` / `lw-docs-sync` (files, frontmatter,
+and every skill/doc reference), manifest dir `.bmad-lite/` → `.leanwheel/` (with legacy
+read-and-migrate back-compat in `/upgrade-project` Step 1/Step 4), scaffolded hook/script
+strings, "BMAD-LITE" branding → "Leanwheel", trigger "sync bmad" → "sync leanwheel", and a
+standing trademark rule added to CLAUDE.md Conventions. Upstream-referential mentions (BMAD
+Method, BMAD-METHOD, full-BMAD migration flow, `_bmad/` detection, credit/comparison docs)
+were deliberately preserved.
+
+**Remaining owner-only actions:**
+1. Merge this branch, then rename the GitHub repo to `rterakedis/leanwheel-skills`
+   (Settings → Rename; GitHub redirects the old URL — do it promptly, since README install
+   commands now point at the new URL).
+2. On the maintainer machine: rename the local clone dir, `git remote set-url`, remove stale
+   `~/.claude/agents/bmad-*.md` symlinks, re-run the symlink sync (see CLAUDE.md Local
+   Development).
+3. Announce to testers: uninstall `bmad-lite@bmad-lite`, re-add the marketplace, install
+   `leanwheel@leanwheel` (a plugin rename is a new plugin).
+4. Existing scaffolded projects: run `/upgrade-project` — it migrates `.bmad-lite/` →
+   `.leanwheel/` and refreshes the renamed scripts/hooks.
+5. Phase 3 items below (discussion #2540 edit, listings, optional goodwill email).
+
+*The original decision notes follow for the record.*
 
 The MIT license permits keeping everything; the trademark policy requires the *product* stop
 being called anything BMad-derived. One decision is needed — the new name — then the rename is

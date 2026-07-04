@@ -1,6 +1,6 @@
-# CLAUDE.md — bmad-lite-skills
+# CLAUDE.md — leanwheel-skills
 
-This repo is a lean, token-efficient port and simplification of the [BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD) for Claude Code. It ships as a Claude Code plugin (`bmad-lite`) via `.claude-plugin/plugin.json`. Skills live in `.claude/skills/` and are registered as `SKILL.md` (uppercase) — the upstream uses `skill.md` (lowercase) and an entirely different file structure (activation ceremony, TOML customization tiers, JIT step files) that this repo deliberately does not carry over.
+This repo is a lean, token-efficient port and simplification of the [BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD) for Claude Code. It ships as a Claude Code plugin (`leanwheel`) via `.claude-plugin/plugin.json`. Skills live in `.claude/skills/` and are registered as `SKILL.md` (uppercase) — the upstream uses `skill.md` (lowercase) and an entirely different file structure (activation ceremony, TOML customization tiers, JIT step files) that this repo deliberately does not carry over.
 
 ## Purpose
 
@@ -38,7 +38,7 @@ git clone https://github.com/bmad-code-org/BMAD-METHOD /tmp/BMAD-METHOD
 Upstream's skill files don't structurally match this repo's (different filenames, activation ceremony, TOML customization tiers, JIT step-file loading), so a mechanical `diff` isn't useful here. Instead, hand the comparison to an AI assistant with a prompt that leads with this repo's token-minimization philosophy, so it filters for genuine capability gains rather than re-importing ceremony this repo intentionally cut. Example prompt:
 
 ```
-I maintain bmad-lite-skills, a token-efficient port of the BMAD Method for Claude Code.
+I maintain leanwheel-skills, a token-efficient port of the BMAD Method for Claude Code.
 It deliberately strips: the per-invocation activation ceremony, three-tier TOML
 customization, agent persona overhead, and JIT step-file loading — replacing them with
 plain-English rules in CLAUDE.md and single-pass inline skill files. Full rationale in
@@ -67,7 +67,7 @@ Scaffold question 3 changed from a yes/no Apple platform question to a multi-sel
 
 Added scaffold question 4: "Does this project ship a web surface? (none / web app / Astro / Hugo / other SSG)". Step 3c appends the web guardrails block (`stubs/modern-web.md`, checks for `## Web Guardrails`). Step 3d scaffolds `docs/setup/web/` from `stubs/web/` — shared files (`css-design-system.md`, `accessibility-seo.md`, `anti-patterns.md`) always, plus `astro.md` or `hugo.md` per the answer.
 
-Added agentic-engineering scaffolding: Step 1 also creates `docs/evals/` + `docs/metrics/` (from `stubs/evals/` and `stubs/metrics/`). New **Step 3e** copies the deterministic guardrail hooks (`stubs/hooks/*.sh`) into `.claude/hooks/` and chmod +x. **Step 4** now merges the hook wiring from `stubs/hooks/hooks-settings.json` into `.claude/settings.json` (PreToolUse/PostToolUse) alongside the skills `add-dir` startup hook. **Step 5** writes `.bmad-lite/manifest.json` (skills_path, surfaces, asset flags) for `/upgrade-project` to sync against. Subagents need no scaffolding — they ship plugin-level in `agents/` (the plugin-standard location at repo root).
+Added agentic-engineering scaffolding: Step 1 also creates `docs/evals/` + `docs/metrics/` (from `stubs/evals/` and `stubs/metrics/`). New **Step 3e** copies the deterministic guardrail hooks (`stubs/hooks/*.sh`) into `.claude/hooks/` and chmod +x. **Step 4** now merges the hook wiring from `stubs/hooks/hooks-settings.json` into `.claude/settings.json` (PreToolUse/PostToolUse) alongside the skills `add-dir` startup hook. **Step 5** writes `.leanwheel/manifest.json` (skills_path, surfaces, asset flags) for `/upgrade-project` to sync against. Subagents need no scaffolding — they ship plugin-level in `agents/` (the plugin-standard location at repo root).
 
 ### `check-readiness`
 Added **Check 7** (cross-epic runtime dependency analysis), **Check 8** (testing targets derived from architecture, with codification into `CLAUDE.md`), **Check 9** (UX alignment — conditional on `docs/ux/` existing: design specs final before UI stories, every UI story maps to an EXPERIENCE.md surface, state coverage, token readiness), and **Check 10** (pre-mortem — plan-level red-teaming: assume the shipped project failed at month three, work backwards to 5–8 causes grounded in the actual PRD/architecture/epics, classify each as addressed / unaddressed-material → blocker + LOG-AND-SCHEDULE / unaddressed-speculative → warning). Checks 7–9 are not in upstream. Check 10 is the lean fold-in of upstream's pre-mortem, which ships as one method in `bmad-advanced-elicitation`'s CSV-served interactive menu — the menu/registry infrastructure is not ported, just the motion, run inside the gate where the three planning docs are already in context. Division of labor: `/forge-idea` pressure-tests the *idea*, Check 10 pressure-tests the *plan*.
@@ -124,7 +124,7 @@ Guidance routing and design loop (not in upstream):
 
 Added to the Build & Test Gate: runs the `evals` RUN op (cumulative `command` regression set across stories — a failing case is treated like a red build) and the BUILD op (registers the story's new tests as cases). On Completion writes a `dev-story` line to `docs/metrics/flywheel-ledger.jsonl`.
 
-**Operational doc sync** (human-guide feedback): On-Completion Wrap-Up step (the "All resolved" path) calls the `docs-sync` **OPERATIONAL** op with the story's final changed-file list — keeping the human stand-up / run-it / database guides current when an infra-shaped file changed, zero-cost otherwise. Surfaced via a `DOCS UPDATED:` field in the `bmad-story-developer` report contract (captured by story-/epic-flywheel), a `docs_updated` ledger field, and a DoD checklist item. The human-readable counterpart to the architecture-promotion feedback (which serves the LLM's planning). Mechanics + the infra-signal table live in the [`docs-sync`](#docs-sync) skill (single source of truth, also called by `quick-dev`).
+**Operational doc sync** (human-guide feedback): On-Completion Wrap-Up step (the "All resolved" path) calls the `docs-sync` **OPERATIONAL** op with the story's final changed-file list — keeping the human stand-up / run-it / database guides current when an infra-shaped file changed, zero-cost otherwise. Surfaced via a `DOCS UPDATED:` field in the `lw-story-developer` report contract (captured by story-/epic-flywheel), a `docs_updated` ledger field, and a DoD checklist item. The human-readable counterpart to the architecture-promotion feedback (which serves the LLM's planning). Mechanics + the infra-signal table live in the [`docs-sync`](#docs-sync) skill (single source of truth, also called by `quick-dev`).
 
 ### `epics`
 Added **cross-epic runtime dependency scan** step after drafting all epics but before writing. Checks whether any story in an earlier epic requires a runtime artifact (migration, seed data, table, endpoint) from a later epic, and annotates both epics with dependency notes or flags potential reordering.
@@ -152,7 +152,7 @@ Also uses `gh api` with `--jq` for more precise issue filtering within a milesto
 
 Phase 4 checkpoint includes a **TESTING PLAN** section (between DEFERRED ITEMS and UNRESOLVED ITEMS): concrete manual steps derived from the story's ACs and changed code — tap/click paths, API calls, edge cases. Writes "none — no user-visible surface changed." for pure refactors or migrations.
 
-**Subagent Delegation & Model Routing** (not in upstream): the default mode delegates each phase to a bmad subagent (`bmad-story-creator`, `bmad-story-developer`, `bmad-story-reviewer` in `agents/`) via the Agent tool. Two Pro-plan wins: **automatic model routing** (no manual `/model` switching) and **context isolation** (each phase's heavy doc/code reading runs in a throwaway subagent window; the orchestrating thread only accumulates short structured reports). Routing is Conserve-Opus baseline with a dynamic Swift exception: create-story=Sonnet, dev-story=**Sonnet on Python/web but Opus on Swift** (`swift_project` = `docs/setup/swift/` exists OR an `.xcodeproj`/`.xcworkspace`/`Package.swift` present), code-review=Sonnet. The flywheel passes a per-spawn `model: opus` override only for Phase 2 on Swift. Because dev-story already runs an **inline** review, Phase 3 spawns a separate reviewer only when there are unresolved items / a FAIL gate / a security-sensitive story — otherwise it carries the Phase 2 findings straight to the checkpoint (saves an extra review's tokens). Human touch-points collapse to three: Phase-1 clarification surfacing, the Phase-4 checkpoint, the epic-boundary gate; an opt-in **auto-pilot** ("auto-continue on clean stories") advances past checkpoints that are fully green with no unresolved items while always stopping on red/HALT. **Fallback** (subagents unavailable): the old **MODEL SWITCH GATE** hard-stops, Swift-only, documented under "Fallback: Manual Model Switching." Rationale for Swift→Opus even under Conserve-Opus: a Sonnet Swift dev-story pass tends to fail the Build & Test Gate and loop, and each failed `xcodebuild` retry costs more than one accurate Opus pass — so Opus is the token-conserving choice there; on Python/web Sonnet passes first-try often enough that Opus is overspend. Phase 4 checkpoint gained a **VERIFICATION** line (Build & Test · evals P/T · rubric gate · invariants · iterations) and writes a story-level roll-up to `docs/metrics/flywheel-ledger.jsonl`.
+**Subagent Delegation & Model Routing** (not in upstream): the default mode delegates each phase to a leanwheel subagent (`lw-story-creator`, `lw-story-developer`, `lw-story-reviewer` in `agents/`) via the Agent tool. Two Pro-plan wins: **automatic model routing** (no manual `/model` switching) and **context isolation** (each phase's heavy doc/code reading runs in a throwaway subagent window; the orchestrating thread only accumulates short structured reports). Routing is Conserve-Opus baseline with a dynamic Swift exception: create-story=Sonnet, dev-story=**Sonnet on Python/web but Opus on Swift** (`swift_project` = `docs/setup/swift/` exists OR an `.xcodeproj`/`.xcworkspace`/`Package.swift` present), code-review=Sonnet. The flywheel passes a per-spawn `model: opus` override only for Phase 2 on Swift. Because dev-story already runs an **inline** review, Phase 3 spawns a separate reviewer only when there are unresolved items / a FAIL gate / a security-sensitive story — otherwise it carries the Phase 2 findings straight to the checkpoint (saves an extra review's tokens). Human touch-points collapse to three: Phase-1 clarification surfacing, the Phase-4 checkpoint, the epic-boundary gate; an opt-in **auto-pilot** ("auto-continue on clean stories") advances past checkpoints that are fully green with no unresolved items while always stopping on red/HALT. **Fallback** (subagents unavailable): the old **MODEL SWITCH GATE** hard-stops, Swift-only, documented under "Fallback: Manual Model Switching." Rationale for Swift→Opus even under Conserve-Opus: a Sonnet Swift dev-story pass tends to fail the Build & Test Gate and loop, and each failed `xcodebuild` retry costs more than one accurate Opus pass — so Opus is the token-conserving choice there; on Python/web Sonnet passes first-try often enough that Opus is overspend. Phase 4 checkpoint gained a **VERIFICATION** line (Build & Test · evals P/T · rubric gate · invariants · iterations) and writes a story-level roll-up to `docs/metrics/flywheel-ledger.jsonl`.
 
 ### `ux`
 Added a **Content site (SSG) preset** (Astro/Hugo) alongside the web-app and Apple presets: typography-first token probing, CSS custom property token names, content-model → layout mapping in IA, a mandatory **Content & Performance** section in EXPERIENCE.md (CWV target + per-page-type JS budget with named/justified islands), and SEO/meta as design decisions. `checklist.md` gained a matching section 7 (Content Site / SSG); platform question text mentions SSGs explicitly.
@@ -187,10 +187,10 @@ New composable skill with no upstream equivalent — the **single source of trut
 
 Directly invocable as `/docs-sync` (runs OPERATIONAL over the working tree). Three doc audiences kept deliberately separate: human operational guides (OPERATIONAL writes), LLM planning doc (PROMOTE writes), external-sourced coding guidance (neither writes — DRIFT only flags; `/refresh-*` owns it). Surfaced through a `docs_updated` ledger field and a dev-story DoD item.
 
-**Model routing — runs on Haiku via the `bmad-docs-sync` subagent** (see [Flywheel subagents](#flywheel-subagents) and the routing memory). OPERATIONAL/PROMOTE are mechanical, grounded-in-diff prose and must never inherit the dev model (**Opus on Swift**). Since a skill can't pick its own model, the `bmad-story-developer` subagent does **not** run docs-sync inline — it reports `INFRA TOUCHED: yes/no`, and the **orchestrator** (story-/epic-flywheel) spawns `bmad-docs-sync` (Haiku) after the dev phase (OPERATIONAL, via the story's File List) and at the epic boundary / retrospective (PROMOTE). Main-session callers (`quick-dev`, standalone `dev-story`, `/docs-sync`) spawn it directly. DRIFT stays inline (one advisory line — cheaper than a spawn). Inline execution remains the fallback when subagents are unavailable.
+**Model routing — runs on Haiku via the `lw-docs-sync` subagent** (see [Flywheel subagents](#flywheel-subagents) and the routing memory). OPERATIONAL/PROMOTE are mechanical, grounded-in-diff prose and must never inherit the dev model (**Opus on Swift**). Since a skill can't pick its own model, the `lw-story-developer` subagent does **not** run docs-sync inline — it reports `INFRA TOUCHED: yes/no`, and the **orchestrator** (story-/epic-flywheel) spawns `lw-docs-sync` (Haiku) after the dev phase (OPERATIONAL, via the story's File List) and at the epic boundary / retrospective (PROMOTE). Main-session callers (`quick-dev`, standalone `dev-story`, `/docs-sync`) spawn it directly. DRIFT stays inline (one advisory line — cheaper than a spawn). Inline execution remains the fallback when subagents are unavailable.
 
 ### `upgrade-project`
-New skill with no upstream equivalent. Brings an existing bmad-lite project up to the latest skills/stubs/hooks/framework — the recurring sync to `/setup`'s first-run. **Detection-based** (works on projects scaffolded before manifests existed): scans for missing assets (hooks, evals/metrics dirs, hook wiring, CLAUDE.md guardrail blocks) and stub drift, classifying each as ADD / REFRESH / **CONFLICT** / OK. The REFRESH-vs-CONFLICT test uses git provenance of `{skills_path}` — if a project stub hashes to any historical committed version it was never locally edited → safe REFRESH; otherwise it's a CONFLICT, surfaced for manual merge and **never auto-overwritten**. Previews a plan, applies only ADD/REFRESH on confirmation, writes `.bmad-lite/manifest.json` going forward. Token-safe (small reads + git/hash compares, no model-heavy work). Never touches planning docs or story files. Triggered via `/upgrade-project` ("upgrade project", "sync bmad").
+New skill with no upstream equivalent. Brings an existing leanwheel project up to the latest skills/stubs/hooks/framework — the recurring sync to `/setup`'s first-run. **Detection-based** (works on projects scaffolded before manifests existed): scans for missing assets (hooks, evals/metrics dirs, hook wiring, CLAUDE.md guardrail blocks) and stub drift, classifying each as ADD / REFRESH / **CONFLICT** / OK. The REFRESH-vs-CONFLICT test uses git provenance of `{skills_path}` — if a project stub hashes to any historical committed version it was never locally edited → safe REFRESH; otherwise it's a CONFLICT, surfaced for manual merge and **never auto-overwritten**. Previews a plan, applies only ADD/REFRESH on confirmation, writes `.leanwheel/manifest.json` going forward. Token-safe (small reads + git/hash compares, no model-heavy work). Never touches planning docs or story files. Triggered via `/upgrade-project` ("upgrade project", "sync leanwheel").
 
 ### `epic-flywheel`
 New skill with no upstream equivalent. The autonomous, epic-scoped layer *above* `story-flywheel` — drives a whole epic from "not started" to "implemented, reviewed, verified together" with minimal steering. Reuses story-flywheel's three subagents and per-phase model routing (does not duplicate the table). Adds five things story-flywheel lacks: (1) **granular commit-per-step** (create → commit → dev → commit → review+patch → commit) so a bad story is bisectable/unravel-able rather than buried in one squash — uses the project's `scripts/commit-push.sh` if present, else plain git, and requires up-front commit authorization; (2) **within-epic auto-advance** on fully-green stories (the per-story Build & Test / evals / invariant gates still HALT on a real compounding bug — only the *manual* test pass is deferred); (3) a real **Epic Boundary Gate** that runs a whole-project build+test, the cumulative `evals` RUN across all epics, an invariant-verification sweep, and a two-pass deferred sweep — **any failure HALTs and asks for help, never starts the next epic**; (4) continuous deferred-item **re-homing** (orphan check at the boundary); (4c) **architecture promotion** (doc-feedback Gap A): a zero-token boundary step calling the `docs-sync` **PROMOTE** op — harvests project-canonical learnings from `docs/epics/epic-{N}-context.md` and appends the durable ones to `docs/architecture.md` (idempotent) so the next epic plans against live docs instead of a stale architecture; never touches `docs/setup/*`; (5) a **rolled-up, LLM-deduplicated Test Plan** written to `docs/epics/epic-{N}-test-plan.md`, merging per-story TESTING PLANs into end-to-end flows + edge cases and **classifying every test as simulator/local-runnable vs physical-device-required** (camera, APNs push, Face ID, sensors, org-account-gated provisioning). Physical-device items also accrue to a persistent cross-epic `docs/testing/physical-device-backlog.md` so they resurface when an org developer account lands — directly addresses the user's current inability to test on physical hardware. The boundary report **always surfaces a mandatory retrospective reminder** (recommended flow: run the simulator test plan → then `/retrospective` for the epic → then start the next epic); skipping retro requires an explicit confirmation. Token posture: every boundary gate is zero-token (shell commands + short recorded-block reads); the only model-heavy step is the once-per-epic dedup over plan text. Per-story TESTING PLANs are stashed to a scratch `docs/epics/.epic-{N}-test-plans.md` so the orchestrator never holds all plans in context at once. Triggered via `/epic-flywheel` ("epic flywheel", "run the whole epic", "flywheel the epic").
@@ -208,7 +208,7 @@ New skill, lean port that **merges upstream's three editorial skills** (`bmad-ed
 
 ## Harness Assets (agentic-engineering layer)
 
-Added to move bmad-lite further from "vibe" toward "agentic engineering" (per *The New SDLC With Vibe Coding*) while staying cheap to run on the **Claude Pro plan** — every mechanism here is either zero-token (deterministic hooks, command evals, file-append observability) or token-*saving* (subagent context isolation, model routing).
+Added to move leanwheel further from "vibe" toward "agentic engineering" (per *The New SDLC With Vibe Coding*) while staying cheap to run on the **Claude Pro plan** — every mechanism here is either zero-token (deterministic hooks, command evals, file-append observability) or token-*saving* (subagent context isolation, model routing).
 
 ### Deterministic guardrail hooks (`setup/stubs/hooks/`)
 Pure bash/grep — **never call a model**, so zero token cost. Scaffolded into a project's `.claude/hooks/` by `/setup` Step 3e, wired via `hooks-settings.json`, refreshed by `/upgrade-project`:
@@ -217,7 +217,7 @@ Pure bash/grep — **never call a model**, so zero token cost. Scaffolded into a
 - `log-activity.sh` — PostToolUse (`*`). Appends one JSON line per tool use to `docs/metrics/activity.jsonl` (capped at 2000 lines); backs observability.
 
 ### Flywheel subagents (`agents/`)
-Ship plugin-level (available wherever `bmad-lite` is installed; no per-project scaffolding). `bmad-story-creator` (Sonnet), `bmad-story-developer` (Sonnet default; flywheel overrides to Opus on Swift), `bmad-story-reviewer` (Sonnet), and `bmad-docs-sync` (**Haiku**). Each runs its skill in an isolated context and returns a terse structured report — see the story-flywheel **Subagent Delegation & Model Routing** notes above. `bmad-docs-sync` runs the `docs-sync` skill's OPERATIONAL/PROMOTE ops on the cheapest model so mechanical doc maintenance never lands on the dev model (Opus on Swift); the orchestrator spawns it post-dev / at the epic boundary (the dev/dev-developer subagent can't nest a child). **New agent → must be symlinked** (see Local Development reminder).
+Ship plugin-level (available wherever `leanwheel` is installed; no per-project scaffolding). `lw-story-creator` (Sonnet), `lw-story-developer` (Sonnet default; flywheel overrides to Opus on Swift), `lw-story-reviewer` (Sonnet), and `lw-docs-sync` (**Haiku**). Each runs its skill in an isolated context and returns a terse structured report — see the story-flywheel **Subagent Delegation & Model Routing** notes above. `lw-docs-sync` runs the `docs-sync` skill's OPERATIONAL/PROMOTE ops on the cheapest model so mechanical doc maintenance never lands on the dev model (Opus on Swift); the orchestrator spawns it post-dev / at the epic boundary (the dev/dev-developer subagent can't nest a child). **New agent → must be symlinked** (see Local Development reminder).
 
 ### Observability ledger (`setup/stubs/metrics/`)
 Zero-token. `docs/metrics/flywheel-ledger.jsonl` gets one curated line per phase per story (model, build/test result + iterations, evals P/T, finding counts, rubric gate, invariants) appended by dev-story / code-review / story-flywheel via a single shell redirect — never read into the model. Drift indicators (rising build/test iterations, falling rubric gate, recurring `manual-required`) documented in the stub README for `/status`-style review.
@@ -248,9 +248,9 @@ No local changes — safe to overwrite from upstream on sync:
     <skill-name>/
       SKILL.md        # skill prompt (uppercase — plugin convention)
 agents/               # flywheel subagents (plugin-standard location, root)
-  bmad-story-creator.md
-  bmad-story-developer.md
-  bmad-story-reviewer.md
+  lw-story-creator.md
+  lw-story-developer.md
+  lw-story-reviewer.md
 .claude-plugin/
   plugin.json         # plugin manifest — declares "skills": "./.claude/skills/"
   marketplace.json    # marketplace catalog — plugin source is "./"
@@ -259,7 +259,7 @@ agents/               # flywheel subagents (plugin-standard location, root)
 ## Plugin Packaging
 
 This repo is both a plugin and its own single-plugin marketplace, installable via
-`/plugin marketplace add <repo>` then `/plugin install bmad-lite@bmad-lite`.
+`/plugin marketplace add <repo>` then `/plugin install leanwheel@leanwheel`.
 
 - **Skills** stay in the non-standard `.claude/skills/` (preserves the personal-symlink
   + `additionalDirectories` + upstream-sync workflow). `plugin.json` exposes them with
@@ -285,8 +285,8 @@ snapshot for testers. Instead the skills/agents are consumed live via personal-d
 **symlinks** into this repo, so edits propagate to every project on the next session
 with no commit/update/restart:
 
-- `~/.claude/skills/<name>` → `…/bmad-lite-skills/.claude/skills/<name>`
-- `~/.claude/agents/<name>.md` → `…/bmad-lite-skills/agents/<name>.md`
+- `~/.claude/skills/<name>` → `…/leanwheel-skills/.claude/skills/<name>`
+- `~/.claude/agents/<name>.md` → `…/leanwheel-skills/agents/<name>.md`
 
 This matters because the macOS app does **not** auto-load skills from a project's
 `additionalDirectories`; the personal-dir symlinks are what make them load everywhere.
@@ -296,10 +296,16 @@ This matters because the macOS app does **not** auto-load skills from a project'
 > symlink yet and will silently fail to load in the app (this is exactly how `swift-audit`
 > went missing). Re-run:
 > ```bash
-> for d in /Users/rterakedis/Git-Repos/bmad-lite-skills/.claude/skills/*/; do ln -sfn "$d" ~/.claude/skills/"$(basename "$d")"; done
-> for a in /Users/rterakedis/Git-Repos/bmad-lite-skills/agents/*.md; do ln -sfn "$a" ~/.claude/agents/"$(basename "$a")"; done
+> for d in /Users/rterakedis/Git-Repos/leanwheel-skills/.claude/skills/*/; do ln -sfn "$d" ~/.claude/skills/"$(basename "$d")"; done
+> for a in /Users/rterakedis/Git-Repos/leanwheel-skills/agents/*.md; do ln -sfn "$a" ~/.claude/agents/"$(basename "$a")"; done
 > ```
 > Then restart the session. (Don't touch `~/.claude/skills/reset-git-staging-branch` — not from this repo.)
+>
+> **One-time post-rename cleanup (bmad-lite → leanwheel):** the local clone must be
+> renamed to `…/Git-Repos/leanwheel-skills` (and `git remote set-url` after the GitHub
+> repo rename), old `~/.claude/agents/bmad-*.md` symlinks removed
+> (`rm ~/.claude/agents/bmad-story-*.md ~/.claude/agents/bmad-docs-sync.md`), and the
+> sync re-run so the `lw-*` agents load.
 
 ## Conventions
 
@@ -307,3 +313,4 @@ This matters because the macOS app does **not** auto-load skills from a project'
 - No `settings.json` in `.claude/` — this repo is a plugin, not a project config.
 - Do not add project-level docs (`docs/`, story files, etc.) — this repo ships skills only.
 - When adding a new skill or agent, also re-run the symlink sync (see **Local Development**) so it loads on the maintainer's machine.
+- **Trademark rule:** "BMAD"/"BMad" appears only in *references to the upstream project* (credit, comparison, migration, upstream-sync workflow) — never in the name of anything this repo ships (skills, agents, plugin, dirs, scripts, hooks). BMad™, BMad Method™, and BMad Core™ are trademarks of BMad Code, LLC; see LICENSE third-party notices and `license-fix.md`.
