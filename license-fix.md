@@ -164,6 +164,15 @@ Check GitHub/npm/plugin-marketplace collisions before committing. The tagline
 1. **Domains / social handles:** none known for this project; if any exist containing "bmad",
    retire them (explicitly prohibited by TRADEMARK.md).
 2. **Marketplace/directory listings** referencing `bmad-lite`: update after the rename.
+2a. **Upstream announcement post** — [BMAD-METHOD discussion #2540](https://github.com/bmad-code-org/BMAD-METHOD/discussions/2540#discussion-10349133),
+   titled "BMAD-Lite-Skills --> BMAD for lower token budgets (like Claude Pro)". This is the
+   post where the licensing concern was raised, and it currently presents the BMad-derived
+   product name on upstream's own repo. After Phase 2 lands: edit the title and body to use
+   `{NEW-NAME}` with permitted referential phrasing (e.g. "{NEW-NAME} — a lean port of the
+   BMAD Method for lower token budgets"), update the repo link to the renamed URL (GitHub
+   redirects, but the old name shouldn't remain visible), and reply to the licensing comment
+   noting the rename and the restored MIT notice — it closes the loop with the person who
+   flagged it. Owner-only action (posted from the rterakedis account).
 3. **Ongoing rule** (add to CLAUDE.md conventions after Phase 2): "BMAD"/"BMad" appears only in
    *references to the upstream project* (credit, comparison, migration, sync workflow) — never
    in the name of anything this repo ships (skills, agents, plugin, dirs, scripts, hooks).
