@@ -31,3 +31,5 @@ For 🔲: read `docs/epics.md` for stories without GitHub issue.
    - Any `ready-for-dev` → `/dev-story` start {N.M}
    - 🔲 exists → `/create-story` spec {N.M}
    - All done → `/retrospective`
+
+   For routing beyond the dev loop (planning gaps, epic boundaries, post-MVP), suggest `/next`.

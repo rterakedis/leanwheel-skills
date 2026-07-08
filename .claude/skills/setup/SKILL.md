@@ -154,9 +154,10 @@ If the file exists, update its fields (don't discard unknown keys).
 Report created/skipped lists. Note the skills path wired into the startup hook, the guardrail hooks installed, and that the eval set + metrics ledger are ready.
 
 Next:
-  Greenfield → `/prd`
+  Greenfield → `/product-brief` (idea not formed) or `/prd` (idea formed)
   Brownfield → `/discover`
   Fill `docs/setup/index.md` with dev instructions
+  Unsure at any point from here on → `/next` routes to the single next command
 
 ---
 

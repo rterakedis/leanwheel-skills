@@ -1,5 +1,7 @@
 [← Back to README](../README.md)
 
+> **You don't need to memorize these maps.** Run `/next` in any session — it detects project state (zero-token file checks) and routes you to the single next command on these charts.
+
 ## Greenfield Process
 *Use this when starting a brand-new project from scratch.*
 

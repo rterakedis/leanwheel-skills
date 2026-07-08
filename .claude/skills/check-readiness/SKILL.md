@@ -129,3 +129,11 @@ Readiness report: ten checks, blockers (fix before `/create-story`), warnings (f
 Blockers: uncovered FRs, circular deps, architecture contradictions, cross-epic runtime blockers, UI stories without design coverage, empty load-bearing tokens, unaddressed material pre-mortem causes. Call **LOG-AND-SCHEDULE** for remediation stories.
 Warnings: weak ACs, scope overlap, missing security ACs, cross-epic runtime warnings, draft-status design specs, missing state coverage, speculative pre-mortem causes. Surface to user.
 Testing targets written to `CLAUDE.md` Conventions section as part of this check.
+
+Finally, stamp the result so `/next` can route deterministically: insert or update a single line directly below the H1 of `docs/epics.md`:
+
+```
+<!-- readiness-check: {date} — {blockers} blockers, {warnings} warnings -->
+```
+
+Re-runs update this line in place (one stamp, never a history).

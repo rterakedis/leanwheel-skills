@@ -72,6 +72,8 @@ Added agentic-engineering scaffolding: Step 1 also creates `docs/evals/` + `docs
 ### `check-readiness`
 Added **Check 7** (cross-epic runtime dependency analysis), **Check 8** (testing targets derived from architecture, with codification into `CLAUDE.md`), **Check 9** (UX alignment — conditional on `docs/ux/` existing: design specs final before UI stories, every UI story maps to an EXPERIENCE.md surface, state coverage, token readiness), and **Check 10** (pre-mortem — plan-level red-teaming: assume the shipped project failed at month three, work backwards to 5–8 causes grounded in the actual PRD/architecture/epics, classify each as addressed / unaddressed-material → blocker + LOG-AND-SCHEDULE / unaddressed-speculative → warning). Checks 7–9 are not in upstream. Check 10 is the lean fold-in of upstream's pre-mortem, which ships as one method in `bmad-advanced-elicitation`'s CSV-served interactive menu — the menu/registry infrastructure is not ported, just the motion, run inside the gate where the three planning docs are already in context. Division of labor: `/forge-idea` pressure-tests the *idea*, Check 10 pressure-tests the *plan*.
 
+Output additionally **stamps** `<!-- readiness-check: {date} — {b} blockers, {w} warnings -->` below the H1 of `docs/epics.md` (updated in place on re-runs) — the deterministic marker `/next` routes on.
+
 ### `code-review`
 Additions:
 1. Clean-review shortcut line: if no findings, write `Clean review — no patches or deferred items.` instead of an empty checklist.
@@ -145,6 +147,8 @@ Also added a two-pass deferred item audit:
 
 Strengthened the **PRD / Architecture Sync Check** to also call the `docs-sync` **PROMOTE** op (doc-feedback Gap A, manual path): promotes durable project-canonical learnings from `docs/epics/epic-{N}-context.md` into `docs/architecture.md` (idempotent — safe to run alongside epic-flywheel's boundary PROMOTE). Never edits `docs/setup/*` (records a refresh action item instead). Mechanics in the [`docs-sync`](#docs-sync) skill.
 
+Output additionally **stamps** `<!-- retro: epic {N} — {date} -->` below the H1 of `docs/epics.md` (one line per epic, idempotent) — the deterministic marker `/next` routes on — and the closing Report now points at `/epic-flywheel {N+1}` in a fresh session instead of `/create-story`.
+
 ### `story-flywheel`
 Epic discovery sorts by **epic number embedded in milestone title** (e.g., `"Epic 3 — ..."` → 3), not by GitHub milestone ID. This is intentional: GitHub assigns milestone IDs in creation order, which doesn't reflect intended epic sequence. Upstream sorts by milestone ID.
 
@@ -204,6 +208,12 @@ New skill, lean port of upstream `bmad-qa-generate-e2e-tests` (previously listed
 ### `doc-review`
 New skill, lean port that **merges upstream's three editorial skills** (`bmad-editorial-review-structure`, `bmad-editorial-review-prose`, `bmad-review-adversarial-general`) into one three-pass skill — same merge move as `research`: they share one target (a doc reviewed as writing) and compose in a fixed order upstream itself prescribes (structure before copy-edit). Fills the gap where code gets adversarial review but the planning docs — re-read by the model in every downstream session, so bloat is a *recurring* token cost — never get reviewed as writing (`check-readiness` checks alignment, not clarity/density). Pass A structure (purpose statement → structure-model fit → CUT/MERGE/MOVE/CONDENSE/QUESTION/PRESERVE recommendations with word estimates), Pass B prose (minimal-intervention clarity fixes, three-column table), Pass C adversarial (missing sections, unsupported claims, ambiguity an implementing session would trip on, contradictions incl. against sibling planning docs). Reader-type aware: `llm` for model-consumed docs (prd/architecture/epics/CLAUDE.md — terminology consistency, no hedging, explicitness may *lengthen*), `humans` for guides (comprehension aids preserved). CONTENT IS SACROSANCT for A+B; Pass C findings are report-only and route to `/prd update`//`correct-course`, never silent meaning-edits. Apply step is user-gated (all / structure / prose / by number / none). Drops upstream's per-skill HALT ceremony, style-guide TOML plumbing, and the "clueless weasel" persona framing. Triggered via `/doc-review` ("doc review", "tighten this doc", "editorial review").
 
+### `next`
+New skill with no upstream equivalent — the **navigator**, and the fix for "which skill, in what order?". Detects project state with one **zero-token bash block** (file existence + story-frontmatter greps + inline-finding counts — never reads planning-doc *contents*), classifies it against a priority-ordered decision table spanning the whole lifecycle (uninitialized → `/setup`; brownfield-undocumented → `/discover`; idea → `/product-brief`//`prd`; planning → `/ux`//`architecture`//`epics`; gate → `/check-readiness`; dev loop → `/epic-flywheel`/resume; boundary → manual test → `/harvest-findings` → `/retrospective`; post-MVP → `/quick-dev`), and reports exactly **one** NEXT command (max two optional branches), offering to run it or recommending a fresh session when the next phase is model-heavy. Routes on two deterministic markers written for it: the `readiness-check` stamp (`check-readiness`) and per-epic `retro:` stamps (`retrospective`), both single HTML comments below the `docs/epics.md` H1. Asks at most one question per run (idea formed? ships UI? manual test done?) and records durable answers into `.leanwheel/manifest.json` `surfaces`. Runs inline — deliberately **not** a subagent (detection is one bash call; a spawn would cost more than it saves). Triggered via `/next` ("next", "what's next", "what now", "where am I", "what should I run"). Surfaced from `/setup`'s closing Next block, `/status` step 4, `/retrospective`'s Report, the README's three-command quickstart tier, and `guide/workflows.md`.
+
+### `status`
+One-line addition: step 4's next-action heuristic (which only covers the dev loop) ends by pointing at `/next` for routing beyond it (planning gaps, epic boundaries, post-MVP). Otherwise identical to upstream.
+
 ---
 
 ## Harness Assets (agentic-engineering layer)
@@ -234,9 +244,9 @@ Mirror of the Swift stub system for web/SSG projects. Five sectioned reference f
 
 No local changes — safe to overwrite from upstream on sync:
 
-`architecture`, `correct-course`, `discover`, `investigate`, `prd`, `quick-dev`, `security-review`, `status`
+`architecture`, `correct-course`, `discover`, `investigate`, `prd`, `quick-dev`, `security-review`
 
-(`setup` and `ux` were previously in this list; both now carry local customizations documented above.)
+(`setup`, `ux`, and `status` were previously in this list; all now carry local customizations documented above.)
 
 ---
 

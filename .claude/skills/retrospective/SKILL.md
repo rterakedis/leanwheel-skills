@@ -132,4 +132,5 @@ End the retro with a `## Next Epic Readiness` section:
 1. Write to `docs/epics/epic-{epic_num}-retro-{date}.md`: summary, metrics, what went well, blockers, patterns, conventions-held audit, process changes, CLAUDE.md additions, security findings (mandatory), deferred items status, action items (checked off), next epic readiness.
 2. Update CLAUDE.md with new/revised conventions (Q7). If >80 lines, prune: consolidate, remove examples, move verbose explanations to docs/.
 3. Edit `docs/deferred-items.md` for any reassignments or newly logged items from the Deferred Item Status Check (mandatory — same turn). Every unresolved item must point to an open, not-started story.
-4. Report: "Retrospective complete. CLAUDE.md updated. Next: `/create-story`."
+4. Stamp completion so `/next` can route deterministically: append `<!-- retro: epic {epic_num} — {date} -->` directly below the H1 of `docs/epics.md` (one line per epic; skip if already present).
+5. Report: "Retrospective complete. CLAUDE.md updated. Next: `/epic-flywheel {N+1}` in a fresh session (or `/next` to confirm)."

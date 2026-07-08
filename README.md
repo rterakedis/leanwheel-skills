@@ -26,6 +26,16 @@ BMad™, BMad Method™, and BMad Core™ are trademarks of BMad Code, LLC (all 
 
 ## Quickstart
 
+**The short version — you only need to remember three commands:**
+
+| Command | When |
+|---|---|
+| `/setup` | Once, at the start of a project |
+| `/next` | Any time you're unsure what to run — detects project state and routes you to the single next command |
+| `/epic-flywheel` | To build — drives a whole epic autonomously with checkpoints |
+
+Everything else is either invoked for you by those three, or `/next` will route you to it at the right moment. The steps below are the full path for reference.
+
 1. **Install the plugin** — skills are then available in every Claude Code session automatically, no `/add-dir` needed:
 
    ```

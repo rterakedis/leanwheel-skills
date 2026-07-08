@@ -2,6 +2,11 @@
 
 ## All Skills
 
+**Navigator**
+| Invocation | What it does |
+|------------|-------------|
+| `/next` | The answer to "what do I run now?" at any point from empty folder to post-MVP. Detects project state deterministically (file existence + story-frontmatter greps — never reads planning-doc contents, so it's near-zero-token) and recommends exactly one next command with at most two optional branches, then offers to run it. Routes on the readiness stamp written by `/check-readiness` and the retro stamps written by `/retrospective`. |
+
 **Project Initialization**
 | Invocation | What it does |
 |------------|-------------|
