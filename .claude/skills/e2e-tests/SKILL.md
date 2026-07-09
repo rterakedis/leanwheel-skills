@@ -64,6 +64,12 @@ status codes, response structure. Follow existing test-file patterns exactly
   diff), roles/labels/text on web. Never brittle coordinate or CSS-path
   selectors.
 - Assert visible outcomes; keep tests linear and simple.
+- **Reach state via seeds, not taps** — if the project has the testability
+  foundation (`docs/setup/swift/testability.md`: `SeedScenario` registry +
+  `--seed`/`--uitest` launch arguments), every generated test launches with
+  the scenario that produces its precondition instead of tapping through
+  setup flows. If an Apple project lacks the foundation, propose adding it
+  first (it's the single highest-leverage piece of this skill's diff).
 - No complex fixture composition, no abstractions the project doesn't already
   use.
 

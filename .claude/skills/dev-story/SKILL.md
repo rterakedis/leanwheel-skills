@@ -20,6 +20,7 @@ description: Implement a story from its story file. Use when the user says "dev 
    - Any story adding new features, services, or project structure: read `docs/setup/swift/architecture.md`
    - Any story adding views or UI components: read `docs/setup/swift/ui-composition.md`
    - Any story adding tests: read `docs/setup/swift/testing.md`
+   - Any story adding/changing a persisted model entity, adding user-facing views, or touching launch behavior: read `docs/setup/swift/testability.md` (seed scenarios, launch-argument contract, accessibility identifiers)
    - Always read `docs/setup/swift/anti-patterns.md` if present — it governs what must not be written
    - If `docs/setup/swift/ipados-specific.md` exists and the story touches navigation, split view, drag-and-drop, pointer, keyboard, or multi-window: read it
    - If `docs/setup/swift/macos-specific.md` exists and the story touches menus, windows, toolbar, settings, tables, or file operations: read it
@@ -42,6 +43,8 @@ For each task in order:
 4. If problem found, log in Debug Log; continue.
 
 Don't ask for clarification (use Dev Notes; log ambiguous calls in Completion Notes).
+
+**Keep testability current as you go** (Apple projects with `docs/setup/swift/testability.md`): a task that adds or changes a persisted model entity updates the `SeedScenario` registry (at minimum `.typical` and `.edge`) in the same task; new user-facing views get semantic `.accessibilityIdentifier`s as they are written, never backfilled.
 
 **Keep files maintainable as you go.** If a file you create or touch crosses the file-size / decomposition target in the routed guidance (`docs/setup/swift/ui-composition.md` or `docs/setup/web/`), decompose it **as part of the task** — don't defer it. Split along responsibility seams (Swift: `extension TypeName {}` files for members, named `private struct` sub-views for layout), never by mechanical line-cutting, and never by giving a sub-view its own data access. A 280-line file with one cohesive job is fine; a smaller file doing three jobs is not — cohesion decides the cut.
 

@@ -37,6 +37,7 @@ xcrun simctl ui booted appearance light
 Also capture one screenshot with Dynamic Type at an accessibility size:
 `xcrun simctl ui booted content_size accessibility-extra-large` (reset after).
 Navigate to the changed surface first if it isn't the launch screen — use the app's deep link/URL scheme if one exists; otherwise screenshot what is reachable and note the limitation.
+If the project has the testability foundation (`docs/setup/swift/testability.md`), launch with seed arguments to render the states the Design Contract requires — e.g. `xcrun simctl launch booted {bundle_id} --seed empty` for empty states, `--seed edge` for truncation/overflow, `--seed heavy` for long lists — instead of only verifying whatever state the simulator happens to hold.
 
 **Web / SSG:**
 ```bash

@@ -74,6 +74,13 @@ Research each section in turn. For each: compare findings against the existing f
 - Any new Xcode test runner integration?
 - Core Data test patterns
 
+**`testability.md`**
+- `PreviewModifier` / preview-seeding APIs — any changes since iOS 18?
+- SwiftData `ModelConfiguration` / in-memory container patterns — any new options?
+- XCUITest — new launch/automation APIs, or replacements (e.g. Xcode UI-automation changes)?
+- Launch-argument / `ProcessInfo` patterns still the recommended seed trigger?
+- Accessibility-identifier best practices — any new locator guidance?
+
 **`anti-patterns.md`**
 - New patterns AI tools commonly generate that should be added to the rejection list?
 - Any anti-patterns that are now acceptable (rare — document the reason)?

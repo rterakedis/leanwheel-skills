@@ -43,6 +43,8 @@ For each epic:
 3. Get user confirmation, adjust
 4. Write full entries using template
 
+**Testability foundation story (Apple app projects):** if the architecture targets iOS/iPadOS/macOS, Epic 1 must include an early story (immediately after project scaffold, before the first feature story) that ships the foundation from `docs/setup/swift/testability.md`: the `SeedScenario` registry (empty/firstRun/typical/heavy/edge), the launch-argument contract (`--seed`/`--uitest`/`--reset` with in-memory store isolation), the accessibility-identifier convention, and one XCUITest smoke target with 2–4 tests. Every later story then *keeps* seeds and identifiers current instead of retrofitting them — this story is what makes automated testing cheap for the rest of the project.
+
 **Cross-epic runtime dependency scan (do after drafting all epics, before writing):**
 
 For every epic, ask: does any story in this epic require a runtime artifact — migration, seed data, table, endpoint — that lives in a *later* epic to be end-to-end testable or operationally complete?

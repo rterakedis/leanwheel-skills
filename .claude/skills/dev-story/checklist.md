@@ -9,6 +9,7 @@ All items must pass before status is set to `review`.
 - [ ] Edge cases from Dev Notes are handled
 - [ ] Behavior Contract invariants (if any) verified with cited evidence — test or assertion/guard at `file:line` (not a prose claim)
 - [ ] Touched files respect the decomposition targets in `docs/setup/swift|web/` guidance (if present) — over-target files are split by responsibility, or carry a one-line cohesion justification
+- [ ] Testability kept current (`docs/setup/swift/testability.md` projects): seed scenarios updated for any added/changed model entity; accessibility identifiers on new user-facing views — or N/A
 - [ ] Only dependencies listed in Dev Notes or CLAUDE.md were used
 
 ## Build & Tests

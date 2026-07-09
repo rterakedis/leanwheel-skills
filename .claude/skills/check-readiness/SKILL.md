@@ -85,6 +85,8 @@ Read `docs/architecture.md` to identify the tech stack, layers, and component ty
 - Mostly UI-driven with thin logic: 40–60%
 - Adjust up if architecture calls out safety, financial, or auth-critical paths
 
+**Testability foundation (Apple app projects):** if the architecture targets iOS/iPadOS/macOS, verify Epic 1 contains the testability-foundation story (seed-scenario registry + launch-argument contract + in-memory isolation + accessibility-ID convention + XCUITest smoke target — see `docs/setup/swift/testability.md`). Missing = **blocker**: call **LOG-AND-SCHEDULE** to slot it in before the first feature story. Without it, every downstream story's tests pay a state-setup tax and manual testing becomes the only way to see app states.
+
 **Codify in CLAUDE.md:** Append the following to the `## Conventions` section of `CLAUDE.md` (create the section if missing):
 
 ```

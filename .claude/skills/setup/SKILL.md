@@ -82,6 +82,7 @@ If {is_apple_platform} is true:
   - `architecture.md`
   - `ui-composition.md`
   - `testing.md`
+  - `testability.md`
   - `anti-patterns.md`
 - If {platforms} includes **iPadOS**: also copy `ipados-specific.md`.
 - If {platforms} includes **macOS**: also copy `macos-specific.md`.
