@@ -3,6 +3,9 @@
 ## How the Token Budget Works
 *Why this is cheaper than full BMAD — and how the cache makes it even cheaper.*
 
+> Estimates last recalculated **2026-07-08** against upstream **BMAD Method v6.10.0** (commit `49069b8`).
+> Method: measured bytes of every file a full skill run loads (SKILL.md + step files + checklists + TOML + templates), converted at ~4 chars/token. These are input-token estimates; output tokens (the AI's actual writing) are roughly the same in both systems.
+
 ```mermaid
 flowchart LR
     subgraph EXPENSIVE ["⚠️ /create-story — reads everything once per epic"]
@@ -31,37 +34,66 @@ flowchart LR
 > **The key insight:** You pay the full reading cost once (when creating the first story in an epic).
 > Every story after that uses the cache. The `/dev-story` agent only ever reads the story file —
 > never the PRD or architecture doc — because `/create-story` embedded everything it needs.
+>
+> Upstream has since adopted this same pattern inside `bmad-dev-auto` (it compiles an
+> `epic-N-context.md` too) — but only in that autonomous loop. Its standalone
+> `bmad-create-story` still mandates exhaustive re-analysis of PRD + architecture +
+> epics + UX on every story.
 
 ---
 
-## Token Spend Reduction vs Original BMAD
+## What changed since the last estimate
 
-Estimates based on a typical project: 3 epics × 4 stories each = 12 stories.
+Both systems grew — but not equally. The upstream v6 rewrite roughly **tripled** its per-run skill payloads (the retrospective is now a single 67KB SKILL.md; the PRD workflow is 61KB across 8 JIT step files), and the activation ceremony got *bigger* (~1,000 tokens/call: three-tier TOML resolution, config.yaml load, persistent facts, greeting, prepend/append hooks). Leanwheel's skills also grew — the Build & Test Gate, Behavior/Design Contracts, evals, and flywheel orchestration are real additions — but the lean single-pass structure kept the growth to roughly a third of upstream's. The net effect: the percentage savings **held or improved** even though both absolute numbers went up.
 
-### Per-invocation savings
+## Per-invocation skill-load comparison
 
-| Source of waste | Original BMAD | Leanwheel | Saved |
-|----------------|--------------|-----------|-------|
-| Activation ceremony (per skill call) | ~700 tokens | 0 | 700/call |
-| Architecture skill (8 JIT step files) | ~4,500 tokens | ~1,200 tokens | 3,300 |
-| UX skill (SKILL.md + 3 refs + customize.toml + Sally persona + 5 example assets + creative tools) | ~12,600 tokens | ~4,100 tokens (skill.md + checklist + 2 templates) | ~8,500/run |
-| `sprint-status.yaml` read (per dev/review call) | ~300 tokens | 0 | 300/call |
-| Agent persona overhead (per skill call) | ~400 tokens | 0 | 400/call |
-| `create-story` reading full PRD + arch (per story) | ~4,500 tokens | ~500 tokens (cache hit) | 4,000/story |
-| Separate code-review session startup (per story) | ~1,800 tokens | 0 (inline) | 1,800/story |
+Tokens loaded per full run of each skill (skill assets + ceremony; excludes project-doc reads, which are compared separately below).
 
-### Across a 12-story project
+| Skill | BMAD v6.10 | Leanwheel | Saved |
+|-------|-----------|-----------|-------|
+| Activation ceremony (every skill call) | ~1,000 | 0 | 1,000/call |
+| `create-story` (skill + checklist + TOML + templates) | ~12,000 | ~3,900 | ~8,100 |
+| `dev-story` | ~9,200 | ~4,000 (inline review included) | ~5,200 |
+| `code-review` (upstream: separate session, 4 step files) | ~9,000 | ~2,600 | ~6,400 |
+| `retrospective` (upstream: one 67KB SKILL.md) | ~17,800 | ~2,100 | ~15,700 |
+| `prd` (upstream: 8 JIT step files) | ~15,200 | ~1,700 | ~13,500 |
+| `architecture` | ~12,700 | ~1,200 | ~11,500 |
+| `epics` | ~10,300 | ~1,300 | ~9,000 |
+| `check-readiness` | ~8,400 | ~1,900 | ~6,500 |
+| `ux` (upstream: 17 files; ~35KB loads on a typical Create run) | ~9,000–11,000 | ~5,800 | ~4,000+ |
+| Agent persona overhead (upstream `bmad-agent-*`, when used) | ~2,000 | 0 | 2,000/session |
+| `sprint-status.yaml` bookkeeping (per dev/review call) | ~300 | 0 (GitHub labels via `gh-track.sh`, zero-token) | 300/call |
+| `create-story` doc reads (per story after the first in an epic) | ~5,000 (full PRD + arch + epics + UX) | ~500 (epic-context cache) | ~4,500/story |
 
-| Phase | Original BMAD | Leanwheel | Reduction |
-|-------|--------------|-----------|-----------|
-| Planning (PRD + arch + epics) | ~18,000 | ~8,000 | ~55% |
-| `/ux` (1 Create run per project) | ~12,600 | ~4,100 | ~67% |
-| `create-story` × 12 | ~58,000 | ~14,000 | ~76% |
-| `dev-story` + `code-review` × 12 | ~62,000 | ~42,000 | ~32% |
-| Retrospective × 3 epics | ~12,000 | ~4,500 | ~63% |
-| **Total** | **~162,600** | **~72,600** | **~55%** |
+## Across a 12-story project
 
-> These are input token estimates. Output tokens (the AI's actual writing) are roughly the same in both systems — the savings are entirely on the reading/loading side.
+3 epics × 4 stories, input/loading side, including project-doc reads. The Leanwheel column assumes the flywheel (subagent) path and includes its orchestration overhead.
+
+| Phase | BMAD v6.10 | Leanwheel | Reduction |
+|-------|-----------|-----------|-----------|
+| Planning (PRD + architecture + epics + readiness gate) | ~55,000 | ~14,000 | ~75% |
+| `/ux` (1 Create run) | ~10,000 | ~8,000 | ~20% |
+| `create-story` × 12 | ~200,000 | ~65,000 | ~67% |
+| `dev-story` + review × 12 | ~285,000 | ~110,000 (review inline) | ~61% |
+| Retrospective × 3 epics | ~54,000 | ~11,000 | ~80% |
+| Flywheel orchestration (3 epics) | — | ~15,000 | — |
+| **Total** | **~600,000** | **~220,000** | **~63%** |
+
+> The Leanwheel total also *buys more* than the upstream total: it includes the Behavior
+> Contract / edge-case AC pass, Design Contract extraction, invariant verification, and the
+> inline adversarial review — verification layers upstream's equivalent phases don't run.
+
+### Where Leanwheel spends nothing at all
+
+Several layers added since the original estimate were designed to be **zero-token or off-model**, so they don't appear in the table:
+
+- **Deterministic hooks** (secret guard, design-token guard, activity log) — pure bash, never call a model.
+- **Evals RUN** — the cumulative regression net is `type: command` shell execution; a 50-case eval set costs 0 tokens to run.
+- **Build & Test Gate** — toolchain commands, not model reads; it *saves* tokens by catching regressions that would otherwise trigger re-fix loops.
+- **GitHub tracking** — label transitions moved into `scripts/gh-track.sh` (one shell call replaces a view→parse→edit→verify model round-trip per transition).
+- **Ledger/observability** — shell-append JSONL, never read into context.
+- **docs-sync** — routed to a **Haiku** subagent, so mechanical doc maintenance never lands on the dev model (which is Opus on Swift projects).
 
 ### What session hygiene adds on top
 
@@ -69,8 +101,8 @@ Original BMAD typically runs multi-phase sessions, so the PRD and architecture s
 
 ### What subagent isolation adds on top
 
-When using `/story-flywheel`, each phase runs in a throwaway context. The story creator reads PRD + architecture + epics, distills the story, and exits — those docs never enter the main thread. The developer reads only the story file. The reviewer reads only the diff. This is an additional **10–15%** reduction on the main thread versus running the same phases manually in a single long session.
+When using `/story-flywheel` or `/epic-flywheel`, each phase runs in a throwaway subagent context. The story creator reads PRD + architecture + epics, distills the story, and exits — those docs never enter the main thread. The developer reads only the story file. The reviewer reads only the diff. Of the ~220K project total, the **orchestrating thread holds only ~15–20K** (skill + short structured reports); everything else lives in disposable windows. On top of isolation, the flywheels do **model routing**: create/review run on Sonnet, docs maintenance on Haiku, and Opus is reserved for Swift dev passes where a cheaper model's failed build loops would cost more than one accurate pass.
 
 ### Bottom line
 
-Leanwheel uses roughly **half the tokens** of original BMAD for the same 12-story project — primarily by eliminating the activation ceremony, caching epic context, inlining code review, and enforcing session hygiene. The Claude Pro $15/month plan includes ~1.5M input tokens/month on Sonnet; a 12-story project in Leanwheel costs roughly **~70K tokens**, leaving substantial budget for iteration and experimentation.
+Leanwheel uses roughly **a third of the tokens** of BMAD v6 for the same 12-story project (~220K vs ~600K on the loading side) — while running more verification (build gates, evals, invariant checks, inline review) than upstream does. The savings come from the same four levers as before, all of which survived both systems' growth: no activation ceremony, epic-context caching, inline review, and session hygiene — now compounded by subagent isolation, model routing, and the zero-token guardrail/eval/tracking layers.
