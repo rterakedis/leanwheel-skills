@@ -82,6 +82,19 @@ Behavioral. Visual contrast lives in `DESIGN.md`.
 **Climax:** ...
 **Failure:** ...
 
+## Engagement & Persuasion
+Behavioral levers applied to high-leverage flows, each with an honesty check. Omit only with an explicit `N/A — no onboarding, conversion, or retention surface` note.
+
+| Flow / Surface | Lever | How it's applied | Honesty check (why it aligns user + business) |
+|---|---|---|---|
+| | Smart default | | |
+| | Goal gradient | | |
+| | Reciprocity | | |
+| | Loss framing | | |
+| | Contrast / anchoring | | |
+
+**Rejected as dark patterns:** [any lever considered and ruled out — pre-checked paid/consent opt-ins, fake or endowed progress, manufactured urgency/scarcity, guilt-decline copy, decoy pricing — and why it's out. Write "none considered" if the flows never tempted one.]
+
 ---
 
 ## Apple Platform

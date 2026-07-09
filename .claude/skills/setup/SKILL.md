@@ -110,6 +110,7 @@ If {is_web} is true:
 Copy the **zero-token** guardrail hook scripts from `{skills_path}/.claude/skills/setup/stubs/hooks/` into the project's `.claude/hooks/` (create the dir; skip any file that already exists, never overwrite):
 - `guard-secrets.sh` — blocks hardcoded secrets at write/commit time (the one mandatory enforcement hook)
 - `guard-design-tokens.sh` — advisory off-token color warning (active only when `docs/ux/DESIGN.md` exists)
+- `guard-dark-pattern.sh` — advisory dark-pattern warning (confirmshaming copy, pre-checked marketing/consent opt-ins) on UI files
 - `log-activity.sh` — appends the raw tool-call stream to `docs/metrics/activity.jsonl`
 - `README.md` — hook reference
 

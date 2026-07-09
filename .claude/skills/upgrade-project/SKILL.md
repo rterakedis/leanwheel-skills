@@ -48,7 +48,7 @@ Check these:
 
 | Area | Detection |
 |---|---|
-| Guardrail hooks | `.claude/hooks/{guard-secrets,guard-design-tokens,log-activity}.sh` present + executable |
+| Guardrail hooks | `.claude/hooks/{guard-secrets,guard-design-tokens,guard-dark-pattern,log-activity}.sh` present + executable |
 | Hook wiring | `.claude/settings.json` `hooks.PreToolUse/PostToolUse` reference the leanwheel guard scripts |
 | Eval set | `docs/evals/README.md` present |
 | Metrics ledger | `docs/metrics/README.md` present |

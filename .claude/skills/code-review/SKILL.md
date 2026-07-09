@@ -71,6 +71,7 @@ Work each pass independently. Look for what's *missing* (absent behavior, unhand
 - Platform checklist: Apple — tap targets, Dynamic Type, safe areas, SF Symbols; web — semantic elements, focus visibility, `alt`, heading hierarchy, off-token `!important`/inline styles
 - New component that near-duplicates one in `docs/ux/components-built.md`
 - Unresolved findings in the story's `### Design Verification` section
+- **Dark patterns** (check the diff against EXPERIENCE.md's `## Engagement & Persuasion`, if present): pre-checked paid or consent opt-ins; smart defaults that pre-select the higher-cost/higher-commitment choice; fake or endowed progress indicators; countdown/urgency with no real deadline; guilt-decline (confirmshaming) copy; decoy pricing. Flag any lever in the diff that isn't backed by an honest entry in that section — shipping user-hostile behavior is HIGH severity (it erodes trust and is a support/churn liability, not just a style nit).
 
 ## Step 4 — Triage and Severity
 

@@ -77,7 +77,18 @@ Run during Validate flow and at Finalize. Report critical/high findings with loc
 
 ---
 
-## 8. Bloat & Overspecification
+## 8. Engagement & Persuasion
+- [ ] `## Engagement & Persuasion` section present, or an explicit `N/A — no onboarding/conversion/retention surface` note.
+- [ ] Every lever used names the flow it applies to and carries an honesty check (aligns the user's interest with the business's).
+- [ ] Smart defaults pre-select the choice most users actually want — never the most profitable / highest-commitment option by default.
+- [ ] Goal-gradient progress is real and earned — no fake, pre-filled, or endowed progress.
+- [ ] No dark patterns: no pre-checked paid/consent opt-ins, manufactured urgency/scarcity, guilt-decline (confirmshaming) copy, or decoy pricing.
+
+**Severity if broken:** Critical (a shipped dark pattern) / High (lever with no honesty check) / Low (missing section on a tool with no conversion surface)
+
+---
+
+## 9. Bloat & Overspecification
 - [ ] No pixel values in EXPERIENCE.md where a DESIGN.md token covers it.
 - [ ] No PRD content restated (personas, FRs, scope) — inherited by reference only.
 - [ ] No decorative prose in EXPERIENCE.md untied to a behavioral decision.
@@ -87,9 +98,9 @@ Run during Validate flow and at Finalize. Report critical/high findings with loc
 
 ---
 
-## 9. Shape
+## 10. Shape
 - [ ] DESIGN.md sections in canonical order: Brand & Style → Colors → Typography → Layout & Spacing → Elevation & Depth → Shapes → Components → Do's and Don'ts. (Omittable; order locked when present.)
-- [ ] EXPERIENCE.md required sections present: Foundation · IA · Voice and Tone · Component Patterns · State Patterns · Interaction Primitives · Accessibility Floor · Key Flows. Dropped sections have a stated reason.
+- [ ] EXPERIENCE.md required sections present: Foundation · IA · Voice and Tone · Component Patterns · State Patterns · Interaction Primitives · Accessibility Floor · Key Flows · Engagement & Persuasion (or its N/A note). Dropped sections have a stated reason.
 - [ ] Conditional sections present when triggered: Apple Platform (any Apple surface) · Responsive & Platform (web with breakpoints) · Inspiration & Anti-patterns (user provided references or rejects).
 
 **Severity if broken:** Medium (missing conditional section) / Low (order violation)
