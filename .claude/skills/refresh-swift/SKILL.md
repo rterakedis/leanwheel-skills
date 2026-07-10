@@ -1,11 +1,11 @@
 ---
 name: refresh-swift
-description: Research current Swift/SwiftUI/platform best practices from gold-standard sources and update the docs/setup/swift/ reference files and the modern-swiftui.md guardrails stub. Use when the user says "refresh swift", "update swift guidance", "refresh swift best practices", or "refresh swiftui".
+description: Research current Swift/SwiftUI/platform best practices from gold-standard sources and update the docs/setup/swift/ reference files and the modern-swiftui.md guardrails stub. Also refreshes the App Store submission facts embedded in the appstore-preflight skill. Use when the user says "refresh swift", "update swift guidance", "refresh swift best practices", or "refresh swiftui".
 ---
 
 # Refresh Swift Best Practices Skill
 
-**Goal:** Research the current state of Swift language, SwiftUI, concurrency, testing, and platform-specific patterns from primary sources and update the sectioned reference docs in `docs/setup/swift/` plus the `modern-swiftui.md` guardrails stub in the skills repo. These files are baked into every new Apple platform project — keeping them current is critical for guiding correct architectural choices.
+**Goal:** Research the current state of Swift language, SwiftUI, concurrency, testing, and platform-specific patterns from primary sources and update the sectioned reference docs in `docs/setup/swift/` plus the `modern-swiftui.md` guardrails stub in the skills repo. These files are baked into every new Apple platform project — keeping them current is critical for guiding correct architectural choices. The same run also refreshes the App Store submission facts embedded in the `appstore-preflight` skill (Step 4) — those shift on the same iOS/Xcode cadence.
 
 **Scope:** iOS 18 through the current stable release only. **Hard exclude** any pre-release, beta, or unannounced OS API. When in doubt, omit.
 
@@ -130,18 +130,43 @@ The guardrails file must stay under ~50 lines — it lives in CLAUDE.md and is l
 
 ---
 
-## Step 4 — Report to User
+## Step 4 — Refresh App Store Submission Facts (`appstore-preflight`)
+
+App Store submission requirements move on the same annual iOS/Xcode cadence as the coding guidance (plus litigation-driven changes mid-cycle), so this run also refreshes the requirement facts embedded in `{skills_path}/.claude/skills/appstore-preflight/SKILL.md`. Skip this step only if that skill file is not reachable (skills repo absent).
+
+**Cheap gate first:** read the skill's "Currency note" date, then check developer.apple.com/news/upcoming-requirements/ and Apple's App Review Guidelines changelog for anything newer. If nothing has changed since that date, update nothing and report "appstore-preflight facts confirmed current" — done.
+
+Otherwise research what moved:
+
+- **developer.apple.com/news/upcoming-requirements/** — the annual minimum Xcode/SDK upload floor, enforcement deadlines
+- **App Review Guidelines** (developer.apple.com/app-store/review/guidelines/) + developer.apple.com/news/ — guideline text changes (privacy 5.1.x, business 3.1.x, design 4.x)
+- **developer.apple.com/support/third-party-SDK-requirements/** — listed-SDK additions/removals
+- **Privacy plumbing** — new `NS*UsageDescription` keys, new required-reason API categories or reason codes, privacy-manifest enforcement changes (new ITMS codes)
+- **⚠️VOLATILE items specifically** — external purchase link rules (US storefront litigation), `UIRequiresFullScreen`/iPad windowing enforcement, launch-screen mandates, age-rating system, EU DSA / regulatory, TestFlight policy changes
+
+Then update in `appstore-preflight/SKILL.md`:
+
+1. The "Currency note" date, and any ⚠️VOLATILE flags now resolved (or newly needed)
+2. The fact tables — purpose-string keys, required-reason categories/codes, listed SDKs, config/asset rules and their ITMS codes
+3. Step 7 checklist items for any new App Store Connect requirements
+
+**Facts only** — never restructure that skill's steps, severity scheme, or output formats. This updates the skills-repo file only; `appstore-preflight` has no per-project guidance copies.
+
+---
+
+## Step 5 — Report to User
 
 Summarize:
 
 1. **What changed:** Bullet list per file — new patterns added, outdated patterns removed, iOS/Swift version bumps.
 2. **What stayed the same:** Brief confirmation that still-valid content was preserved.
-3. **Sources consulted:** Which gold-standard sources had relevant current content.
-4. **Reminder:** Existing projects that already have the sectioned files in `docs/setup/swift/` will have their copies updated by this run. Projects that haven't run `/setup` yet will get the updated stubs when they do.
+3. **App Store facts:** What changed in `appstore-preflight` (or "confirmed current").
+4. **Sources consulted:** Which gold-standard sources had relevant current content.
+5. **Reminder:** Existing projects that already have the sectioned files in `docs/setup/swift/` will have their copies updated by this run. Projects that haven't run `/setup` yet will get the updated stubs when they do.
 
 ---
 
-## Step 5 — Offer Audit Handoff
+## Step 6 — Offer Audit Handoff
 
 After reporting, ask:
 
