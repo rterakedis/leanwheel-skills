@@ -1,6 +1,6 @@
 # Hugo Patterns
 
-> Updated: 2026-06-12 — Hugo 0.146+ (new template system)
+> Updated: 2026-07-19 — Hugo 0.146+ template system; current through v0.164
 > Page bundles, template structure, asset pipeline, and image processing for Hugo sites.
 
 ---
@@ -79,6 +79,8 @@ CSS and JS go through `assets/` and Hugo Pipes — never raw files in `static/` 
 
 - `css.Sass` for Sass (the old `toCSS` name is deprecated); `js.Build` (esbuild) for any JS.
 - `fingerprint` on everything cacheable.
+- For output that must run after the site build (e.g. a stylesheet purged against final HTML), use `templates.Defer` — `resources.PostProcess` is deprecated (v0.164).
+- Node-backed pipes (PostCSS, Babel, Tailwind) require Node ≥ 22 as of v0.161; the standalone Tailwind executable is no longer supported. Prefer pure-Hugo pipes (`css.Sass`, `js.Build`) — they need no Node toolchain at all.
 
 ---
 
@@ -97,6 +99,8 @@ Every content image is processed — resized, converted to WebP, with explicit d
 
 `❌` Raw `![](cover.jpg)` rendering to an unprocessed, dimension-less `<img>` — install the render hook first, then markdown stays clean.
 
+AVIF is supported natively since v0.162 (`.Resize "800x avif"`); quality is configurable **per format** in `[imaging]` (the global quality setting is deprecated, and AVIF defaults to q60). WebP remains the safe default; adding an AVIF source in a `<picture>` is an optional enhancement, not a requirement.
+
 ---
 
 ## Shortcodes vs Partials
@@ -114,6 +118,8 @@ Every content image is processed — resized, converted to WebP, with explicit d
 - `hugo.toml` (not legacy `config.toml`); split into `config/_default/` directory only when environments genuinely diverge.
 - Declare taxonomies explicitly; remove the defaults you don't use (`disableKinds` for unused page kinds — stops Hugo generating empty taxonomy pages).
 - `enableGitInfo = true` for accurate `Lastmod` dates on content sites.
+- Syntax highlighting: Chroma ships dark/light style pairs since v0.164 (`hugo gen chromastyles`) — pair the generated CSS with the site's `light-dark()` scheme handling instead of shipping a single-scheme highlight theme.
+- Security posture tightened in v0.162: HTML content files are disallowed by default (`security.allowContent`), and `security.http.urls` is re-checked on redirects — don't loosen these to paper over a template problem.
 
 ---
 

@@ -9,7 +9,7 @@ description: Audit an iOS/iPadOS SwiftUI project's configuration, privacy declar
 
 **Requires:** An Apple app project (`.xcodeproj`, `.xcworkspace`, or an app-target `Package.swift`). If absent, stop: "No Apple app project found — nothing to preflight."
 
-**Currency note:** Requirement facts embedded below are current as of **July 2026**. Items marked ⚠️VOLATILE change frequently (litigation, annual SDK mandates) — re-verify against https://developer.apple.com/news/upcoming-requirements/ at submission time rather than trusting this file.
+**Currency note:** Requirement facts embedded below are current as of **July 19, 2026**. Items marked ⚠️VOLATILE change frequently (litigation, annual SDK mandates) — re-verify against https://developer.apple.com/news/upcoming-requirements/ at submission time rather than trusting this file.
 
 ---
 
@@ -201,6 +201,7 @@ Write `docs/maintainer/appstore-submission-checklist.md` (overwrite on re-runs �
 - [ ] Bundle ID registered as explicit App ID and matches Xcode — IMMUTABLE after first upload
 - [ ] App name (≤30 chars, unique store-wide), subtitle (≤30), primary + secondary category
 - [ ] Age rating questionnaire — new 2025 system (4+/9+/13+/16+/18+) must be completed or updates are blocked (deadline was Jan 31, 2026)
+- [ ] ⚠️VOLATILE: Social-media capability question added to the age-rating questionnaire July 2026 (places the app in the Time Allowance category for Social Media); answering it becomes **required for new versions/updates and notarization starting Sept 2026** — answer honestly, don't skip
 - [ ] Content rights declaration answered honestly (third-party content?)
 - [ ] Pricing & availability set (base storefront + price; review region list vs DSA/France constraints)
 - [ ] Copyright field ("{year} {owner}")

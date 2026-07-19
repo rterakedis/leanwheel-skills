@@ -1,6 +1,6 @@
 ## Swift/SwiftUI Guardrails (iOS 18+)
 
-> Updated: 2026-07-19 — iOS 18+ / Swift 6.2 (iOS 26 features gated with `#available`)
+> Updated: 2026-07-19 — iOS 18+ / Swift 6.3 (iOS 26 features gated with `#available`)
 
 Full reference patterns live in `docs/setup/swift/`. This section contains only the always-active hard rules.
 
