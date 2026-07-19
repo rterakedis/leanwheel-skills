@@ -9,6 +9,11 @@ description: Research current Swift/SwiftUI/platform best practices from gold-st
 
 **Scope:** iOS 18 through the current stable release only. **Hard exclude** any pre-release, beta, or unannounced OS API. When in doubt, omit.
 
+**Version-axis rules (prevents drift):**
+1. **Verify version names before writing any header.** Search for the current stable iOS/macOS/Swift/Xcode versions first — never infer the next version by incrementing (Apple jumped iOS 18 → iOS 26; a past run invented a phantom "iOS 19" from that assumption). Every fact written must cite a real, shipped version string.
+2. **Concurrency and testing guidance is keyed to the Swift language version** (e.g. Swift 6.2), not the iOS version — label and research those files on that axis.
+3. For every file, the research question is **"what changed since this file's `Updated:` date?"** against the current stable release — not a fixed "iOS 18+?" checklist frozen at authoring time.
+
 ---
 
 ## Step 1 — Locate Files
@@ -43,6 +48,16 @@ Use WebSearch and WebFetch to pull current content from the gold-standard source
 - **Apple WWDC sample apps** — developer.apple.com/documentation/SampleCode
 - **Apple Swift updates** — developer.apple.com/documentation/updates/swift
 - **Point-Free** — pointfree.co (modern state management)
+
+### Curated Agent-Skill Repos (diff sources — highest signal per token)
+
+These community skills are already distilled into agent-facing rules, so diffing them against our stubs is far cheaper than crawling articles. Clone shallow (`git clone --depth 1`) into a temp dir, compare, **port ideas in our lean ✅/❌ style — never copy files** (same rule as the BMAD upstream sync). Pinned to trusted authors only; the wider `twostraws/swift-agent-skills` directory is an *index* to check for new entries by these authors, not a blanket source (its own README warns listing ≠ endorsement).
+
+- **github.com/twostraws/SwiftUI-Agent-Skill**, **SwiftData-Agent-Skill**, **Swift-Concurrency-Agent-Skill**, **Swift-Testing-Agent-Skill**, **SwiftAgents** (Paul Hudson)
+- **github.com/Dimillian/Skills** (Thomas Ricouard — concurrency, SwiftUI performance, Liquid Glass)
+- **github.com/AvdLee/Swift-Concurrency-Agent-Skill**, **Swift-Testing-Agent-Skill** (Antoine van der Lee)
+
+**House-style filter when porting:** leanwheel deliberately bans per-view ViewModels (views are the ViewModel — logic as computed properties in the View, mutations in testable services). Some of these sources recommend ViewModel extraction for testability — **do not port that**; map any such advice onto our service-extraction pattern (anti-patterns.md #1/#11) instead.
 
 ### Research by Target File
 
@@ -81,9 +96,21 @@ Research each section in turn. For each: compare findings against the existing f
 - Launch-argument / `ProcessInfo` patterns still the recommended seed trigger?
 - Accessibility-identifier best practices — any new locator guidance?
 
+**`swiftdata.md`**
+- `#Predicate` — newly supported (or still-crashing) constructs?
+- Migration APIs (`VersionedSchema`, `SchemaMigrationPlan`) — any changes?
+- CloudKit-backed store constraints — any relaxed or added?
+- New model macros, index types, or fetch options since the file's Updated date?
+
+**`accessibility.md`**
+- New accessibility modifiers or environment values?
+- Dynamic Type / scaled-font APIs — any changes?
+- Any new Voice Control / VoiceOver / Assistive Access requirements affecting code?
+
 **`anti-patterns.md`**
 - New patterns AI tools commonly generate that should be added to the rejection list?
 - Any anti-patterns that are now acceptable (rare — document the reason)?
+- Newly deprecated/superseded APIs for the #13 modernization table?
 
 **`ipados-specific.md`** (if present in `docs/setup/swift/` or stubs)
 - `NavigationSplitView` — any new column options or behaviors in iPadOS 18+?
