@@ -1,6 +1,6 @@
-## Web Guardrails (Baseline CSS / Astro 5+ / Hugo 0.146+)
+## Web Guardrails (Baseline CSS / Astro 6+ / Hugo 0.146+)
 
-> Updated: 2026-06-12
+> Updated: 2026-07-19
 
 Full reference patterns live in `docs/setup/web/`. This section contains only the always-active hard rules.
 
