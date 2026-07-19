@@ -1,6 +1,6 @@
 # Testing Conventions
 
-> Updated: 2026-07-19 — iOS 18+ / Swift 6.2
+> Updated: 2026-07-19 — iOS 18+ / Swift 6.3 (stable with Xcode 26.6)
 > Swift Testing framework, assertion discipline, async testing, Core Data test setup, and concurrency-safe tests.
 
 ---

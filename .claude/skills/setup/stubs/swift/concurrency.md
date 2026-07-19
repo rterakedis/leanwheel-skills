@@ -1,6 +1,6 @@
 # Concurrency & Safe Threading
 
-> Updated: 2026-07-19 — iOS 18+ / Swift 6.2
+> Updated: 2026-07-19 — iOS 18+ / Swift 6.3 (stable with Xcode 26.6)
 > Async patterns, actor isolation, and UI thread safety. Concurrency rules are keyed to the **Swift language version**, not the iOS version.
 
 ---
@@ -210,3 +210,12 @@ Work top-down; each step is less preferable than the one above it:
 5. `@unchecked Sendable` — last resort, only with a real lock/immutability justification in a comment.
 
 Test suites touching `@MainActor`-isolated types must be annotated `@MainActor` at the suite level (see testing.md).
+
+---
+
+## New in Swift 6.3 (additive — 6.2 guidance above still holds)
+
+- **`weak let`** is now legal for immutable weak references — a class that was `@unchecked Sendable` only because of a `weak var` can switch to `weak let` and earn real `Sendable` checking. Re-audit any `@unchecked Sendable` justified that way.
+- **`~Sendable`** marks a type explicitly non-`Sendable` — prefer it over a comment when a type must never cross actors.
+- **Silently dropped task errors now warn**: a `Task { try ... }` whose error is never observed gets a compiler warning. Handle the error inside the task or keep the handle and `try await task.value` — don't silence with `try?`.
+- **`defer` may now call `async` functions** — async cleanup no longer needs the old workaround of a trailing manual call before every return.
