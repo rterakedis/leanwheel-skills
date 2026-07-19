@@ -20,6 +20,8 @@ description: Implement a story from its story file. Use when the user says "dev 
    - Any story adding new features, services, or project structure: read `docs/setup/swift/architecture.md`
    - Any story adding views or UI components: read `docs/setup/swift/ui-composition.md`
    - Any story adding tests: read `docs/setup/swift/testing.md`
+   - Any story adding views or UI components: also read `docs/setup/swift/accessibility.md`
+   - If the project uses SwiftData and the story touches models, queries, or persistence: read `docs/setup/swift/swiftdata.md`
    - Any story adding/changing a persisted model entity, adding user-facing views, or touching launch behavior: read `docs/setup/swift/testability.md` (seed scenarios, launch-argument contract, accessibility identifiers)
    - Always read `docs/setup/swift/anti-patterns.md` if present — it governs what must not be written
    - If `docs/setup/swift/ipados-specific.md` exists and the story touches navigation, split view, drag-and-drop, pointer, keyboard, or multi-window: read it

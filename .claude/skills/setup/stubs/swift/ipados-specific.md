@@ -1,7 +1,7 @@
 # iPadOS-Specific Patterns
 
-> Updated: 2026-06-08 — iOS/iPadOS 19+
-> iPadOS 18+ | Navigation, multi-window, pointer, drag-and-drop, and keyboard conventions.
+> Updated: 2026-07-19 — iPadOS 18+
+> Navigation, multi-window, pointer, drag-and-drop, and keyboard conventions.
 
 ---
 

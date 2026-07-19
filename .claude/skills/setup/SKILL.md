@@ -84,6 +84,8 @@ If {is_apple_platform} is true:
   - `testing.md`
   - `testability.md`
   - `anti-patterns.md`
+  - `accessibility.md`
+  - `swiftdata.md` (guidance self-gates: applies only if the project uses SwiftData)
 - If {platforms} includes **iPadOS**: also copy `ipados-specific.md`.
 - If {platforms} includes **macOS**: also copy `macos-specific.md`.
 

@@ -1,7 +1,7 @@
 # Testing Conventions
 
-> Updated: 2026-06-14 — iOS/iPadOS 19+
-> iOS 18+ / Swift 6.2 | Swift Testing framework, Core Data test setup, and concurrency-safe tests.
+> Updated: 2026-07-19 — iOS 18+ / Swift 6.2
+> Swift Testing framework, assertion discipline, async testing, Core Data test setup, and concurrency-safe tests.
 
 ---
 
@@ -36,6 +36,93 @@ class OrderServiceTests: XCTestCase {
         XCTAssertEqual(order.id, "123")
     }
 }
+```
+
+Structure rules:
+- Use a `struct` (class only when you need `deinit` or subclassing); `init()`/`deinit` replace `setUp`/`tearDown`.
+- `@Suite` is only needed to attach a display name or traits — any type containing `@Test` is already a suite. Don't add a bare `@Suite` with no arguments.
+- Parameterized tests with **two** argument collections form a Cartesian product (every combination). For pairwise cases, pass `zip(inputs, expected)`.
+- Tag cross-cutting groups: `extension Tag { @Tag static var edgeCase: Self }` then `@Test(.tags(.edgeCase))`. Record regression provenance with `.bug(id:)`.
+
+---
+
+## Assertions — `#require` vs `#expect`
+
+`#require` is for **preconditions**: it unwraps optionals and stops the test immediately on failure, so later assertions don't cascade-fail on garbage. `#expect` is for the **actual assertions** — the test keeps running so you see every failure. A test that reaches no `#expect`/`#require` at all silently passes — make sure every path asserts something.
+
+```swift
+@Test func loadOrder_parsesAllFields() async throws {
+    // ✅ Precondition — unwraps and aborts early if missing
+    let order = try #require(await store.order(id: "123"))
+
+    // ✅ Real assertions — all evaluated even if one fails
+    #expect(order.total == 49.99)
+    #expect(order.isArchived == false)   // never #expect(!order.isArchived) — the
+                                          // `!` defeats the macro's failure message
+}
+
+// ✅ Throwing: always name the specific error — never Error.self
+#expect(throws: OrderError.notFound) { try store.remove(id: "missing") }
+
+// ✅ Assert something does NOT throw
+#expect(throws: Never.self) { try store.validate(order) }
+
+// ✅ Need the thrown error? #expect(throws:) returns it (Swift 6.1+)
+let error = #expect(throws: ValidationError.self) { try store.validate(bad) }
+#expect(error?.field == "email")
+
+// ✅ Inside do/catch, fail with Issue.record — never a bare comment
+do { try risky() } catch { Issue.record("unexpected error: \(error)") }
+```
+
+---
+
+## Async Testing — `confirmation`, Time Limits, Serialization
+
+```swift
+// ✅ Assert async work happened N times — the work must complete before the
+// closure returns (make the method async or return its Task; completion-handler
+// code that outlives the closure fails the confirmation)
+@Test func sync_notifiesEachRecord() async {
+    await confirmation(expectedCount: 3) { confirmed in
+        let engine = SyncEngine(onRecord: { _ in confirmed() })
+        await engine.sync(records: threeRecords)
+    }
+}
+
+// ✅ Ranges work too: 5...10, 5..., and expectedCount: 0 means "never happens"
+
+// ✅ Time limit — .minutes only; .seconds is NOT an accepted TimeLimitTrait
+@Test(.timeLimit(.minutes(1))) func slowImport() async throws { ... }
+```
+
+`.serialized` only affects **parameterized tests** (or applies to a whole suite) — putting it on a single plain `@Test` does nothing.
+
+---
+
+## Dependency Injection — No Live Networking or Shared Defaults in Tests
+
+Hidden dependencies (`URLSession.shared`, `UserDefaults.standard`) make tests flaky and order-dependent. Expose them as injected parameters with production defaults, protocol-wrapped so tests can substitute a mock.
+
+```swift
+// ✅ Production code: injectable with a default — call sites don't change
+protocol URLSessionProtocol { func data(from url: URL) async throws -> (Data, URLResponse) }
+extension URLSession: URLSessionProtocol {}
+
+struct WeatherClient {
+    var session: URLSessionProtocol = URLSession.shared
+    func forecast() async throws -> Forecast { ... }
+}
+
+// ✅ Test: mock session, zero network
+struct MockSession: URLSessionProtocol {
+    let stubbed: Data
+    func data(from url: URL) async throws -> (Data, URLResponse) { (stubbed, HTTPURLResponse()) }
+}
+
+// ✅ UserDefaults: per-test suite, cleaned up in deinit or defer
+let defaults = try #require(UserDefaults(suiteName: #function))
+defer { defaults.removePersistentDomain(forName: #function) }
 ```
 
 ---
@@ -111,17 +198,19 @@ struct BackgroundSyncServiceTests {
 Swift 6.2 added **attachments** for enriching test output with diagnostic data — useful for debugging failures in CI.
 
 ```swift
-// ✅ Attach data to a test for inspection on failure
+// ✅ Attach data to a test for inspection on failure — note the .record call;
+// a bare Attachment(...) initializer records nothing
 @Test func exportGenerate_producesValidPDF() async throws {
     let data = try await ExportService.generatePDF(for: order)
-    
-    // Attachment is captured in the test report on failure
+
     try #require(data.count > 0)
-    Attachment(data, named: "generated-output.pdf")
-    
+    Attachment.record(data, named: "generated-output.pdf")
+
     #expect(data.isPDF)
 }
 ```
+
+`String`, `Data`, and `Encodable` values attach directly; image attachments require Swift 6.3+.
 
 ---
 

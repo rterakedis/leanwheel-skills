@@ -1,7 +1,7 @@
 # State Management & Data Flow
 
-> Updated: 2026-06-08 — iOS/iPadOS 19+
-> iOS 18+ | Source of truth for observation, data flow, and property wrapper selection.
+> Updated: 2026-07-19 — iOS 18+
+> Source of truth for observation, data flow, and property wrapper selection.
 
 ---
 
@@ -121,11 +121,14 @@ extension EnvironmentValues {
 A View struct should hold `@State` for local UI, declare `@FetchRequest` for Core Data, and express business logic as **computed properties** — not methods called inside `body`, and not separate ViewModel files.
 
 ```swift
-// ✅ Filtering logic as a computed property in the View
+// ✅ Filtering logic as a computed property in the View.
+// User-input matching uses localizedStandardContains — case- and
+// diacritic-insensitive, the Finder-style behavior users expect.
+// Not contains(), not localizedCaseInsensitiveContains().
 private var filteredCustomers: [Customer] {
     let base = customers.filter { matchesFilter($0) }
     guard !searchText.isEmpty else { return base }
-    return base.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    return base.filter { $0.name.localizedStandardContains(searchText) }
 }
 
 // ❌ Separate @Observable class that duplicates FetchRequest state
@@ -134,6 +137,17 @@ private var filteredCustomers: [Customer] {
     var searchText: String = ""      // should be @State in the View
 }
 ```
+
+---
+
+## Data-Flow Rules That Prevent Silent Bugs
+
+- **`@Observable` classes driving UI must be `@MainActor`** (implicit if the module enables main-actor default isolation — see concurrency.md).
+- **Never put `@AppStorage` inside an `@Observable` class** — even with `@ObservationIgnored` it does not publish changes, so views silently stop updating. Keep `@AppStorage` in views, or mirror the value manually.
+- **Avoid `Binding(get:set:)` inside `body`** — it recreates the binding every render and defeats change detection. Use `@State` plus `.onChange(of:)` (always the two-parameter or zero-parameter variant).
+- **Numeric input needs both halves:** `TextField("Price", value: $price, format: .number)` *and* `.keyboardType(.decimalPad)` — the modifier alone doesn't parse, the format alone doesn't constrain the keyboard.
+- **Conform models to `Identifiable`** instead of scattering `id: \.someProperty` at every `ForEach`/`List` call site.
+- **`@State` as a cache for expensive non-observable objects is legitimate** (e.g. a `CIContext` or formatter you don't want rebuilt per render) — the ban is on `@State` mirroring shared/observable data, not on caching.
 
 ---
 
