@@ -138,6 +138,31 @@ private var filteredCustomers: [Customer] {
 }
 ```
 
+### When a computed property grows: extract a pure function, not a ViewModel
+
+The moment derived logic becomes worth unit-testing (multi-criteria filtering, sorting + grouping, form validation), move it to a **pure static function** on the model or a service enum. The view keeps a one-line computed property; the logic becomes trivially testable with plain inputs — no view instantiation, no new layer, no state duplication.
+
+```swift
+// ✅ Pure function owns the logic; the view just calls it
+extension Customer {
+    static func matching(_ customers: [Customer], search: String, filter: CustomerFilter) -> [Customer] {
+        // combine filter + search + sort — all testable with plain arrays
+    }
+}
+
+// View — one line, still no ViewModel
+private var filteredCustomers: [Customer] {
+    Customer.matching(Array(customers), search: searchText, filter: activeFilter)
+}
+
+// Test — no view, no store, no mocks
+@Test func matching_appliesFilterBeforeSearch() {
+    #expect(Customer.matching(fixtures, search: "al", filter: .active).count == 2)
+}
+```
+
+This is the missing rung between "computed property in the view" and "service method with a context" (anti-patterns.md #11) — use it whenever the property's body outgrows a few lines or gains branching worth testing.
+
 ---
 
 ## Data-Flow Rules That Prevent Silent Bugs

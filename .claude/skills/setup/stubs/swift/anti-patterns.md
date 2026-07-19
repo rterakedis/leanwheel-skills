@@ -30,6 +30,8 @@ struct ProfileView: View {
 }
 ```
 
+**Testability is not an excuse for a ViewModel.** Derived logic worth unit-testing (filtering, validation, grouping) is extracted to a **pure static function** on the model or a service enum, called from a one-line computed property in the view — testable with plain inputs, no view instantiation, no new layer (see *When a computed property grows* in state-management.md). Multi-step mutations go to service methods (#11).
+
 ---
 
 ## 2. Legacy Observation (`ObservableObject` / `@Published`)
