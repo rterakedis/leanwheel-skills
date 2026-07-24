@@ -32,7 +32,9 @@ Work through each section below in order. For each section:
 - Key third-party services?
 - Deployment target?
 
-Output: bulleted decisions with one-line rationale.
+Before adding any new dependency to the stack, apply rungs ①–⑤ of the simplicity ladder: does the standard library, a native platform feature, or an already-chosen dependency already cover it? Prefer the platform default when it's adequate, and record a one-line justification for each new dependency that earns its place.
+
+Output: bulleted decisions with one-line rationale (each new dependency carries its justification).
 
 ### Section 2 — Data Model
 - Core entities and relationships (from PRD Glossary)?

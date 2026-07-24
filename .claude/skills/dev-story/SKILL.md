@@ -38,6 +38,7 @@ description: Implement a story from its story file. Use when the user says "dev 
 
 For each task in order:
 1. Read task. Understand file, action, outcome.
+1b. Apply the simplicity ladder from CLAUDE.md's `## Simplicity & Anti-Over-Engineering` — after understanding the task, not instead of: reuse before rewrite, stdlib/native before a new dependency, and write the least code that satisfies the AC.
 2. Implement.
 3. Check box: `[ ]` → `[x]`.
 4. If problem found, log in Debug Log; continue.

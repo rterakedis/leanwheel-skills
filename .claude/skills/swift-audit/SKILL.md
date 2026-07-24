@@ -168,6 +168,8 @@ Flag each hit where a DESIGN.md token covers the value (MEDIUM). Values with no 
 
 For each `onAppear` hit, read surrounding lines (±5) to determine if it contains a `Task {` — only flag if it does. For `DispatchQueue` hits, read surrounding lines to determine if the file is a legacy wrapper (acceptable) or new code (flagged). Use judgment — do not flag things that are clearly intentional compatibility shims with a comment explaining why.
 
+**Over-engineering / deletion pass:** scan touched source for complexity that shouldn't exist, one tagged line per finding — `delete:` (dead code / speculative feature), `stdlib:` (hand-rolled thing the standard library ships), `native:` (a dependency or code doing what the SDK already does — e.g. a custom formatter over `Foundation`), `yagni:` (an abstraction with one implementation, a protocol with one conformer, a config nobody sets), `shrink:` (same logic, fewer lines). Never flag a single smoke test / assert, validation, security, or accessibility for removal. These are `[CODE]` findings, usually LOW/MEDIUM.
+
 ---
 
 ## Step 5 — Triage Findings

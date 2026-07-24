@@ -66,6 +66,12 @@ Write to root using template. If exists, append missing sections (never replace)
 If not exists: create from template.
 If exists: check for `## Docs Structure` + `## Task Tracking Emoji`. Add missing sections at top (after project desc). Don't modify existing.
 
+### Step 3s — Append Simplicity Guardrails (unconditional — all projects)
+
+Applies to every project, not gated on platform:
+- Check whether `## Simplicity & Anti-Over-Engineering` already exists in CLAUDE.md. If it does, skip (never duplicate).
+- Otherwise, append the full contents of `{skills_path}/.claude/skills/setup/stubs/simplicity.md` to CLAUDE.md, preceded by a `---` separator.
+
 ### Step 3a — Append Apple Platform Guardrails (conditional)
 
 If {is_apple_platform} is yes:
@@ -236,7 +242,7 @@ Add the `Status:` line to the story file's frontmatter block (between the `---` 
 
 ### Step 6 — Update AGENTS.md + CLAUDE.md
 
-Run **Scaffold Flow** Step 2 + Step 3 to add any Leanwheel sections missing from existing files. Never replace existing content.
+Run **Scaffold Flow** Step 2 + Step 3 + Step 3s (the unconditional simplicity guardrails) to add any Leanwheel sections missing from existing files. Never replace existing content.
 
 ### Step 7 — Attempt GitHub tracking setup
 
