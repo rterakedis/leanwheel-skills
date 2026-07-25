@@ -20,6 +20,8 @@ It strips out the activation ceremony and customization overhead of the original
 
 This project is derived from and inspired by **[BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD)** by BMad Code, LLC, used under the [MIT License](https://github.com/bmad-code-org/BMAD-METHOD/blob/main/LICENSE). The BMAD Method is a structured AI development workflow; this project ports its core planning flywheel into a leaner form optimized for Claude Pro's context budget.
 
+The simplicity-ladder / anti-over-engineering layer is adapted — idea, not code — from **[ponytail](https://github.com/DietrichGebert/ponytail)** (MIT-licensed): its 7-rung "laziness ladder," the deletion-focused code-review lens (Pass F), and the deliberate-shortcut marker convention (here spelled `leanwheel:`). As with BMAD, only the concepts were ported; ponytail's intensity dial (lite/full/ultra) and benchmark scoreboard were deliberately left out to keep the layer as plain rules in `CLAUDE.md` rather than added ceremony.
+
 BMad™, BMad Method™, and BMad Core™ are trademarks of BMad Code, LLC (all casings and variations). This project is not affiliated with or endorsed by BMad Code, LLC. See the upstream [trademark guidelines](https://github.com/bmad-code-org/BMAD-METHOD/blob/main/TRADEMARK.md) and this repo's [LICENSE](LICENSE) third-party notices.
 
 ---
