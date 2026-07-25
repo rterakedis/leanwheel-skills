@@ -126,6 +126,8 @@ grep -rn '<img\([^>]*\)>' --include="*.astro" --include="*.html" $EXC . | grep -
 
 **Judgment pass:** For each `client:*` hit, read the component — only flag if the component has no genuine interactivity. For each `<img>` hit in Astro, only flag local assets (external URLs are fine). Do not flag intentional, commented compatibility shims. For font hits: `font-display: swap` is a finding unless DESIGN.md documents it as a heading-only exception (MEDIUM; HIGH if applied to body text); an `@font-face` block with no `font-display` or no metric-matched fallback companion (`size-adjust`/`ascent-override`) is a MEDIUM visible-swap/CLS finding.
 
+**Over-engineering / deletion pass:** scan touched markup/styles/scripts for complexity that shouldn't exist, one tagged line per finding — `delete:` (dead CSS / unused partial / speculative markup), `stdlib:` (hand-rolled thing a platform API ships), `native:` (a library or JS doing what HTML/CSS already does — e.g. a carousel script over `scroll-snap`, a date lib over `Intl`), `yagni:` (a component with one caller, a config nobody sets, a build step for one file), `shrink:` (same result, fewer lines / less markup). Never flag validation, security, or accessibility affordances for removal. These are `[CODE]` findings, usually LOW/MEDIUM.
+
 **Page-level checks:** Open the base layout(s) and verify: single `<h1>` pattern, meta description required (not defaulted), canonical present, `lang` attribute set, OG tags present. Each missing item is one finding.
 
 ---

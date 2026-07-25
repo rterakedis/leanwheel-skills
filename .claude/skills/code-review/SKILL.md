@@ -28,7 +28,7 @@ If empty diff: stop. If >3000 lines: warn, offer to chunk by file.
 - **If the diff touches user-visible UI** and `docs/ux/DESIGN.md` exists: read its frontmatter token block (and the story's `### Design Contract` if present) — required input for Pass E.
 - Confirm: "Reviewing {N} files, {+/-lines}. Story context: {yes/no}."
 
-## Step 3 — Five Review Passes
+## Step 3 — Six Review Passes
 
 Work each pass independently. Look for what's *missing* (absent behavior, unhandled path) as hard as what's *wrong*.
 
@@ -73,6 +73,15 @@ Work each pass independently. Look for what's *missing* (absent behavior, unhand
 - Unresolved findings in the story's `### Design Verification` section
 - **Dark patterns** (check the diff against EXPERIENCE.md's `## Engagement & Persuasion`, if present): pre-checked paid or consent opt-ins; smart defaults that pre-select the higher-cost/higher-commitment choice; fake or endowed progress indicators; countdown/urgency with no real deadline; guilt-decline (confirmshaming) copy; decoy pricing. Flag any lever in the diff that isn't backed by an honest entry in that section — shipping user-hostile behavior is HIGH severity (it erodes trust and is a support/churn liability, not just a style nit).
 
+**Pass F: Over-Engineering** — hunt complexity and code that shouldn't exist (correctness/security belong to Passes A–D; do not duplicate them here). One tagged line per finding:
+- `delete:` — dead code or a speculative feature; replacement is nothing.
+- `stdlib:` — a hand-rolled thing the standard library already ships (name it).
+- `native:` — a dependency or code doing what the platform/framework already does (name the feature).
+- `yagni:` — an abstraction with one implementation, a config nobody sets, a layer with one caller.
+- `shrink:` — same logic, fewer lines (show the shorter form).
+
+Boundary: a single smoke test / assert-based self-check is the minimum — never flag it for deletion; and never simplify away validation, security, or accessibility. End the pass with `net: −N lines possible` or `Lean already.` if there's nothing to cut.
+
 ## Step 4 — Triage and Severity
 
 For each finding assign both a category and severity:
@@ -87,6 +96,8 @@ For each finding assign both a category and severity:
 - `HIGH` — data loss, auth bypass, secret exposure, injection, crash in main path
 - `MEDIUM` — incorrect behavior under reachable conditions, missing error handling, IDOR
 - `LOW` — edge case with low probability, best-practice gap, missing guard on unlikely path
+
+**Pass F (over-engineering) findings** route as `patch` when the cut is clear (usually LOW/MEDIUM), or `defer` / `decision-needed` when removing code needs a judgment call. They are cleanups, not correctness bugs — never HIGH.
 
 Merge duplicates. Drop `dismiss`. If zero remain: write `Clean review — no patches or deferred items.` and justify briefly why each pass came up empty.
 
@@ -110,10 +121,10 @@ Merge duplicates. Drop `dismiss`. If zero remain: write `Clean review — no pat
 **Eval Scorecard:** Emit a structured pass/fail line — this is just turning the passes you already ran into scored output, **no extra model calls**. Execute **SCORE** from `skills/evals/SKILL.md`: one verdict per applicable dimension and an overall gate. Append to `### Review Findings`:
 
 ```
-RUBRIC: correctness PASS · edge-cases PASS · ac-coverage PASS · design PASS · security n/a → GATE PASS
+RUBRIC: correctness PASS · edge-cases PASS · ac-coverage PASS · design PASS · simplicity PASS · security n/a → GATE PASS
 ```
 
-A dimension is FAIL if any unresolved `[ ]` finding maps to it; GATE is PASS only when every applicable dimension is PASS. The gate feeds the flywheel checkpoint and the ledger.
+The `simplicity` dimension scores Pass F (it's just reporting a pass already run — no extra model calls). A dimension is FAIL if any unresolved `[ ]` finding maps to it; GATE is PASS only when every applicable dimension is PASS. The gate feeds the flywheel checkpoint and the ledger.
 
 **Pull deferred forward:** If any `[ ] [Defer]`, execute **LOG-AND-SCHEDULE** from `skills/deferred/skill.md` for each deferred item (title = finding title, detail = finding detail, source = file:line).
 

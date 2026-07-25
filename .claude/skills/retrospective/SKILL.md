@@ -40,6 +40,14 @@ Scan all story files for the epic just completed (`docs/epics/epic-{N}-*.md`) fo
 
 For each `[Defer]` item found in a story file that has **no matching D-ID** in `docs/deferred-items.md`: call **LOG-AND-SCHEDULE** from `skills/deferred/SKILL.md` immediately. Do not leave unlogged deferred items after the retro.
 
+Also grep the codebase for deliberate in-code shortcut markers (`## Simplicity & Anti-Over-Engineering`'s `leanwheel:` convention), skipping vendored/build output:
+
+```bash
+grep -rnE '(#|//|--) ?leanwheel:' . --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.build --exclude-dir=DerivedData --exclude-dir=dist
+```
+
+For each marker that names a **real ceiling** (e.g. `// leanwheel: O(n²) scan, index if list exceeds ~1k`) with no matching entry in `docs/deferred-items.md`, call **LOG-AND-SCHEDULE** the same way — so a deliberate corner-cut can't silently rot. Skip markers that are purely explanatory with no upgrade trigger.
+
 ### Pass 2 — Ensure all logged items are scheduled into open work
 
 Read `docs/deferred-items.md`. For every row, check the `Scheduled As` story against `docs/epics.md`:

@@ -54,6 +54,7 @@ Check these:
 | Metrics ledger | `docs/metrics/README.md` present |
 | Swift stubs | each `docs/setup/swift/*.md` vs `{skills_path}/.../stubs/swift/*.md` (only if `is_apple`) |
 | Web stubs | each `docs/setup/web/*.md` vs stubs (only if `is_web`) |
+| Simplicity guardrails block | `## Simplicity & Anti-Over-Engineering` in CLAUDE.md (all projects — not gated) |
 | Swift guardrails block | `## Swift/SwiftUI Guardrails` in CLAUDE.md (only if `is_apple`) |
 | Web guardrails block | `## Web Guardrails` in CLAUDE.md (only if `is_web`) |
 | Commit script | `scripts/commit-push.sh` present + executable; `## Git Workflow` in CLAUDE.md |
@@ -96,7 +97,9 @@ In dependency order, applying only ADD and REFRESH items:
    These are unedited-overwrite-safe by the same git-provenance test as stubs (REFRESH
    if the project copy matches a historical committed version; CONFLICT otherwise).
 6. **CLAUDE.md sections:** append any missing guardrail/structure blocks (same logic as
-   `/setup` Steps 3/3a/3c) — check-heading-then-append, never modify existing prose.
+   `/setup` Steps 3/3s/3a/3c) — check-heading-then-append, never modify existing prose.
+   The `## Simplicity & Anti-Over-Engineering` block (`stubs/simplicity.md`) is
+   unconditional — append it on all projects when the heading is absent.
 6. **Manifest:** if a legacy `.bmad-lite/` directory exists, rename it to `.leanwheel/`
    first (contents unchanged). Then write/update `.leanwheel/manifest.json` with the
    current `scaffolded_at` date, surfaces, and asset flags.

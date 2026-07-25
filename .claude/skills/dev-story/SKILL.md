@@ -40,6 +40,7 @@ description: Implement a story from its story file. Use when the user says "dev 
 
 For each task in order:
 1. Read task. Understand file, action, outcome.
+1b. Apply the simplicity ladder from CLAUDE.md's `## Simplicity & Anti-Over-Engineering` — after understanding the task, not instead of: reuse before rewrite, stdlib/native before a new dependency, and write the least code that satisfies the AC.
 2. Implement.
 3. Check box: `[ ]` → `[x]`.
 4. If problem found, log in Debug Log; continue.
@@ -110,9 +111,9 @@ When tasks done, DoD passes, **and the Build & Test Gate is green** (or manual-r
 
 ## Inline Code Review
 
-The diff is uncommitted changes. Story file is loaded. Go straight to three passes.
+The diff is uncommitted changes. Story file is loaded. Go straight to the passes below.
 
-### Three Passes
+### Review Passes
 
 **Pass A — Blind Correctness:** Logic errors, null dereferences, unchecked returns, injection/auth/data exposure, races, leaks, error handling.
 
@@ -123,6 +124,8 @@ The diff is uncommitted changes. Story file is loaded. Go straight to three pass
 **Pass D — Security (conditional):** If Dev Notes has `Security Sensitivity:`, run matching categories from `skills/security-review/skill.md`. Skip if blank.
 
 **Pass E — Design Compliance (conditional):** If the diff touches user-visible UI and a `### Design Contract` (or `docs/ux/DESIGN.md`) exists: hardcoded values where a token exists, missing required states (empty/loading/error), missing dark-mode pair, platform checklist violations (tap targets, Dynamic Type, semantic HTML, focus visibility), near-duplicate of an inventoried component. Include any unresolved `### Design Verification` findings. Skip for non-UI diffs.
+
+**Pass F — Over-Engineering:** Hunt complexity only (correctness/security are Passes A–D — don't duplicate). One tagged line per finding: `delete:` (dead/speculative code), `stdlib:` (hand-rolled thing the stdlib ships), `native:` (dependency/code the platform already covers), `yagni:` (one-implementation abstraction, config nobody sets, one-caller layer), `shrink:` (same logic, fewer lines). Never flag a single smoke test / validation / security / accessibility for removal. Route findings as `patch`/`defer` cleanups, never a blocking bug. End with `net: −N lines possible` or `Lean already.`
 
 ### Triage
 

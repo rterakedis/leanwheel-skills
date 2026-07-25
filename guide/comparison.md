@@ -76,3 +76,9 @@ Skip anything that's purely structural/ceremonial with no functional difference.
 Treat the output as a worklist, not a patch. For each item: read it, decide whether it fixes a real problem or adds genuine value, then port the *idea* into the equivalent `SKILL.md` — checking it against the [Local Customizations by Skill](../CLAUDE.md#local-customizations-by-skill) section in CLAUDE.md first so you don't clobber an intentional local divergence.
 
 **The divergence will grow over time**, and that's expected — both projects evolve independently, and upstream may restructure significantly. Treat upstream as an ideas source, not a merge target.
+
+---
+
+## Relationship to ponytail
+
+The simplicity / anti-over-engineering layer is the one piece **not** sourced from BMAD. It's an idea-only port of [ponytail](https://github.com/DietrichGebert/ponytail) (MIT): the 7-rung laziness ladder (appended to every `CLAUDE.md`), the delete-first review pass (code-review Pass F), and the `leanwheel:` deliberate-corner-cut marker (harvested by `/retrospective`). As with BMAD, no files were copied — and ponytail's own ceremony was left out: its lite/full/ultra **intensity dial** and its benchmark **scoreboard** aren't ported, and rather than a standalone audit skill the lens folds into `/architecture`, `/create-story`, `/dev-story`, `/code-review`, `/swift-audit`, `/web-audit`, and `/retrospective`.

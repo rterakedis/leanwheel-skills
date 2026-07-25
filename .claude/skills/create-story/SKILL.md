@@ -66,6 +66,8 @@ Before writing any ACs, draft the `### Behavior Contract` section (template) and
 
 Every enumerated edge case with a non-obvious outcome must become its own Given/When/Then AC — the enumeration is worthless if it stays in prose. Dev sessions test ACs, not Behavior Contract narrative.
 
+**Simplicity lens (scaled by complexity):** before finalizing, ask *does each AC and Dev Notes section need to exist?* — prune speculative ACs and boilerplate scaffolding. For a **simple** story this is a one-line sanity check: do not manufacture ceremony (no invented edge cases, no Behavior Contract padding). For any new dependency or abstraction the story would introduce, apply ladder rungs ①–⑤ (`## Simplicity & Anti-Over-Engineering`): prefer reuse of an existing helper/pattern, the standard library, or a native platform feature before writing new machinery or adding a dependency.
+
 **Cross-epic runtime dependency check (mandatory):**
 Before writing, explicitly answer: does this story require a runtime artifact — database table, seed data row, API endpoint, migration, or service — that lives in a *different* epic and may not be complete yet?
 
@@ -116,7 +118,7 @@ After user approves, append to cache's `## Prior Story Learnings`:
 Do not write the story while any **material** flow is ambiguous — one whose resolution would change an AC or a task. This gate is the fix for thin ACs and downstream rework. From the Behavior Contract and edge-case enumeration, separate:
 
 - **Stated assumptions** — ambiguities with one sensible default. Record the assumption inline (e.g. "assuming soft-delete") and proceed; the user corrects at review if wrong.
-- **Material ambiguities** — genuine forks where you cannot pick a default without guessing at product intent (which state wins on conflict? is partial success allowed? what happens on re-entry?).
+- **Material ambiguities** — genuine forks where you cannot pick a default without guessing at product intent (which state wins on conflict? is partial success allowed? what happens on re-entry?). A **proposed new dependency** or a **single-caller abstraction** the story would introduce is a material item worth surfacing here — confirm it earns its place before writing it in.
 
 If any material ambiguity exists, **stop and ask the user** — list them concisely and wait for answers. Do not write speculative ACs around an unresolved fork. Trivial or simple stories with no material ambiguity skip straight to writing — do not invent questions to satisfy the gate.
 
