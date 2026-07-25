@@ -57,7 +57,10 @@ your-project/
 │   │   │   ├── architecture.md
 │   │   │   ├── ui-composition.md
 │   │   │   ├── testing.md
+│   │   │   ├── testability.md
 │   │   │   ├── anti-patterns.md
+│   │   │   ├── accessibility.md
+│   │   │   ├── swiftdata.md         ← guidance self-gates to SwiftData projects
 │   │   │   ├── ipados-specific.md   ← present if iPadOS targeted
 │   │   │   └── macos-specific.md    ← present if macOS targeted
 │   │   └── web/           ← Web/SSG guidance (created by /setup for web projects)

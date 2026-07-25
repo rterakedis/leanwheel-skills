@@ -1,7 +1,7 @@
 # UI Composition & Layout Rules
 
-> Updated: 2026-06-08 — iOS/iPadOS 19+
-> iOS 18+ | Preventing massive views, subview extraction, layout decisions, and new container APIs.
+> Updated: 2026-07-19 — iOS 18+ (iOS 26 features flagged)
+> Preventing massive views, subview extraction, layout decisions, HIG conventions, and new container APIs.
 
 ---
 
@@ -10,38 +10,45 @@
 If `var body: some View` exceeds ~50 lines, it must be decomposed. This is not a style preference — large bodies create re-render surface area and make conditional logic harder to audit.
 
 Decomposition priority order:
-1. Extract to a private computed property returning `some View` (zero overhead, stays in same file)
-2. Extract to a private nested `struct` view (use when the subview has its own `@State`)
-3. Extract to a separate file in the same feature folder (use when the component is reused or complex)
+1. Extract to a private `struct` sub-view (preferred — a struct is a real identity boundary, so its `body` only re-evaluates when its own inputs change)
+2. Extract to a separate file in the same feature folder (when the component is reused or complex)
+3. A private computed property returning `some View` — acceptable only for tiny static fragments. A computed property (or `@ViewBuilder` method) is **not** an identity boundary: it inlines into the parent's `body`, so the whole parent still re-evaluates as one unit. It organizes code; it does not scope invalidation.
 
 ```swift
-// ✅ Computed property extraction — stays in same file, no overhead
+// ✅ Struct sub-views — each is its own invalidation scope
 struct OrderListView: View {
     var body: some View {
         VStack {
-            headerSection
-            orderList
-            footerSection
+            OrderListHeader(count: orders.count)
+            OrderList(orders: orders)
+            OrderListFooter()
         }
     }
+}
 
-    private var headerSection: some View {
-        HStack { ... }
-    }
-
-    private var orderList: some View {
+private struct OrderList: View {
+    let orders: [Order]
+    var body: some View {
         List(orders) { OrderRow(order: $0) }
     }
 }
 
-// ✅ Nested struct — when the subview needs its own @State
+// ✅ Sub-view owning its own @State
 private struct ExpandableOrderRow: View {
     let order: Order
     @State private var isExpanded = false
 
     var body: some View { ... }
 }
+
+// ⚠️ Computed property — fine for a static caption; wrong for anything that
+// renders data, because it re-evaluates with every parent body pass
+private var footerCaption: some View {
+    Text("Prices include tax").font(.footnote)
+}
 ```
+
+This is layout decomposition only — logic still lives in the view or a service, never a per-view ViewModel (see anti-patterns.md #1).
 
 ---
 
@@ -255,7 +262,7 @@ CardStack {
 `MeshGradient` creates smooth, multi-point color blends. Use for decorative backgrounds and hero images — not for content areas.
 
 ```swift
-// ✅ Static mesh gradient background
+// ✅ Static mesh gradient background — colors come from the app's design tokens
 MeshGradient(
     width: 2,
     height: 2,
@@ -264,33 +271,56 @@ MeshGradient(
         [0, 1], [1, 1]
     ],
     colors: [
-        Color.appAccentLawn, .mint,
-        Color.appAccentSnow, .teal
+        Color.appAccentPrimary, .mint,
+        Color.appAccentSecondary, .teal
     ]
 )
 .ignoresSafeArea()
 
-// ❌ Do not hardcode semantic colors — use app accent colors per season
+// ❌ Do not hardcode raw colors — use the app's design-token accent colors
 MeshGradient(
     width: 2, height: 2,
     points: [[0,0],[1,0],[0,1],[1,1]],
-    colors: [.green, .mint, .blue, .teal]  // wrong — use Color.appAccent(for:)
+    colors: [.green, .mint, .blue, .teal]  // wrong — use token colors
 )
 ```
 
 ---
 
-## Liquid Glass Effect (iOS 19+)
+## Liquid Glass (iOS 26+)
 
-iOS 19 introduced the Liquid Glass design language. Use `glassEffect()` for floating action buttons and overlay controls — not for primary content areas.
+iOS 26 introduced the Liquid Glass design language. Use it for floating controls and overlay chrome — never on primary content. Gate with `#available(iOS 26, *)` and fall back to `.ultraThinMaterial` when supporting iOS 18–18.x.
 
 ```swift
-// ✅ Glass effect for a floating control
-Button("Scroll to Top", systemImage: "chevron.up") {
-    scrollToTop()
+// ✅ Configured glass on a floating control — apply glassEffect AFTER layout modifiers
+Button("Scroll to Top", systemImage: "chevron.up") { scrollToTop() }
+    .padding()
+    .glassEffect(.regular.tint(.accentColor).interactive(),
+                 in: .rect(cornerRadius: 16))
+
+// ✅ System button styles
+Button("Confirm") { confirm() }.buttonStyle(.glassProminent)  // or .glass
+
+// ✅ Multiple glass elements near each other: wrap in a GlassEffectContainer
+// (required for correct blending/morphing, and cheaper than N separate effects)
+GlassEffectContainer {
+    HStack {
+        FilterChip("Open").glassEffect()
+        FilterChip("Done").glassEffect()
+    }
 }
-.padding()
-.glassEffect()
+
+// ✅ Morphing between states: same glassEffectID + @Namespace
+@Namespace private var glassNS
+// collapsed and expanded views each declare:
+.glassEffect().glassEffectID("fab", in: glassNS)
+
+// ✅ Availability gating
+if #available(iOS 26, *) {
+    controls.glassEffect()
+} else {
+    controls.background(.ultraThinMaterial, in: .rect(cornerRadius: 16))
+}
 
 // ❌ Glass effect on primary content — reduces readability
 List(orders) { order in
@@ -298,6 +328,31 @@ List(orders) { order in
         .glassEffect()  // wrong — glass is for overlay/floating UI
 }
 ```
+
+---
+
+## HIG Conventions — Empty States, Labels, Tap Targets
+
+```swift
+// ✅ ContentUnavailableView for empty/missing states — never a custom VStack
+ContentUnavailableView("No Orders", systemImage: "tray",
+                       description: Text("Orders you create appear here."))
+// ✅ Built-in variant for empty search results
+ContentUnavailableView.search(text: searchText)
+
+// ✅ Label for icon+text pairs — never a manual HStack (loses a11y + style adaptivity)
+Label("Schedule", systemImage: "calendar")
+
+// ✅ LabeledContent for value rows and labeled controls in a Form
+LabeledContent("Total", value: order.total, format: .currency(code: "USD"))
+LabeledContent("Volume") { Slider(value: $volume) }
+```
+
+- Interactive targets must be at least **44×44 points** — pad small icons, don't shrink hit areas.
+- Never read `UIScreen.main.bounds` — use `containerRelativeFrame(_:)`, `GeometryReader` (last resort), or let layout flow.
+- Avoid fixed frames on text-bearing views — they break under Dynamic Type (see accessibility.md).
+- Use `bold()` not `fontWeight(.bold)`; use hierarchical styles (`.secondary`, `.tertiary`) instead of manual opacity.
+- Centralize spacing/corner-radius/font constants in a shared design-constants enum (or the project's DESIGN.md tokens) — no magic numbers scattered through views.
 
 ---
 

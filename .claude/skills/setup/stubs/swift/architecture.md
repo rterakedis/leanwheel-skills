@@ -1,7 +1,7 @@
 # Architecture & Project Structure
 
-> Updated: 2026-06-08 — iOS/iPadOS 19+
-> iOS 18+ | Project topology, feature isolation, and service layer conventions.
+> Updated: 2026-07-19 — iOS 18+
+> Project topology, feature isolation, service layer, and navigation/presentation conventions.
 
 ---
 
@@ -147,4 +147,31 @@ NavigationView { ... }
 
 // ❌ Inline destination closures for non-trivial cases
 NavigationLink(destination: OrderDetailView(order: order)) { ... }
+```
+
+Navigation rules:
+- **Never mix** `navigationDestination(for:)` and `NavigationLink(destination:)` in the same hierarchy — pick value-based and stay with it.
+- Register each destination type **once** per stack, at the root — duplicate registrations are a bug.
+
+---
+
+## Presentation — Sheets, Alerts, Dialogs
+
+```swift
+// ✅ sheet(item:) when the sheet shows optional data — presents when non-nil,
+// passes the unwrapped value, dismisses by setting nil
+.sheet(item: $selectedOrder) { order in OrderDetailSheet(order: order) }
+// Compact form when the view's init takes exactly the item:
+.sheet(item: $selectedOrder, content: OrderDetailSheet.init)
+
+// ❌ isPresented + separately-stashed optional — two sources of truth that desync
+.sheet(isPresented: $showingDetail) { OrderDetailSheet(order: selectedOrder!) }
+
+// ✅ Single-OK informational alert — omit the actions closure entirely
+.alert("Export complete", isPresented: $showingDone) { }
+
+// ✅ confirmationDialog attaches to the view that triggered it
+// (anchors the popover on iPad, and drives the glass morph animation on iOS 26)
+Button("Delete", role: .destructive) { confirmingDelete = true }
+    .confirmationDialog("Delete this order?", isPresented: $confirmingDelete) { ... }
 ```

@@ -1,7 +1,9 @@
 # Astro Patterns
 
-> Updated: 2026-06-12 — Astro 5+
+> Updated: 2026-07-19 — Astro 6 (stable 2026-03; requires Node ≥ 22.12, ships Vite 7 + Zod 4)
 > Zero-JS discipline, content collections, image pipeline, and routing for Astro static sites.
+
+**v5 → v6 removals to know:** `Astro.glob()` (use content collections or `import.meta.glob`), the old `<ViewTransitions />` component (use `<ClientRouter />`), and Zod 3 schemas (content schemas run on Zod 4). Native CSP support is built in — responsive image styles are hashable, so a strict CSP no longer needs `unsafe-inline` for the image pipeline.
 
 ---
 
@@ -41,7 +43,8 @@ All structured content (posts, docs, projects) lives in content collections with
 
 ```ts
 // ✅ src/content.config.ts
-import { defineCollection, z } from 'astro:content';
+import { defineCollection } from 'astro:content';
+import { z } from 'astro/zod';   // v6: z comes from astro/zod (Zod 4), not astro:content
 import { glob } from 'astro/loaders';
 
 const blog = defineCollection({
@@ -69,12 +72,14 @@ Local images go through `astro:assets` — never a raw `<img>` pointing into `pu
 
 ```astro
 ---
-// ✅
+// ✅ layout generates srcset/sizes automatically (stable since 5.10)
 import { Image } from 'astro:assets';
 import hero from '../assets/hero.png';
 ---
-<Image src={hero} alt="Team at the summit" widths={[400, 800, 1200]} sizes="(max-width: 800px) 100vw, 800px" />
+<Image src={hero} alt="Team at the summit" layout="constrained" width={800} height={450} />
 ```
+
+- Prefer the responsive `layout` prop (`constrained` for most content images, `full-width` for heroes, `fixed` for logos/avatars) over hand-written `widths`/`sizes` — set a site-wide default with `image: { layout: 'constrained' }` in `astro.config.mjs` and override per-image only when needed.
 
 ```astro
 {/* ❌ Unoptimized, no dimensions, causes layout shift */}
@@ -107,6 +112,7 @@ import hero from '../assets/hero.png';
 | Banned | Replacement |
 |---|---|
 | `client:load` on static content | Remove the directive (or the framework component) |
+| `Astro.glob()` (removed in v6) | Content collection + `getCollection`, or `import.meta.glob` for non-content files |
 | Framework component for non-interactive markup | Plain `.astro` component |
 | `fetch()` of local content at runtime | Content collection + `getCollection` |
 | Raw `<img>` for a local asset | `<Image />` / `<Picture />` from `astro:assets` |

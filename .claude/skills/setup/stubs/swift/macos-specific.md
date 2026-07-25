@@ -1,7 +1,7 @@
 # macOS-Specific Patterns
 
-> Updated: 2026-06-08 — macOS 15+ (Sequoia)
-> macOS 15+ (Sequoia) | Scene management, menus, toolbar, window, and Mac-idiomatic conventions.
+> Updated: 2026-07-19 — macOS 15+ (macOS 26 features flagged)
+> Scene management, menus, toolbar, window, and Mac-idiomatic conventions.
 
 ---
 
@@ -276,6 +276,16 @@ ForEach(items) { item in
         }
 }
 ```
+
+---
+
+## macOS 26 (Tahoe) — Flagged Additions
+
+macOS 26 adopts the Liquid Glass design language (shared with iOS 26 — full glass-effect usage rules live in `ui-composition.md`; they apply unchanged on Mac). Gate everything below with `#available(macOS 26, *)` while the deployment target is macOS 15.
+
+- **Chrome, not content:** glass belongs on floating controls, toolbars, and overlay chrome — never on primary content areas. Standard toolbars, sidebars, and `MenuBarExtra` pick up the new material automatically on rebuild with the 26 SDK; custom floating controls opt in with `.glassEffect(...)`.
+- **Toolbar grouping:** use `ToolbarSpacer` to visually separate groups of toolbar items — grouped items share one glass capsule; a spacer breaks the grouping. Don't fake separation with padded empty views.
+- **Rebuild audit:** compiling against the macOS 26 SDK re-themes standard controls. After the first 26-SDK build, audit custom-drawn chrome (hardcoded toolbar backgrounds, hand-rolled material overlays) that now clashes with system glass — remove the custom drawing rather than layering glass on top of it.
 
 ---
 
