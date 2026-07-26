@@ -65,7 +65,16 @@ Per-phase routing (Conserve-Opus baseline, dynamic Swift exception):
 
 **How to set the model:** the subagent defs default to Sonnet. Pass a per-spawn `model` override on the Agent call **only** for Phase 2 when `swift_project = true` (`model: opus`). All other spawns use the default. If the user opts out for the run ("conserve everything", "stay on Sonnet"), drop the Opus override too and note it.
 
-**Spawning a phase:** call the Agent tool with the phase's `subagent_type`, the model override if applicable, and a prompt containing the story identifier/path plus any context the subagent needs (it starts cold). Wait for the subagent's report, then act on its structured fields. Do **not** re-do the phase's work in this thread — the subagent owns it.
+**Spawning a phase = one literal Agent tool call.** Everywhere this skill says "spawn", make an actual Agent tool invocation — never a prose description of delegation, and never doing the phase's work inline in this thread:
+
+```
+Agent tool call:
+  subagent_type: "lw-story-creator" | "lw-story-developer" | "lw-story-reviewer" | "lw-docs-sync"
+  model: "opus"        # ONLY Phase 2 when swift_project = true — omit on every other spawn
+  prompt: the story identifier/path + any context the subagent needs (it starts cold)
+```
+
+Wait for the subagent's report, then act on its structured fields. Do **not** re-do the phase's work in this thread — the subagent owns it. If a phase ends with no Agent call in the transcript (only narration like "the creator subagent will handle this"), the phase did not run — go back and make the call. Inline execution is legal only in the documented fallback when subagents are unavailable.
 
 ---
 

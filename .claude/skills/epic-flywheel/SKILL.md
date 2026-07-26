@@ -42,6 +42,8 @@ description: Drive an entire epic to completion semi-autonomously — runs the p
 
 For each story in the epic, in story order. Spawn each phase as its subagent (cold start; it owns the heavy reading). The orchestrator captures only the structured report fields.
 
+**"Spawn" = a literal Agent tool call**, exactly as defined in story-flywheel's **Spawning a phase**: invoke the Agent tool with `subagent_type` set to the named agent (`lw-story-creator` / `lw-story-developer` / `lw-story-reviewer` / `lw-docs-sync`), `model: "opus"` only where a step says so, and a prompt carrying the story identifier/path plus any context the cold subagent needs. Never narrate the delegation and never do the phase's work in this orchestrating thread — if a step ends with no Agent call in the transcript, the step did not run. Inline execution is legal only in the documented fallback when subagents are unavailable.
+
 ### GitHub tracking is orchestrator-owned (do not delegate-and-hope)
 
 A cold subagent does **not** reliably run the issue transitions, and nothing verifies it did — that is how issues drift (stuck on `ready-for-dev`, a stale `backlog` left beside a new label, dev'd stories never closed). epic-flywheel already gates every commit, so it knows the exact moment each phase ends and **drives the transition itself** using the deterministic script:
@@ -120,7 +122,7 @@ bash scripts/gh-track.sh sync "<story-glob>" --apply    # if the diff is non-emp
 A clean diff (`0 to-change`) is the proof every issue landed in the right state. Report the count fixed in the boundary report. (If the project predates the script, call the github-tracking SYNC op instead.)
 
 ### 4c. Architecture promotion (canonical-doc sync, cheap)
-Spawn **`lw-docs-sync`** (Haiku) with op `PROMOTE` and Epic {N} (fallback: execute the docs-sync **PROMOTE** op inline if subagents are unavailable). It harvests project-canonical learnings (schema realities, new/changed services & integrations, cross-cutting invariants, architectural decisions) from `docs/epics/epic-{N}-context.md` and appends the durable ones to `docs/architecture.md` (idempotent; also `docs/sql/` / `docs/maintainer/` when present) — so the next epic plans against live docs, not a stale architecture. Zero-token when the context file has nothing canonical (pure-refactor epics often don't); never touches `docs/setup/*` guidance. Report the count promoted in the boundary report.
+Call the Agent tool with `subagent_type: "lw-docs-sync"` (Haiku) and a prompt naming op `PROMOTE` and Epic {N} (fallback: execute the docs-sync **PROMOTE** op inline if subagents are unavailable). It harvests project-canonical learnings (schema realities, new/changed services & integrations, cross-cutting invariants, architectural decisions) from `docs/epics/epic-{N}-context.md` and appends the durable ones to `docs/architecture.md` (idempotent; also `docs/sql/` / `docs/maintainer/` when present) — so the next epic plans against live docs, not a stale architecture. Zero-token when the context file has nothing canonical (pure-refactor epics often don't); never touches `docs/setup/*` guidance. Report the count promoted in the boundary report.
 
 ### 5. Rolled-up, deduplicated Test Plan (the manual pass)
 This is the payoff of deferring manual testing to here. Read the accumulated `docs/epics/.epic-{N}-test-plans.md` scratch list (collected plan text only — no source). Then, in a **single LLM pass**:
