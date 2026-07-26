@@ -81,8 +81,19 @@ Everything else is either invoked for you by those three, or `/next` will route 
    ```
    /harvest-findings {N} → after the manual test pass, capture inline findings,
                            spin in-scope ones into a remediation story, reset the plan
-   /retrospective        → capture what worked / what didn't, update CLAUDE.md
+   /retrospective        → capture what worked / what didn't, update CLAUDE.md,
+                           condense the closed epic in docs/epics.md
    ```
+
+7. **At a release boundary** (every epic closed, next phase starting) — occasional, and only when you ask for it:
+
+   ```
+   /epic-archive cut-release {version} → archive docs/epics.md into
+                                         docs/epics/releases/, seed a fresh one
+                                         (numbering stays continuous)
+   ```
+
+   Then re-plan the new phase from step 4 (`/prd update` → `/epics` → `/check-readiness`).
 
 Already have an existing codebase instead of starting fresh? Run `/discover` first to reverse-engineer it into `docs/prd.md` + `docs/architecture.md`, then continue from step 3. See **[guide/workflows.md](guide/workflows.md)** for the full greenfield/brownfield flowcharts, and **[guide/skills-reference.md](guide/skills-reference.md)** for every skill and sub-command.
 

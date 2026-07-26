@@ -190,7 +190,9 @@ RECOMMENDED FLOW:
   2. → Run /harvest-findings {N} to capture those findings, schedule the in-scope
        ones as story {N}.{last+1}, and reset the plan for re-test.
   3. → Then run /retrospective for Epic {N} to capture learnings
-       and update conventions BEFORE starting Epic {N+1}.
+       and update conventions BEFORE starting Epic {N+1}. It also condenses
+       Epic {N} in docs/epics.md (epic-archive CONDENSE) — story detail
+       collapses to a summary row; the full spec stays in each story file.
 
 Next:
   • "test"      — walk me through the simulator test plan now
@@ -203,6 +205,8 @@ Next:
 Append the epic-level ledger roll-up. Wait for the user — the boundary is always a human gate (it's where *they* do the manual testing).
 
 **Retrospective reminder is mandatory.** The Epic Boundary Gate must always surface the retrospective prompt — never close an epic silently. If the user picks `"continue"` (skip retro), confirm once: "Starting Epic {N+1} without a retrospective for Epic {N} — the learnings/conventions from this epic won't be captured. Proceed?" Honor their choice, but make the skip explicit. If the user runs `"test"` first, then returns, re-surface the retrospective reminder before advancing to the next epic.
+
+**Last epic of the phase.** If no later epic remains in `docs/epics.md`, add one more line to the recommended flow after step 3: `4. → Optionally /epic-archive cut-release {version} to archive this phase's epics.md and seed a fresh one for the next phase.` An offer only — never cut a release automatically.
 
 ---
 

@@ -18,6 +18,8 @@ Read all three planning documents fully:
 
 Also read `docs/ux/DESIGN.md` and `docs/ux/EXPERIENCE.md` if present (needed for Check 9).
 
+**Collapsed epics are shipped — do not re-validate them.** An epic whose stories render as a summary table (id · title · status · spec link) instead of `### Story` bodies is closed. This skill gates *upcoming* work, so the story-body checks — 2, 3, 4, 6, 9, 10 — apply only to epics with live story bodies; a collapsed epic has no ACs to grade and its work is already built. Checks that still span closed epics: **1** and **5** count a collapsed row as coverage and read the untouched `## FR Coverage Map` plus the surviving per-epic **FRs covered:** lines, so FR traceability stays whole across shipped epics; **7** treats a closed epic as a *satisfied* provider — a live story depending on its artifacts is resolved, not a blocker; **8**'s Epic 1 testability-foundation requirement is met by a `done` row for that story in a collapsed Epic 1. Open a linked story file only if one specific dependency is genuinely unclear. Never read `docs/epics/releases/` — archived releases are out of scope.
+
 ---
 
 ## Check 1 — FR Coverage

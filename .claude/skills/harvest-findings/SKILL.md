@@ -80,6 +80,8 @@ Append a checklisted block under the Epic {N} heading (idempotent — see below)
 - [ ] {finding-text} — _{scenario-title}_ — **question** · needs decision
 ```
 
+**Keep this shape stable — it is machine-foldable.** The heading `### Epic {N} — Post-Test Findings (harvested {date})` and the per-finding row (a `- [ ]` checkbox carrying **kind** · **disposition**, or `needs decision`) are exactly what `skills/epic-archive/SKILL.md`'s **CONDENSE** op reads to decide whether the block is fully resolved and can fold to one line. Don't drift the heading or drop the kind/disposition tag.
+
 **Idempotency (required):** the block is keyed by `(Epic {N}, harvested {date})`. Before writing, check for an existing `### Epic {N} — Post-Test Findings (harvested {date})` heading for the same date. If present, **merge** — add only findings whose `finding-text` is not already listed; never duplicate the block or an existing row. A re-run on a different date creates a new dated block (a distinct test pass).
 
 Use today's date (`date +%Y-%m-%d`).

@@ -67,6 +67,10 @@ Include a summary table in the retro doc:
 | D-2  | ...   | Story X.Y (open) | No change |
 ```
 
+## Condense the Closed Epic
+
+Call **CONDENSE** from `skills/epic-archive/SKILL.md` with `epic_num`. Runs here — after the deferred sweep (which must read the epic's full text) and before the retro stamp (which marks the epic closed). Idempotent; skips silently when nothing is collapsible.
+
 ## PRD / Architecture Sync Check
 
 Before writing the retro, diff `docs/prd.md` and `docs/architecture.md` against stories shipped. List any required updates. Perform them in the same turn.
@@ -142,3 +146,4 @@ End the retro with a `## Next Epic Readiness` section:
 3. Edit `docs/deferred-items.md` for any reassignments or newly logged items from the Deferred Item Status Check (mandatory — same turn). Every unresolved item must point to an open, not-started story.
 4. Stamp completion so `/next` can route deterministically: append `<!-- retro: epic {epic_num} — {date} -->` directly below the H1 of `docs/epics.md` (one line per epic; skip if already present).
 5. Report: "Retrospective complete. CLAUDE.md updated. Next: `/epic-flywheel {N+1}` in a fresh session (or `/next` to confirm)."
+6. **Release boundary (offer only).** If this retro closed the *last* epic — every epic in `docs/epics.md` carries a `retro:` stamp, no story is `ready-for-dev`/`in-progress`/`review`, and no story lacks a file — additionally offer `/epic-archive cut-release {version}` to archive the shipped release and seed the next phase. Requires an explicit user go-ahead; never run it automatically. If any epic remains open, say nothing — item 5 stands as-is.

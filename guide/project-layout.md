@@ -39,7 +39,9 @@ your-project/
 │   │   ├── epic-2-context.md
 │   │   ├── epic-2-retro-{date}.md
 │   │   ├── 2-1-{slug}.md
-│   │   └── ...
+│   │   ├── ...
+│   │   └── releases/             ← Archived epics.md per shipped release (from /epic-archive CUT-RELEASE)
+│   │       └── {version}-epics.md ← e.g. v1.0-epics.md — the closed release's epics, out of the read path
 │   ├── investigations/    ← Case files from /investigate runs
 │   ├── specs/             ← Quick-dev specs (post-MVP one-off changes)
 │   │   └── {slug}.md
