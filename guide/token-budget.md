@@ -103,6 +103,23 @@ Original BMAD typically runs multi-phase sessions, so the PRD and architecture s
 
 When using `/story-flywheel` or `/epic-flywheel`, each phase runs in a throwaway subagent context. The story creator reads PRD + architecture + epics, distills the story, and exits — those docs never enter the main thread. The developer reads only the story file. The reviewer reads only the diff. Of the ~220K project total, the **orchestrating thread holds only ~15–20K** (skill + short structured reports); everything else lives in disposable windows. On top of isolation, the flywheels do **model routing**: create/review run on Sonnet, docs maintenance on Haiku, and Opus is reserved for Swift dev passes where a cheaper model's failed build loops would cost more than one accurate pass.
 
+### What epics.md condensing adds on top
+
+`docs/epics.md` is read *in full* by `check-readiness`, the first `create-story` of each epic, every `retrospective`, `correct-course`, `doc-review`, and `epics` update run — roughly **15–25 full reads** over a project's life. Left alone it grows monotonically: every shipped story's user-story statement and Given/When/Then ACs sit in it forever, duplicating the story file that already holds the same ACs plus the implementation record. `/epic-archive` **CONDENSE** (called by `/retrospective` at epic close) collapses a closed epic's `done` story bodies to one summary row each.
+
+Order of magnitude, with the assumptions stated:
+
+| Assumption | Estimate |
+|------------|----------|
+| One full story entry in `epics.md` (user story + 3–5 Given/When/Then ACs) | ~170 tokens |
+| A 5-story epic's collapsible detail | ~900 tokens |
+| The same epic as a summary table (one row per story, with the story-file link) | ~120–150 tokens |
+| **Net per closed epic, per full read of `epics.md`** | **~750 tokens** |
+
+The benefit is therefore a function of project *length*, not of any single run. On the 12-story project above (3 epics, ~2 of them closed before the end) it is a few thousand tokens — **negligible** against the ~220K total. On a long or multi-phase project — say 8 epics with ~10 full reads still ahead — the same arithmetic is ~5K per read, i.e. **tens of thousands of tokens**, and it compounds because uncondensed detail is re-paid on every subsequent read. **CUT-RELEASE** takes a shipped release's file out of the read path entirely, replacing it with one row in a `## Shipped Releases` table.
+
+The ops themselves are near-free: a structured edit over one file, once per epic close — no doc synthesis, no subagent, idempotent.
+
 ### Bottom line
 
 Leanwheel uses roughly **a third of the tokens** of BMAD v6 for the same 12-story project (~220K vs ~600K on the loading side) — while running more verification (build gates, evals, invariant checks, inline review) than upstream does. The savings come from the same four levers as before, all of which survived both systems' growth: no activation ceremony, epic-context caching, inline review, and session hygiene — now compounded by subagent isolation, model routing, and the zero-token guardrail/eval/tracking layers.

@@ -13,7 +13,7 @@ description: Create a comprehensive story file for a specific epic/story. Use wh
 
 ### Step 1 — Identify target story
 - If user specified epic/story (e.g., "1-2"), use it.
-- Otherwise read `docs/epics.md`, find first story with no file in `docs/epics/`.
+- Otherwise read `docs/epics.md`, find first story with no file in `docs/epics/`. Scan only epics with live `### Story` bodies — an epic collapsed to a summary table is closed and every row there already has a file, so it can never be the target. A summary row is a pointer to a story file, never a spec to author from.
 - Confirm: "Creating story {epic}-{story}: {title}?"
 
 ### Step 2 — Load documents via cache
@@ -37,6 +37,8 @@ Check cache validity:
 - Read completed `docs/epics/{epic_num}-*.md`
 - Generate cache before writing story
 - Tell user: "Generated epic-{epic_num} context cache."
+
+**Collapsed epics (either branch):** a collapsed epic's summary table holds no story bodies — the spec for any row in it lives in the linked `docs/epics/{N}-{M}-*.md`. Read that story file when you need the detail (prior-story constraints, patterns); never try to mine it out of `docs/epics.md`.
 
 **Command:** `/create-story refresh-cache` — force-regenerate cache regardless of timestamps.
 

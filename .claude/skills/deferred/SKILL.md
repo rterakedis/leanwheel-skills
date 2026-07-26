@@ -47,6 +47,8 @@ Input: `title`, `detail`, `source`, `d_id`, optionally `target_epic`.
 
 **Step 2 — fallback: new remediation story.** Semantic epic matching: place in the epic whose scope naturally contains this work (security→auth epic, UI→UI epic, perf→perf epic, etc.). If no match: append to last incomplete epic (or create Epic R: Remediation if all complete).
 
+**Never target a closed epic.** An epic carrying a `<!-- retro: epic {N} -->` stamp — or collapsed to a summary table by `epic-archive` CONDENSE — is shipped: its retro is written and its milestone closed. Semantic matching considers **open epics only**; if the best semantic match is closed, fall through to the last incomplete epic (or Epic R). Same immutability rule `harvest-findings` applies to done stories.
+
 New story entry format (append to epic's stories):
 ```markdown
 ### Story {epic}.{N}: {title} *(remediation)*

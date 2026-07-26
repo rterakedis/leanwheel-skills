@@ -52,10 +52,12 @@ flowchart TD
         MT["🧪 Manual test pass\nWork through the epic test plan\nRecord findings inline"]
         MT -.->|"optional: automate the plan"| AT["/e2e-tests\nConvert local-runnable scenarios\ninto automated tests + eval cases\nManual pass shrinks permanently"]
         MT --> HF["/harvest-findings {N}\nCapture + triage by kind\nbug/tweak in-scope → story {N}.{last+1}\nenhancements → backlog · questions → decide\nreset the plan"]
-        HF --> J["/retrospective\nWhat worked? What didn't?\nUpdates CLAUDE.md with new conventions"]
+        HF --> J["/retrospective\nWhat worked? What didn't?\nUpdates CLAUDE.md with new conventions\nCondenses the closed epic in docs/epics.md"]
     end
 
-    J -->|"Start next epic"| G
+    J -->|"More epics\nin this phase"| G
+    J -->|"All epics closed —\nnew phase starting"| RC["/epic-archive cut-release\nArchive docs/epics.md into docs/epics/releases/\nSeed a fresh one — numbering stays continuous"]
+    RC -->|"re-plan the new phase"| D
 
     style ONCE fill:#e8f4f8,stroke:#2196F3
     style IDEA fill:#f3e8fc,stroke:#9C27B0

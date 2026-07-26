@@ -21,6 +21,8 @@ for f in docs/project/brief.md docs/prd.md docs/ux/DESIGN.md docs/ux/EXPERIENCE.
 echo "== gates =="
 grep -m1 'readiness-check' docs/epics.md 2>/dev/null || echo "no readiness stamp"
 grep -o 'retro: epic [0-9]*' docs/epics.md 2>/dev/null || echo "no retro stamps"
+grep -cE '^## Epic [0-9]' docs/epics.md 2>/dev/null            # 0 = freshly cut, epics not written yet
+ls docs/epics/releases/*.md 2>/dev/null || echo "no releases archived"
 echo "== stories =="
 grep -H -m1 '^status:' docs/epics/*.md /dev/null 2>/dev/null
 grep -H -m1 '^\*\*Status:\*\*' docs/epics/*.md /dev/null 2>/dev/null   # legacy format
@@ -45,7 +47,7 @@ echo "== done =="
 | 4 | Brief, no prd | Idea → Plan | `/prd` — optional first: `/forge-idea` if no `forged-idea-*.md` (pressure-test) |
 | 5 | Prd; manifest surfaces show UI (apple/web app/SSG); no `docs/ux/DESIGN.md` | Plan | `/ux` (no manifest → ask once: does this ship UI?) |
 | 6 | No `docs/architecture.md` | Plan | `/architecture` |
-| 7 | No `docs/epics.md` | Plan | `/epics` |
+| 7 | No `docs/epics.md`, or a freshly cut one (0 epics) | Plan | `/epics` — optional first: `/prd update` for the new phase's scope |
 | 8 | Epics, no readiness stamp | Gate | `/check-readiness` — optional first: `/doc-review` on prd/architecture |
 | 9 | Any story `status: review` | Dev loop | `/code-review` on that story |
 | 10 | Any story `status: in-progress` | Dev loop | `/dev-story` to resume it (or resume `/epic-flywheel {N}` if the epic was mid-flywheel) |
@@ -53,7 +55,8 @@ echo "== done =="
 | 12 | Epic's stories all done; `epic-{N}-test-plan.md` has inline findings > 0 | Boundary | `/harvest-findings {N}` |
 | 13 | Test plan exists, findings = 0, no retro stamp for {N} | Boundary | Ask once: manual test pass done? No → run the test plan (optional: `/e2e-tests` to automate it) · Yes → `/retrospective` |
 | 14 | Retro stamped for {N}, later epics remain | Next epic | `/epic-flywheel {N+1}` — in a **fresh session** |
-| 15 | All epics done | Post-MVP | `/quick-dev` for one-offs · bigger feature area → `/prd update` then `/epics` · new product idea → `/product-brief` |
+| 15 | All epics done **and** every epic retro-stamped | Release boundary | Ask once: new phase, or one-offs? New phase → `/epic-archive cut-release {version}` first, then `/prd update` → `/epics` · one-offs → `/quick-dev`, no cut needed |
+| 16 | All epics done | Post-MVP | `/quick-dev` for one-offs · bigger feature area → `/prd update` then `/epics` · new product idea → `/product-brief` |
 
 To resolve rows 11–14, `docs/epics.md`'s story table may be skimmed for epic/story numbering only — never the prose.
 
