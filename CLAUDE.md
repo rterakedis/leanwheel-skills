@@ -180,6 +180,9 @@ Added an **Engagement & Persuasion** design decision (no upstream equivalent): S
 
 ---
 
+### `quick-dev`
+Diverged from upstream by one addition in **Phase 4 — Doc Update**: an **Operational guides** step that, when the change touched an infra-shaped file (dependency, env var, migration, script, deploy/CI, new service), calls the Agent tool with `subagent_type: "lw-docs-sync"` (Haiku) and a prompt naming op `OPERATIONAL` plus the changed-file list (inline fallback when subagents are unavailable; zero-cost skip when no infra file changed). Mechanics live in the [`docs-sync`](#docs-sync) skill. Otherwise identical to upstream.
+
 ### `refresh-swift`
 New skill with no upstream equivalent. Researches current Swift/SwiftUI best practices from gold-standard sources (Hacking with Swift, Swift with Majid, SwiftLee, Apple WWDC docs, Point-Free) **plus curated community agent-skill repos as diff sources** (twostraws' SwiftUI/SwiftData/Concurrency/Testing Pro skills + SwiftAgents, Dimillian/Skills, AvdLee's skills — pinned trusted authors; the `twostraws/swift-agent-skills` directory is checked only as an index for new entries by those authors) and updates both the project's `docs/setup/swift/` sectioned reference docs and the skills repo stubs. Ideas are ported in lean ✅/❌ style, never file-copied, and ViewModel-extraction advice from those sources is mapped onto the local services-not-ViewModels house style, never adopted. Carries **version-axis rules**: verify current version *names* before writing headers (a past run invented a phantom "iOS 19"), key concurrency/testing files to the Swift language version, and research "what changed since each file's Updated date" rather than a frozen checklist. Triggered via `/refresh-swift`. Scope is iOS 18 through current stable release — hard-excludes pre-release APIs. **Step 4** additionally refreshes the App Store submission facts embedded in `appstore-preflight/SKILL.md` (SDK floor, guideline changes, listed SDKs, purpose-string/required-reason additions, ⚠️VOLATILE items) — cheap-gated: compares Apple's upcoming-requirements/guidelines changelog against that skill's Currency-note date and skips when nothing moved; facts-only, never restructures the skill. After updating guidance, offers to chain into `/swift-audit`.
 
@@ -263,9 +266,9 @@ Mirror of the Swift stub system for web/SSG projects. Five sectioned reference f
 
 No local changes — safe to overwrite from upstream on sync:
 
-`correct-course`, `discover`, `investigate`, `prd`, `quick-dev`, `security-review`
+`correct-course`, `discover`, `investigate`, `prd`, `security-review`
 
-(`setup`, `ux`, `status`, and `architecture` were previously in this list; all now carry local customizations documented above.)
+(`setup`, `ux`, `status`, `architecture`, and `quick-dev` were previously in this list; all now carry local customizations documented above.)
 
 ---
 
