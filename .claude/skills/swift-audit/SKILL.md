@@ -168,6 +168,54 @@ Flag each hit where a DESIGN.md token covers the value (MEDIUM). Values with no 
 
 For each `onAppear` hit, read surrounding lines (±5) to determine if it contains a `Task {` — only flag if it does. For `DispatchQueue` hits, read surrounding lines to determine if the file is a legacy wrapper (acceptable) or new code (flagged). Use judgment — do not flag things that are clearly intentional compatibility shims with a comment explaining why.
 
+**Automation contract (only if `docs/setup/swift/testability.md` exists):**
+
+```bash
+# Interactive elements — compare against identifier count to size the gap
+grep -rnE "Button\(|TextField\(|Toggle\(|Picker\(|NavigationLink\(|\.onTapGesture" \
+  --include="*.swift" --exclude-dir="{DerivedData,.build,Pods,Packages}" . | wc -l
+grep -rn "accessibilityIdentifier" \
+  --include="*.swift" --exclude-dir="{DerivedData,.build,Pods,Packages}" . | wc -l
+
+# Identifiers that break the {feature}-{element}-{role} kebab-case convention
+grep -rhoE 'accessibilityIdentifier\("[^"]+"\)' \
+  --include="*.swift" --exclude-dir="{DerivedData,.build,Pods,Packages}" . \
+  | grep -vE 'accessibilityIdentifier\("[a-z0-9]+(-[a-z0-9\\()._]+)+"\)'
+```
+
+Flag non-kebab or label-shaped identifiers (`"Save Button"`, `"btn1"`) as MEDIUM `[CODE]` findings — they defeat the locator contract as surely as having none.
+
+---
+
+## Step 4b — Testability Foundation Check (brownfield retrofit)
+
+Three greps decide whether this fires at all — zero cost when the foundation is present:
+
+```bash
+grep -rl "enum SeedScenario" --include="*.swift" .            # seed registry
+grep -rl '"--seed"\|"--uitest"' --include="*.swift" .          # launch-arg contract
+xcodebuild -list -json 2>/dev/null | grep -i "UITests"          # UI test target
+grep -rl "onOpenURL" --include="*.swift" .                      # deep-link routing
+```
+
+If **all four** are present, record "testability foundation present" and skip to Step 5.
+
+If any are missing, the project cannot be driven deterministically — but do **not** emit one big-bang retrofit AC. Nobody runs a story that says "add identifiers to 60 views." Emit a **staged** remediation instead, written into the Step 6 story as separate task groups:
+
+- **Stage 0 — Foundation (blocking).** Whatever of the four is missing: `SeedScenario` registry with `.empty`/`.typical`/`.edge`, the `--seed`/`--uitest`/`--reset` launch-argument contract with in-memory store isolation, a URL scheme + `.onOpenURL` route table, one UI test target with the `launch(seed:route:)` / `step(_:_:)` helpers, and 2–4 flows. This is the only stage that blocks; everything else builds on it. On a Core Data + CloudKit project, explicitly verify CloudKit is disabled on seeded/`--uitest` runs (see `testability.md`) — seeding into a CloudKit-backed store writes fixture rows to the developer's real private database.
+- **Stages 1..N — Identifiers + routes, highest-traffic screens first.** One stage per screen or small screen group, each independently shippable. Rank screens by inbound-reference count — a deterministic zero-token traffic proxy:
+
+```bash
+# For each view file, how many places navigate to it
+for f in $(find . -name "*View.swift" ! -path "*/DerivedData/*" ! -path "*/.build/*"); do
+  n=$(basename "$f" .swift)
+  printf "%s %s\n" "$(grep -rlE "NavigationLink|\.sheet|\.fullScreenCover|TabView" --include="*.swift" . \
+    | xargs grep -l "\b$n\b" 2>/dev/null | wc -l | tr -d ' ')" "$n"
+done | sort -rn | head -20
+```
+
+Report the ranking in Dev Notes so the ordering is auditable rather than asserted. Each stage's AC: every interactive element and dynamic row on those screens gets a Design-Contract-style identifier, plus the screen's deep-link route. State the honest total in the report (`{k} of {total} screens covered by this remediation`) — never imply full coverage from a partial retrofit.
+
 **Over-engineering / deletion pass:** scan touched source for complexity that shouldn't exist, one tagged line per finding — `delete:` (dead code / speculative feature), `stdlib:` (hand-rolled thing the standard library ships), `native:` (a dependency or code doing what the SDK already does — e.g. a custom formatter over `Foundation`), `yagni:` (an abstraction with one implementation, a protocol with one conformer, a config nobody sets), `shrink:` (same logic, fewer lines). Never flag a single smoke test / assert, validation, security, or accessibility for removal. These are `[CODE]` findings, usually LOW/MEDIUM.
 
 ---
@@ -182,6 +230,7 @@ Assign each finding a scope tag and severity:
 - `[DOC-EPICS]` — finding in `epics.md`
 - `[STORY]` — finding in a story file
 - `[CODE]` — finding in Swift source
+- `[TESTABILITY]` — missing foundation / identifiers / routes (Step 4b). Stage 0 is HIGH; per-screen stages are MEDIUM.
 
 **Severity:**
 - `HIGH` — active anti-pattern that will produce wrong code when implemented (e.g., architecture prescribes `ObservableObject`; source file uses banned pattern in production path)
@@ -294,5 +343,6 @@ After writing the story file:
 | DOC-EPICS | | | | |
 | STORY | | | | |
 | CODE | | | | |
+| TESTABILITY | | | | |
 
 3. Say: "Run `/dev-story docs/maintainer/swift-audit-{date}.md` to implement all fixes."

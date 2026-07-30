@@ -24,20 +24,21 @@ description: Visually verify implemented UI against docs/ux/DESIGN.md tokens and
 
 Pick the first option that works; degrade gracefully. Never block the story on missing tooling.
 
-**Apple platform:**
+**Apple platform — use `scripts/sim.sh`** (see `docs/setup/swift/simulator.md`). Do not hand-roll `xcrun` calls: device names change every Xcode release, `simctl boot` errors when the device is already booted, and a native screenshot is ~2.9 MB to read back. The harness handles all of that.
+
 ```bash
-# Build for simulator, launch, screenshot
-xcodebuild -scheme {scheme} -destination 'platform=iOS Simulator,name=iPhone 16' build
-xcrun simctl boot "iPhone 16" 2>/dev/null; xcrun simctl launch booted {bundle_id}
-xcrun simctl io booted screenshot /tmp/design-verify-light.png
-# Dark mode pass
-xcrun simctl ui booted appearance dark && xcrun simctl io booted screenshot /tmp/design-verify-dark.png
-xcrun simctl ui booted appearance light
+scripts/sim.sh install                                   # once per code change
+scripts/sim.sh shots {surface} --route {route} --seed empty   # then edge / heavy
 ```
-Also capture one screenshot with Dynamic Type at an accessibility size:
-`xcrun simctl ui booted content_size accessibility-extra-large` (reset after).
-Navigate to the changed surface first if it isn't the launch screen — use the app's deep link/URL scheme if one exists; otherwise screenshot what is reachable and note the limitation.
-If the project has the testability foundation (`docs/setup/swift/testability.md`), launch with seed arguments to render the states the Design Contract requires — e.g. `xcrun simctl launch booted {bundle_id} --seed empty` for empty states, `--seed edge` for truncation/overflow, `--seed heavy` for long lists — instead of only verifying whatever state the simulator happens to hold.
+
+One `shots` run captures the full matrix — light/dark × default/accessibility-XL × iPhone/iPad — into `.leanwheel/sim/shots/{timestamp}/`, downscaled for cheap reading. Read those PNGs back directly.
+
+- **Reach the surface by its deep-link route** (`--route`), never by tapping. If the changed surface has no route, that is itself a MEDIUM finding — record it and screenshot what is reachable.
+- **Drive the states the Design Contract requires** via `--seed` (`empty` / `edge` / `heavy`), rather than verifying whatever state the simulator happens to hold.
+- If every screenshot shows a permission alert, the device has a wedged system alert: re-run with `--fresh`.
+- No `sim.sh` (older project): run `scripts/sim.sh doctor` if the script exists, otherwise fall back to the manual checklist below rather than improvising `xcrun` incantations.
+
+The **accessibility-XL column is not optional** — truncation, clipped labels, and controls pushed off-screen appear there and nowhere else.
 
 **Web / SSG:**
 ```bash

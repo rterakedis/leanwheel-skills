@@ -89,6 +89,7 @@ If {is_apple_platform} is true:
   - `ui-composition.md`
   - `testing.md`
   - `testability.md`
+  - `simulator.md`
   - `anti-patterns.md`
   - `accessibility.md`
   - `swiftdata.md` (guidance self-gates: applies only if the project uses SwiftData)
@@ -119,6 +120,7 @@ Copy the **zero-token** guardrail hook scripts from `{skills_path}/.claude/skill
 - `guard-secrets.sh` — blocks hardcoded secrets at write/commit time (the one mandatory enforcement hook)
 - `guard-design-tokens.sh` — advisory off-token color warning (active only when `docs/ux/DESIGN.md` exists)
 - `guard-dark-pattern.sh` — advisory dark-pattern warning (confirmshaming copy, pre-checked marketing/consent opt-ins) on UI files
+- `guard-a11y-id.sh` — advisory warning when a Swift file gains an interactive element with no `.accessibilityIdentifier` (active only when `docs/setup/swift/testability.md` exists)
 - `log-activity.sh` — appends the raw tool-call stream to `docs/metrics/activity.jsonl`
 - `README.md` — hook reference
 
@@ -131,6 +133,7 @@ Make the `.sh` files executable (`chmod +x .claude/hooks/*.sh`). These pair with
 Copy these from `{skills_path}/scripts/` into the project's `scripts/` (create `scripts/` if absent; skip any that already exist), then `chmod +x` them:
 - `commit-push.sh` — one-call stage/commit/push with the Co-Authored-By trailer.
 - `gh-track.sh` — deterministic GitHub issue status transitions (used by github-tracking + the flywheels; keeps label moves byte-identical and zero-token).
+- `sim.sh` — **Apple projects only** ({is_apple_platform} true): the deterministic simulator harness (boot / install / deep-link navigation / screenshot matrix / hierarchy dump / flows). Used by `/design-verify` and for any supervised click-through. See `docs/setup/swift/simulator.md`.
 
 Then append the git workflow instruction block to CLAUDE.md: check whether `## Git Workflow` already exists in CLAUDE.md. If it does, skip (never duplicate). Otherwise, append a `---` separator followed by the full contents of `{skills_path}/.claude/skills/setup/stubs/commit-workflow.md`.
 
@@ -155,7 +158,7 @@ Write `.leanwheel/manifest.json` (create `.leanwheel/` if absent) recording what
   "skills_path": "{skills_path}",
   "scaffolded_at": "{today}",
   "surfaces": { "apple": {is_apple_platform}, "platforms": {platforms}, "web": {is_web}, "web_surface": "{web_surface}" },
-  "assets": { "hooks": true, "evals": true, "metrics": true, "agents": "plugin-level", "commit_script": true }
+  "assets": { "hooks": true, "evals": true, "metrics": true, "agents": "plugin-level", "commit_script": true, "sim_script": {is_apple_platform} }
 }
 ```
 

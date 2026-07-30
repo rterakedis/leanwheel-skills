@@ -67,8 +67,11 @@ so that {benefit}.
 - {Error conditions that must be handled}
 
 ### Design Contract
-*UI stories only — extracted from docs/ux/ by `/create-story`. Omit this section for stories with no user-visible surface.*
+*UI stories only. Omit this section for stories with no user-visible surface. The testability rows below are required on Apple projects even when there is no docs/ux/; the design rows come from docs/ux/ via `/create-story`.*
 
+- **Accessibility identifiers:** {element → `feature-element-role`, one per interactive control and per dynamic row — implement exactly these names, do not invent}
+- **Deep-link route:** {`scheme://route` reaching this screen, or N/A if not a new screen}
+- **Seed scenario:** {which SeedScenario renders these states, or which needs extending}
 - **Tokens:** {token: value pairs this UI consumes}
 - **Components:** {component → spec summary; SwiftUI view / element mapping}
 - **Required states:** {surface → empty / loading / error specs}
