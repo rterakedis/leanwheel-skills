@@ -9,7 +9,9 @@ your-project/
 ├── AGENTS.md              ← AI conventions for all tools (Copilot, Cursor, Claude)
 ├── CLAUDE.md              ← Claude-specific rules and project conventions
 ├── scripts/
-│   └── commit-push.sh     ← one-call commit helper (stage → commit → push); scaffolded by /setup
+│   ├── commit-push.sh     ← one-call commit helper (stage → commit → push); scaffolded by /setup
+│   ├── gh-track.sh        ← deterministic GitHub issue status transitions
+│   └── sim.sh             ← Apple only: simulator harness (boot/install/shots/dump/flow)
 ├── .leanwheel/
 │   └── manifest.json      ← scaffold record (skills_path, surfaces, asset flags); written by /setup and /upgrade-project
 ├── .claude/
@@ -60,6 +62,7 @@ your-project/
 │   │   │   ├── ui-composition.md
 │   │   │   ├── testing.md
 │   │   │   ├── testability.md
+│   │   │   ├── simulator.md
 │   │   │   ├── anti-patterns.md
 │   │   │   ├── accessibility.md
 │   │   │   ├── swiftdata.md         ← guidance self-gates to SwiftData projects

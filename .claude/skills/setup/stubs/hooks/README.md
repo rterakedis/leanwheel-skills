@@ -11,6 +11,7 @@ otherwise told to "remember but often forgets." Scaffolded into a project's
 | `guard-secrets.sh` | PreToolUse (Edit/Write/MultiEdit + Bash `git commit`) | **Blocks** (exit 2) hardcoded API keys, tokens, private keys, passwords. Allows env reads, keychain refs, and obvious placeholders. |
 | `guard-design-tokens.sh` | PostToolUse (Edit/Write/MultiEdit) | **Advisory** warning when a UI file gains a hardcoded color literal while `docs/ux/DESIGN.md` exists. Never blocks. |
 | `guard-dark-pattern.sh` | PostToolUse (Edit/Write/MultiEdit) | **Advisory** warning when a UI file gains confirmshaming (guilt-decline) copy or a pre-checked marketing/consent opt-in. Never blocks. Semantic dark patterns are caught at design time in EXPERIENCE.md's Engagement & Persuasion section and adversarially in `/code-review` Pass E. |
+| `guard-a11y-id.sh` | PostToolUse (Edit/Write/MultiEdit) | **Advisory** warning when a Swift file gains an interactive element or tappable row with no `.accessibilityIdentifier`, on projects carrying `docs/setup/swift/testability.md`. Never blocks. Identifiers are what let `/design-verify` and XCUITest flows drive the app by name instead of by tap coordinate — and they are near-free to add at write time, expensive to backfill. |
 | `log-activity.sh` | PostToolUse (`*`) | Appends one JSON line per tool use to `docs/metrics/activity.jsonl` (only if that dir exists). Backs the observability ledger. |
 
 ## Why hooks instead of prose rules

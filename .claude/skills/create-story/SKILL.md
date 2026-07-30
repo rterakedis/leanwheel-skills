@@ -78,8 +78,17 @@ If yes:
 2. If the prerequisite epic/story is scheduled *after* this epic in `docs/epics.md`, flag it as a sequencing risk in the story summary shown to the user — they must decide to reorder, split, or accept the incomplete-until-X gap.
 3. Never silently assume a later epic's output will be present.
 
-**Design contract extraction (UI stories only):**
-If the story adds or changes user-visible UI and `docs/ux/DESIGN.md` / `docs/ux/EXPERIENCE.md` exist:
+**Testability contract (UI stories on Apple projects — runs whether or not `docs/ux/` exists):**
+If the story adds or changes user-visible UI and `docs/setup/swift/testability.md` exists, name these in the story's `### Design Contract` **before** dev starts. This is the single highest-leverage step for automation: naming them here means dev implements a list instead of inventing names, and every downstream consumer (`/design-verify`, flows, `/e2e-tests`) can address the UI by name.
+
+1. **Accessibility identifiers** — one per interactive element and per dynamic list row on the story's surfaces, as `{feature}-{element}-{role}` kebab-case (e.g. `invoice-save-button`, `invoice-row-\(item.id)`). Derive `{feature}` from the story's feature area so names stay collision-free across epics. Do not leave this to the dev session.
+2. **Deep-link route** — if the story adds a screen, name the route that reaches it (`{scheme}://invoices`). A screen with no route is unreachable by screenshot verification and by every future flow.
+3. **Seed scenario** — which existing `SeedScenario` renders this story's states, or which one needs extending. Never "tap to set up state."
+
+If the project has no `docs/ux/`, emit a Design Contract containing **only** these — the section is not gated on `docs/ux/` existing.
+
+**Design contract extraction (UI stories with `docs/ux/`):**
+If the story adds or changes user-visible UI and `docs/ux/DESIGN.md` / `docs/ux/EXPERIENCE.md` exist, add to the same section:
 
 1. Read DESIGN.md frontmatter and the EXPERIENCE.md sections for the surfaces this story touches — not the whole files.
 2. Extract into Dev Notes under `### Design Contract` (use the template section):

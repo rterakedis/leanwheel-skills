@@ -22,7 +22,8 @@ description: Implement a story from its story file. Use when the user says "dev 
    - Any story adding tests: read `docs/setup/swift/testing.md`
    - Any story adding views or UI components: also read `docs/setup/swift/accessibility.md`
    - If the project uses SwiftData and the story touches models, queries, or persistence: read `docs/setup/swift/swiftdata.md`
-   - Any story adding/changing a persisted model entity, adding user-facing views, or touching launch behavior: read `docs/setup/swift/testability.md` (seed scenarios, launch-argument contract, accessibility identifiers)
+   - Any story adding/changing a persisted model entity, adding user-facing views, or touching launch behavior: read `docs/setup/swift/testability.md` (seed scenarios, launch arguments, deep-link routes, accessibility identifiers)
+   - Any story that needs the app *rendered* — screenshot verification, adding a flow, or stabilizing a screen: read `docs/setup/swift/simulator.md` (`scripts/sim.sh`, the screenshot matrix, flow conventions)
    - Always read `docs/setup/swift/anti-patterns.md` if present — it governs what must not be written
    - If `docs/setup/swift/ipados-specific.md` exists and the story touches navigation, split view, drag-and-drop, pointer, keyboard, or multi-window: read it
    - If `docs/setup/swift/macos-specific.md` exists and the story touches menus, windows, toolbar, settings, tables, or file operations: read it
@@ -47,7 +48,7 @@ For each task in order:
 
 Don't ask for clarification (use Dev Notes; log ambiguous calls in Completion Notes).
 
-**Keep testability current as you go** (Apple projects with `docs/setup/swift/testability.md`): a task that adds or changes a persisted model entity updates the `SeedScenario` registry (at minimum `.typical` and `.edge`) in the same task; new user-facing views get semantic `.accessibilityIdentifier`s as they are written, never backfilled.
+**Keep testability current as you go** (Apple projects with `docs/setup/swift/testability.md`): a task that adds or changes a persisted model entity updates the `SeedScenario` registry (at minimum `.typical` and `.edge`) in the same task; new user-facing views get the **exact** `.accessibilityIdentifier`s the story's Design Contract names (never invented, never backfilled); a task that adds a screen adds its deep-link route in the same task.
 
 **Keep files maintainable as you go.** If a file you create or touch crosses the file-size / decomposition target in the routed guidance (`docs/setup/swift/ui-composition.md` or `docs/setup/web/`), decompose it **as part of the task** — don't defer it. Split along responsibility seams (Swift: `extension TypeName {}` files for members, named `private struct` sub-views for layout), never by mechanical line-cutting, and never by giving a sub-view its own data access. A 280-line file with one cohesive job is fine; a smaller file doing three jobs is not — cohesion decides the cut.
 
@@ -123,7 +124,7 @@ The diff is uncommitted changes. Story file is loaded. Go straight to the passes
 
 **Pass D — Security (conditional):** If Dev Notes has `Security Sensitivity:`, run matching categories from `skills/security-review/skill.md`. Skip if blank.
 
-**Pass E — Design Compliance (conditional):** If the diff touches user-visible UI and a `### Design Contract` (or `docs/ux/DESIGN.md`) exists: hardcoded values where a token exists, missing required states (empty/loading/error), missing dark-mode pair, platform checklist violations (tap targets, Dynamic Type, semantic HTML, focus visibility), near-duplicate of an inventoried component. Include any unresolved `### Design Verification` findings. Skip for non-UI diffs.
+**Pass E — Design Compliance (conditional):** If the diff touches user-visible UI and a `### Design Contract` (or `docs/ux/DESIGN.md`) exists: hardcoded values where a token exists, missing required states (empty/loading/error), missing dark-mode pair, platform checklist violations (tap targets, Dynamic Type, semantic HTML, focus visibility), near-duplicate of an inventoried component. **Missing or renamed accessibility identifiers**: an interactive element or dynamic row with none, or one that differs from the name the Design Contract assigned (HIGH — a renamed identifier silently breaks every flow and screenshot that addresses it), or one not matching `{feature}-{element}-{role}` kebab-case (MEDIUM). A new screen with no deep-link route is MEDIUM — it is unreachable by `/design-verify` and by future flows. Include any unresolved `### Design Verification` findings. Skip for non-UI diffs.
 
 **Pass F — Over-Engineering:** Hunt complexity only (correctness/security are Passes A–D — don't duplicate). One tagged line per finding: `delete:` (dead/speculative code), `stdlib:` (hand-rolled thing the stdlib ships), `native:` (dependency/code the platform already covers), `yagni:` (one-implementation abstraction, config nobody sets, one-caller layer), `shrink:` (same logic, fewer lines). Never flag a single smoke test / validation / security / accessibility for removal. Route findings as `patch`/`defer` cleanups, never a blocking bug. End with `net: −N lines possible` or `Lean already.`
 

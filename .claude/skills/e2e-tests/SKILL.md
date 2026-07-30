@@ -64,12 +64,16 @@ status codes, response structure. Follow existing test-file patterns exactly
   diff), roles/labels/text on web. Never brittle coordinate or CSS-path
   selectors.
 - Assert visible outcomes; keep tests linear and simple.
-- **Reach state via seeds, not taps** — if the project has the testability
-  foundation (`docs/setup/swift/testability.md`: `SeedScenario` registry +
-  `--seed`/`--uitest` launch arguments), every generated test launches with
-  the scenario that produces its precondition instead of tapping through
-  setup flows. If an Apple project lacks the foundation, propose adding it
-  first (it's the single highest-leverage piece of this skill's diff).
+- **Apple projects: generated UI tests are *flows*.** This skill is where flows
+  get authored. Follow `docs/setup/swift/simulator.md` exactly — file location
+  (`{App}UITests/Flows/{Feature}Flow.swift`), naming (so `sim.sh flow {Feature}`
+  runs it), the `launch(seed:route:)` / `step(_:_:)` helpers, and the rule that
+  state is reached via `--seed` plus a deep-link route, never by tapping through
+  setup. Don't invent a parallel convention. If an Apple project lacks the
+  testability foundation, propose adding it first (it's the single
+  highest-leverage piece of this skill's diff).
+- **Web/Python:** reach state via the project's own fixtures/seeding, never by
+  driving setup UI.
 - No complex fixture composition, no abstractions the project doesn't already
   use.
 
