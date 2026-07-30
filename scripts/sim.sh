@@ -6,18 +6,23 @@
 # coordinate. There are NO coordinate taps anywhere in this script, and none are
 # permitted in any flow it runs.
 #
-# Navigation is ALWAYS by deep link (`<scheme>://<route>`), never by tapping.
-# Data state is set by the `--seed` launch argument. Both halves of that contract
-# live in docs/setup/swift/testability.md; the host-side reference is
-# docs/setup/swift/simulator.md.
+# Navigation is ALWAYS by named route, never by tapping. Unattended runs deliver the
+# route as a `--route <name>` launch argument, dispatched in-process to the same route
+# table `.onOpenURL` uses — because iOS 26 gates every externally-opened custom-scheme
+# URL behind an "Open in <App>?" system alert that no unattended run can tap.
+# `sim.sh open` still uses simctl openurl: it targets a running app with a human
+# watching, who can tap Open. Data state is set by the `--seed` launch argument. Both
+# halves of that contract live in docs/setup/swift/testability.md; the host-side
+# reference is docs/setup/swift/simulator.md.
 #
 # Subcommands:
 #   doctor                    Check toolchain, config, device, scheme, URL scheme.
 #   boot [--fresh]            Boot the simulator (idempotent) + open Simulator.app.
 #                             --fresh restarts it first, clearing wedged system alerts.
 #   install                   Build for the simulator and install the app.
-#   open <route>              Deep-link the RUNNING app to a route (no relaunch).
-#   launch [--seed S] [--route R]   Cold launch, optionally seeded, then route.
+#   open <route>              Deep-link the RUNNING app (ATTENDED — iOS 26 shows an
+#                             "Open in …?" alert a human must tap).
+#   launch [--seed S] [--route R]   Cold launch, optionally seeded and routed.
 #   shots <name> [--route R]  Screenshot matrix: appearance x text size x device.
 #   dump [--route R]          Dump the accessibility hierarchy (identifiers).
 #   flow <Name>               Run one named XCUITest flow, export its screenshots.
@@ -26,8 +31,9 @@
 #   clean                     Remove captured artifacts.
 #
 # Config is cached in .leanwheel/sim.json on first run (deriving it needs a slow
-# xcodebuild call). Delete that file to re-derive. Artifacts land in .leanwheel/sim/,
-# which self-ignores via its own .gitignore.
+# xcodebuild call). It holds only project-scoped values — no absolute paths — so it is
+# safe to commit; delete it to re-derive. Artifacts land in .leanwheel/sim/, which
+# self-ignores via its own .gitignore.
 #
 # Degrades loudly, never silently: every failure prints the cause and the fix.
 
@@ -63,21 +69,38 @@ require_xcode() {
 
 find_container() {
   # Prefer a workspace over a bare project, matching Xcode's own resolution order.
+  #
+  # REGRESSION GUARD — search RELATIVE to PROJECT_DIR, never absolute. `find` matches
+  # -path against the WHOLE path, so `find "$PROJECT_DIR" … -not -path "*/.*"` with an
+  # absolute PROJECT_DIR excludes every project living under ANY hidden ancestor —
+  # including .claude/worktrees/<slug>, which is exactly where this framework's own Git
+  # Workflow tells you to work. Symptom was a wrong-looking hard error ("no .xcodeproj
+  # or .xcworkspace found") in a directory that plainly contains one. Searching from `.`
+  # keeps the real intent — skip ./.build, ./.git — without swallowing the tree.
   local ws proj
-  ws=$(/usr/bin/find "$PROJECT_DIR" -maxdepth 3 -name "*.xcworkspace" -not -path "*/.*" -not -path "*xcodeproj*" 2>/dev/null | head -1)
-  if [ -n "$ws" ]; then echo "-workspace|$ws"; return 0; fi
-  proj=$(/usr/bin/find "$PROJECT_DIR" -maxdepth 3 -name "*.xcodeproj" -not -path "*/.*" 2>/dev/null | head -1)
-  if [ -n "$proj" ]; then echo "-project|$proj"; return 0; fi
+  ws=$(cd "$PROJECT_DIR" 2>/dev/null && /usr/bin/find . -maxdepth 3 -name "*.xcworkspace" -not -path "*/.*" -not -path "*xcodeproj*" 2>/dev/null | head -1)
+  if [ -n "$ws" ]; then echo "-workspace|${ws#./}"; return 0; fi
+  proj=$(cd "$PROJECT_DIR" 2>/dev/null && /usr/bin/find . -maxdepth 3 -name "*.xcodeproj" -not -path "*/.*" 2>/dev/null | head -1)
+  if [ -n "$proj" ]; then echo "-project|${proj#./}"; return 0; fi
   return 1
+}
+
+container_path() {
+  # sim.json stores a PROJECT_DIR-relative container so the file carries no
+  # machine-specific value and can be committed. Tolerate an absolute path written by
+  # an older sim.sh.
+  local c; c=$(cfg container)
+  [ -n "$c" ] || return 1
+  case "$c" in /*) echo "$c" ;; *) echo "$PROJECT_DIR/$c" ;; esac
 }
 
 derive_config() {
   require_xcode
-  local pair flag container scheme uitest bundle_id product build_dir plist srcroot url_scheme
+  local pair flag container_rel container scheme uitest bundle_id product plist srcroot url_scheme
   local tmp list_json bs_json root
 
   pair=$(find_container) || die "no .xcodeproj or .xcworkspace found under $PROJECT_DIR"
-  flag="${pair%%|*}"; container="${pair#*|}"
+  flag="${pair%%|*}"; container_rel="${pair#*|}"; container="$PROJECT_DIR/$container_rel"
 
   note "deriving config from $(basename "$container") (one-time, ~20s)..."
 
@@ -116,7 +139,6 @@ derive_config() {
   bs() { plutil -extract "0.buildSettings.$1" raw -o - "$bs_json" 2>/dev/null || true; }
   bundle_id=$(bs PRODUCT_BUNDLE_IDENTIFIER)
   product=$(bs FULL_PRODUCT_NAME)
-  build_dir=$(bs CONFIGURATION_BUILD_DIR)
   plist=$(bs INFOPLIST_FILE)
   srcroot=$(bs SRCROOT)
   [ -n "$bundle_id" ] || die "could not read PRODUCT_BUNDLE_IDENTIFIER from build settings"
@@ -130,15 +152,19 @@ derive_config() {
   # Projects using a generated Info.plist carry the schemes as a build setting instead.
   [ -z "$url_scheme" ] && url_scheme=$(bs INFOPLIST_KEY_CFBundleURLSchemes | tr ' ' '\n' | head -1)
 
+  # Every value written here is project-scoped, never machine-scoped: `container` is
+  # relative to the repo root and the build output path is derived at use time from
+  # $ART_DIR. That is deliberate — simulator.md tells you to edit `devices` here, which
+  # only makes sense if the file is shareable. An absolute container path or a
+  # DerivedData path would break on every other machine, and on the very next merge.
   mkdir -p "$(dirname "$CONFIG")"
   cat > "$CONFIG" <<EOF
 {
   "container_flag": "$flag",
-  "container": "$container",
+  "container": "$container_rel",
   "scheme": "$scheme",
   "bundle_id": "$bundle_id",
   "product": "$product",
-  "build_dir": "$build_dir",
   "url_scheme": "$url_scheme",
   "ui_test_target": "$uitest",
   "privacy_grant": "$(suggest_privacy_services "$srcroot/$plist" "$bs_json")",
@@ -150,7 +176,17 @@ EOF
   note "wrote $CONFIG"
 }
 
-ensure_config() { [ -f "$CONFIG" ] || derive_config; }
+ensure_config() {
+  if [ ! -f "$CONFIG" ]; then derive_config; return; fi
+  # Self-heal a config that no longer points at anything — an absolute container path
+  # written by an older sim.sh (or one recorded inside a worktree that has since been
+  # removed). Re-deriving is ~20s; a stale path is a confusing hard failure.
+  local c; c=$(container_path || true)
+  if [ -z "$c" ] || [ ! -e "$c" ]; then
+    note "config container '$(cfg container)' no longer exists — re-deriving"
+    rm -f "$CONFIG"; derive_config
+  fi
+}
 
 # Map the app's declared NS*UsageDescription keys to `simctl privacy` services, so a
 # seeded run doesn't stall behind a system permission alert. NOTE: there is NO simctl
@@ -271,15 +307,17 @@ boot_device() {
 # ---------------------------------------------------------------- app
 
 app_path() {
-  local build_dir product
-  build_dir=$(cfg build_dir); product=$(cfg product)
-  [ -n "$build_dir" ] && [ -n "$product" ] || die "build_dir/product missing from $CONFIG — delete it and re-run to re-derive"
-  echo "$build_dir/$product"
+  # sim.sh always builds into its own DerivedData under $ART_DIR, so the .app location
+  # is derivable and does not need to be recorded (a recorded DerivedData path is
+  # machine-specific and goes stale the moment Xcode rehashes the project).
+  local product; product=$(cfg product)
+  [ -n "$product" ] || die "product missing from $CONFIG — delete it and re-run to re-derive"
+  echo "$ART_DIR/DerivedData/Build/Products/Debug-iphonesimulator/$product"
 }
 
 build_and_install() {
   local udid="$1" flag container scheme app
-  flag=$(cfg container_flag); container=$(cfg container); scheme=$(cfg scheme)
+  flag=$(cfg container_flag); container=$(container_path); scheme=$(cfg scheme)
   note "building $scheme..."
   xcodebuild "$flag" "$container" -scheme "$scheme" \
     -destination "platform=iOS Simulator,id=$udid" \
@@ -289,8 +327,7 @@ build_and_install() {
       tail -40 "$ART_DIR/build.log" >&2
       exit 1
     }
-  app="$ART_DIR/DerivedData/Build/Products/Debug-iphonesimulator/$(cfg product)"
-  [ -d "$app" ] || app="$(app_path)"
+  app="$(app_path)"
   [ -d "$app" ] || die "built, but no .app found at $app"
   xcrun simctl install "$udid" "$app" || die "simctl install failed for $app"
   note "installed $(cfg bundle_id)"
@@ -301,21 +338,28 @@ route_url() {
   local route="$1" scheme
   case "$route" in *://*) echo "$route"; return 0 ;; esac
   scheme=$(cfg url_scheme)
-  [ -n "$scheme" ] || die "this app has no URL scheme registered, so it cannot be navigated.
-  Navigation in this harness is deep-link only — see 'sim.sh doctor' for the exact Info.plist fix."
+  [ -n "$scheme" ] || die "this app has no URL scheme registered, so there is no URL to open.
+  See 'sim.sh doctor' for the exact Info.plist fix. (Unattended navigation uses the
+  --route launch argument and does not need a URL — try 'sim.sh launch --route $route'.)"
   echo "$scheme://$route"
 }
 
 open_route() {
+  # ATTENDED ONLY. iOS 26 interposes an "Open in <App>?" / Cancel / Open system alert on
+  # any custom-scheme URL opened from OUTSIDE the app — including simctl openurl against
+  # an already-running, foregrounded app. Until a human taps Open, the URL never reaches
+  # .onOpenURL. So this is reachable from `sim.sh open` and nowhere else; unattended
+  # paths (launch / shots / dump) deliver the route as a `--route` launch argument.
   local udid="$1" route="$2" url
   url=$(route_url "$route")
   xcrun simctl openurl "$udid" "$url" || die "openurl failed for $url — is the route handled in .onOpenURL?"
+  note "iOS 26 will show an \"Open in …?\" alert — tap Open in the Simulator to complete the navigation."
   sleep "$SETTLE"
 }
 
 launch_app() {
-  # launch_app <udid> <seed> <uitest:0|1> <reset:0|1>
-  local udid="$1" seed="$2" uitest="$3" reset="$4" bundle args grant
+  # launch_app <udid> <seed> <uitest:0|1> <reset:0|1> [route]
+  local udid="$1" seed="$2" uitest="$3" reset="$4" route="${5:-}" bundle args grant
   bundle=$(cfg bundle_id)
   # Pre-grant declared permissions, or the very first launch stalls behind a system
   # alert and every capture is a screenshot of that alert. GRANT_OVERRIDE wins;
@@ -327,6 +371,11 @@ launch_app() {
   [ "$uitest" = "1" ] && args="$args --uitest"
   [ "$reset" = "1" ] && args="$args --reset"
   [ -n "$seed" ] && args="$args --seed $seed"
+  # Route is delivered IN-PROCESS at startup, dispatched to the same route table
+  # .onOpenURL uses. Not a parallel navigation mechanism — same vocabulary, same
+  # handler, different delivery. Delivery had to change because iOS 26 gates every
+  # externally-opened custom-scheme URL behind a system confirmation (see open_route).
+  [ -n "$route" ] && args="$args --route $route"
   xcrun simctl terminate "$udid" "$bundle" >/dev/null 2>&1 || true
   # shellcheck disable=SC2086
   xcrun simctl launch "$udid" "$bundle" $args >/dev/null || die "launch failed for $bundle — is it installed? Run: sim.sh install"
@@ -349,14 +398,18 @@ cmd_doctor() {
   require_xcode
   echo "Xcode:       $(xcodebuild -version | head -1)  ($(xcode-select -p))"
   ensure_config
-  echo "Container:   $(cfg container)"
+  echo "Container:   $(cfg container)   (relative to $PROJECT_DIR)"
   echo "Scheme:      $(cfg scheme)"
   echo "Bundle id:   $(cfg bundle_id)"
 
   local scheme uitest
   scheme=$(cfg url_scheme)
   if [ -n "$scheme" ]; then
-    echo "URL scheme:  $scheme://   (navigation OK)"
+    echo "URL scheme:  $scheme://   (route table registered)"
+    echo "             Unattended navigation uses the --route launch argument, which"
+    echo "             must dispatch to the same route table as .onOpenURL. On iOS 26,"
+    echo "             'sim.sh open' (simctl openurl) raises an \"Open in …?\" alert a"
+    echo "             human must tap — that subcommand is attended-only by design."
   else
     cat >&2 <<'EOF'
 URL scheme:  MISSING — this is a hard stop for navigation.
@@ -374,6 +427,8 @@ URL scheme:  MISSING — this is a hard stop for navigation.
     </array>
 
   Then handle it in the root view:  .onOpenURL { url in router.handle(url) }
+  and dispatch the `--route <name>` launch argument to the SAME route table at
+  startup — that is how unattended runs navigate on iOS 26.
   See docs/setup/swift/testability.md (Deep-Link Route Contract).
 EOF
   fi
@@ -464,9 +519,8 @@ cmd_launch() {
   done
   local udid; udid=$(resolve_device "$device")
   boot_device "$udid" "$fresh"
-  launch_app "$udid" "$seed" "$uitest" "$reset"
-  [ -n "$route" ] && open_route "$udid" "$route"
-  note "launched${seed:+ --seed $seed}${route:+ -> $route}"
+  launch_app "$udid" "$seed" "$uitest" "$reset" "$route"
+  note "launched${seed:+ --seed $seed}${route:+ --route $route}"
 }
 
 cmd_shots() {
@@ -497,11 +551,10 @@ cmd_shots() {
   for dev in $(echo "$devices" | tr ',' ' '); do
     udid=$(resolve_device "$dev")
     boot_device "$udid" "$fresh"
-    # One cold launch per device. Every subsequent state change is a deep link or
-    # a simctl ui toggle — no relaunch. That is the whole point of the deep-link
-    # contract: a 24-capture matrix costs 1 launch, not 24.
-    launch_app "$udid" "$seed" 1 0
-    [ -n "$route" ] && open_route "$udid" "$route"
+    # One cold launch per device, carrying the route. Every subsequent state change in
+    # the matrix is a simctl ui toggle, never a relaunch — the appearance x text-size
+    # matrix still costs 1 launch per device, not 8.
+    launch_app "$udid" "$seed" 1 0 "$route"
     for appearance in $(echo "$appearances" | tr ',' ' '); do
       xcrun simctl ui "$udid" appearance "$appearance" >/dev/null 2>&1 || true
       for size in $(echo "$sizes" | tr ',' ' '); do
@@ -543,17 +596,25 @@ cmd_dump() {
 
   local udid flag container scheme bundle_out
   udid=$(resolve_device "$device")
-  flag=$(cfg container_flag); container=$(cfg container); scheme=$(cfg scheme)
+  flag=$(cfg container_flag); container=$(container_path); scheme=$(cfg scheme)
   bundle_out="$RESULTS_DIR/dump.xcresult"
   rm -rf "$bundle_out" "$DUMPS_DIR/latest"
   boot_device "$udid"
 
-  SIMCTL_CHILD_LW_ROUTE="$route" \
+  # REGRESSION GUARD — TEST_RUNNER_<NAME> in xcodebuild's OWN environment is the only
+  # supported way to get a value into the XCTest runner's ProcessInfo.environment (it
+  # arrives there as <NAME>). Two things that look like they work and do not:
+  #   * bare `LW_ROUTE=x` arguments to xcodebuild  -> sets a BUILD SETTING, not an env var
+  #   * SIMCTL_CHILD_LW_ROUTE=x                    -> only reaches processes simctl
+  #                                                   launches directly; the runner is
+  #                                                   launched by xcodebuild
+  # Both fail silently: the dump is of the launch screen with the default seed, and
+  # nothing anywhere says the route was dropped. Do not "simplify" this back.
+  TEST_RUNNER_LW_ROUTE="$route" TEST_RUNNER_LW_SEED="$seed" \
   xcodebuild "$flag" "$container" -scheme "$scheme" \
     -destination "platform=iOS Simulator,id=$udid" \
     -only-testing:"$uitest/HierarchyDumpTests" \
     -resultBundlePath "$bundle_out" \
-    LW_ROUTE="$route" LW_SEED="$seed" \
     test >"$ART_DIR/dump.log" 2>&1 || {
       echo "sim: dump test FAILED. Last 40 lines of $ART_DIR/dump.log:" >&2
       tail -40 "$ART_DIR/dump.log" >&2
@@ -584,7 +645,7 @@ cmd_flow() {
 
   local udid flag container scheme bundle_out out_dir
   udid=$(resolve_device "$device")
-  flag=$(cfg container_flag); container=$(cfg container); scheme=$(cfg scheme)
+  flag=$(cfg container_flag); container=$(container_path); scheme=$(cfg scheme)
   bundle_out="$RESULTS_DIR/${name}Flow.xcresult"
   out_dir="$SHOTS_DIR/flow-$(echo "$name" | tr '[:upper:]' '[:lower:]')"
   rm -rf "$bundle_out" "$out_dir"
@@ -642,7 +703,9 @@ cmd_clean() {
 }
 
 usage() {
-  sed -n '14,27p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  # Anchored on the header text, not on line numbers — editing the preamble above must
+  # not silently truncate the help output.
+  sed -n '/^# Subcommands:/,/^# *clean /p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   exit 1
 }
 
