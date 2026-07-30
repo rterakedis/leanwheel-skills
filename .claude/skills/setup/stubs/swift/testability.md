@@ -60,11 +60,12 @@ Rules:
 
 ## Launch Argument Contract
 
-The app honors three DEBUG-only launch arguments, parsed once at startup:
+The app honors four DEBUG-only launch arguments, parsed once at startup:
 
 | Argument | Effect |
 |---|---|
 | `--seed <scenario>` | Apply the named `SeedScenario` at launch |
+| `--route <name>` | Navigate to a route at startup, through the **same route table** `.onOpenURL` uses (see Deep-Link Routes below) |
 | `--uitest` | Use an **in-memory store** (never touches real user data; hermetic, no cleanup) and disable animations |
 | `--reset` | Wipe the persistent store before launch (manual-testing convenience) |
 
@@ -72,6 +73,7 @@ The app honors three DEBUG-only launch arguments, parsed once at startup:
 @main
 struct TripApp: App {
     let container: ModelContainer
+    @State private var router = Router()
 
     init() {
         var inMemory = false
@@ -91,7 +93,33 @@ struct TripApp: App {
         if args.contains("--uitest") { UIView.setAnimationsEnabled(false) }
         #endif
     }
-    var body: some Scene { WindowGroup { ContentView() }.modelContainer(container) }
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+                .environment(router)
+                .onOpenURL { router.handle($0) }      // production entry point
+                .task { router.applyLaunchRoute() }   // DEBUG: --route, same table
+        }
+        .modelContainer(container)
+    }
+}
+```
+
+```swift
+extension Router {
+    /// DEBUG-only. Builds the same URL an external deep link would and hands it to the
+    /// same `handle(_:)`. This is a delivery mechanism, not a second route table —
+    /// see "Deep-Link Routes" for why unattended runs can't use the external one.
+    func applyLaunchRoute() {
+        #if DEBUG
+        let args = ProcessInfo.processInfo.arguments
+        guard let i = args.firstIndex(of: "--route"), args.indices.contains(i + 1) else { return }
+        let raw = args[i + 1]
+        guard let url = URL(string: raw.contains("://") ? raw : "trip://\(raw)") else { return }
+        handle(url)
+        #endif
+    }
 }
 ```
 
@@ -197,7 +225,7 @@ Convention: `{feature}-{element}-{role}`, kebab-case. These double as the semant
 
 ## Deep-Link Routes — every screen is reachable by name
 
-Navigation for testing, screenshots, and flows is **always** by deep link — never by tapping through the UI. The app registers one URL scheme and routes to any screen:
+Navigation for testing, screenshots, and flows is **always** by named route — never by tapping through the UI. The app registers one URL scheme and one route table:
 
 ```swift
 // Info.plist (once): CFBundleURLTypes ▸ CFBundleURLSchemes ▸ "trip"
@@ -208,9 +236,29 @@ Navigation for testing, screenshots, and flows is **always** by deep link — ne
 
 Route names are a stable contract, like scenario names: `trip://trips`, `trip://trip/new`, `trip://settings`. A story that **adds a screen adds its route**, in the same story.
 
-Why this and not a `--screen` launch argument: a route works on the *already running* app, so a 24-capture screenshot matrix costs one launch instead of 24 relaunches. `XCUIApplication.openURL(_:)` (iOS 16.4+) lets flows use the same routes, so there is exactly one navigation mechanism everywhere.
+### One route table, two deliveries
 
-❌ A DEBUG-only parallel navigation path. ❌ Tapping through onboarding to reach a screen.
+| Delivery | Used by | Attended? |
+|---|---|---|
+| `.onOpenURL` (external URL) | widgets, notifications, shareable links, `sim.sh open` | **yes** — see below |
+| `--route <name>` launch argument | `sim.sh launch` / `shots` / `dump`, XCUITest flows | no |
+
+**iOS 26 interposes an "Open in “<App>”?" / Cancel / Open system alert on any
+custom-scheme URL opened from outside the app** — including `xcrun simctl openurl`
+against an already-running, foregrounded app. Until a human taps *Open*, the URL never
+reaches `.onOpenURL`. Unattended automation therefore cannot use external URL delivery
+at all, and the failure is silent and total: the run continues, the screenshot captures
+the alert sitting on top of the wrong screen, and nothing reports a dropped route. Hence
+`--route`, handled in-process at startup.
+
+This is **not** the `--screen` launch argument rejected earlier. `--screen` would have
+been a second navigation vocabulary with its own switch statement. `--route` is a dozen
+lines that build the same URL and call the same `handle(_:)`: identical route names,
+identical handler, `.onOpenURL` still the production path. Only the delivery changes,
+because on iOS 26 the external delivery is unavailable to a machine.
+
+❌ A DEBUG-only parallel *route table*. ❌ Tapping through onboarding to reach a screen.
+❌ `simctl openurl` in any unattended script.
 
 ---
 

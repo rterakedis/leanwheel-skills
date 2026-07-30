@@ -192,17 +192,24 @@ Flag non-kebab or label-shaped identifiers (`"Save Button"`, `"btn1"`) as MEDIUM
 Three greps decide whether this fires at all — zero cost when the foundation is present:
 
 ```bash
-grep -rl "enum SeedScenario" --include="*.swift" .            # seed registry
-grep -rl '"--seed"\|"--uitest"' --include="*.swift" .          # launch-arg contract
+grep -rl "enum SeedScenario" --include="*.swift" .              # seed registry
+grep -rl '"--seed"\|"--uitest"' --include="*.swift" .           # launch-arg contract
+grep -rl '"--route"' --include="*.swift" .                      # unattended route delivery
 xcodebuild -list -json 2>/dev/null | grep -i "UITests"          # UI test target
-grep -rl "onOpenURL" --include="*.swift" .                      # deep-link routing
+grep -rl "onOpenURL" --include="*.swift" .                      # route table
 ```
 
-If **all four** are present, record "testability foundation present" and skip to Step 5.
+If **all five** are present, record "testability foundation present" and skip to Step 5.
+
+`--route` is checked separately from `--seed`/`--uitest` because a project can have a
+complete `.onOpenURL` route table and still be undrivable: on iOS 26 an externally
+opened custom-scheme URL raises a system confirmation alert, so unattended runs need
+the route delivered as a launch argument. `onOpenURL` present + `"--route"` absent is a
+real Stage 0 gap, not a formality — see `testability.md` (*Deep-Link Routes*).
 
 If any are missing, the project cannot be driven deterministically — but do **not** emit one big-bang retrofit AC. Nobody runs a story that says "add identifiers to 60 views." Emit a **staged** remediation instead, written into the Step 6 story as separate task groups:
 
-- **Stage 0 — Foundation (blocking).** Whatever of the four is missing: `SeedScenario` registry with `.empty`/`.typical`/`.edge`, the `--seed`/`--uitest`/`--reset` launch-argument contract with in-memory store isolation, a URL scheme + `.onOpenURL` route table, one UI test target with the `launch(seed:route:)` / `step(_:_:)` helpers, and 2–4 flows. This is the only stage that blocks; everything else builds on it. On a Core Data + CloudKit project, explicitly verify CloudKit is disabled on seeded/`--uitest` runs (see `testability.md`) — seeding into a CloudKit-backed store writes fixture rows to the developer's real private database.
+- **Stage 0 — Foundation (blocking).** Whatever of the five is missing: `SeedScenario` registry with `.empty`/`.typical`/`.edge`, the `--seed`/`--uitest`/`--reset` launch-argument contract with in-memory store isolation, a URL scheme + `.onOpenURL` route table **plus `--route` dispatching into that same table**, one UI test target with the `launch(seed:route:)` / `step(_:_:)` helpers, and 2–4 flows. This is the only stage that blocks; everything else builds on it. On a Core Data + CloudKit project, explicitly verify CloudKit is disabled on seeded/`--uitest` runs (see `testability.md`) — seeding into a CloudKit-backed store writes fixture rows to the developer's real private database.
 - **Stages 1..N — Identifiers + routes, highest-traffic screens first.** One stage per screen or small screen group, each independently shippable. Rank screens by inbound-reference count — a deterministic zero-token traffic proxy:
 
 ```bash
