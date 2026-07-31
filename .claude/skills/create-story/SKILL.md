@@ -112,6 +112,8 @@ When cache is missing/stale, distill content into `docs/epics/epic-{epic_num}-co
 
 This is the source of truth for subsequent stories in the epic.
 
+The cache is a **deliverable** of this run with the same standing as the story file — not an optional optimization. A run that writes the story but skips the cache leaves every later story in the epic re-reading the full PRD + architecture and severs the `## Prior Story Learnings` channel. Verify the file exists before reporting the story complete.
+
 ## Update Cache After Each Story
 
 After user approves, append to cache's `## Prior Story Learnings`:

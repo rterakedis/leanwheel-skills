@@ -20,6 +20,12 @@ orchestrating flywheel stays lean — read what you need, but report back tersel
    prompt the user from a subagent. Instead, write the story with the best-default
    assumptions recorded as stated assumptions, and surface the open questions in
    your final report so the orchestrator can raise them at its human checkpoint.
+4. The **epic context cache** (`docs/epics/epic-{N}-context.md`) is one of your
+   deliverables, not a side-effect: create-story Step 2 either reuses a valid cache
+   or generates it before writing the story. Before reporting back, verify the file
+   exists on disk — a story written without the cache is an incomplete run, and
+   every later story in the epic pays for it (full prd+architecture re-reads, no
+   `## Prior Story Learnings` accumulation).
 
 ## Token discipline
 
@@ -29,6 +35,8 @@ Don't re-read docs you don't need for this story. Keep your final message short.
 ## Report back (required, concise)
 
 - `STORY FILE: <path>`
+- `EPIC CONTEXT: generated | reused` — which Step-2 cache branch ran; verified
+  present on disk before reporting
 - `COMPLEXITY: simple | stateful`
 - `CLARIFICATIONS NEEDED:` bulleted list of material ambiguities + the default you
   assumed for each, or `none`

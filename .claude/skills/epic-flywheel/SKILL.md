@@ -62,11 +62,12 @@ bash scripts/gh-track.sh close {issue#} "Story {e}.{s} complete"   # final: done
 Get `{issue#}` from the create-story report or `grep '^github_issue:' {story_file}`. If it's `0`/missing the issue was never created — run github-tracking **CREATE-ISSUE** first, don't silently skip. If the script is absent, fall back to the github-tracking TRANSITION/CLOSE-ISSUE ops. If `gh` is unavailable the script prints `skip: gh unavailable` and exits 0 — note that once in the boundary report rather than claiming issues were updated.
 
 ### Step 1 — Create Story → commit
-Spawn `lw-story-creator` with `{epic}.{story}`. Capture `STORY FILE`, `COMPLEXITY`, `CLARIFICATIONS NEEDED`, `PREREQUISITES`, `DESIGN GAP`.
+Spawn `lw-story-creator` with `{epic}.{story}`. Capture `STORY FILE`, `EPIC CONTEXT`, `COMPLEXITY`, `CLARIFICATIONS NEEDED`, `PREREQUISITES`, `DESIGN GAP`.
+- **Epic context gate (zero-token, orchestrator-owned):** run `[ -f docs/epics/epic-{N}-context.md ]`. The creator must have generated or reused it (report field `EPIC CONTEXT`). If the file is absent the subagent dropped a deliverable — re-spawn `lw-story-creator` with an explicit prompt to run create-story's **Generate Cache** section for Epic {N}, then re-check. Never advance to Step 2 or commit while the file is missing: without this gate every story in the epic independently hits the missing-cache branch (full prd+architecture re-reads, no `## Prior Story Learnings` accumulation) and nothing ever notices.
 - **Clarification Gate (the one mandatory human pause inside a story):** if the report lists *material* clarifications, surface them now and wait for answers; record them into the story file. One-default ambiguities are recorded as stated assumptions and do **not** pause.
 - **Cross-story prerequisite check:** if `PREREQUISITES` names a runtime artifact owned by a *later* story in this or another epic, flag a sequencing risk — this is the legitimate "not built yet" case and must be handled at story-design time, not discovered as a fake bug later.
 - **Track:** `gh-track.sh transition {issue#} ready-for-dev`.
-- **Commit:** `story {epic}.{story}: create` (stages the story file + any tracking/epics edits).
+- **Commit:** `story {epic}.{story}: create` (stages the story file + the epic context cache if generated/updated this step + any tracking/epics edits).
 
 ### Step 2 — Dev Story → commit
 **Track first:** `gh-track.sh transition {issue#} in-progress` before spawning, so a long dev pass shows the right state. Then spawn `lw-story-developer` (model `opus` only if `swift_project`) with the story file path. It runs the full dev-story workflow: implementation, **Build & Test Gate** (verify by running), **evals RUN** (if `docs/evals/`), invariant + design verification, and the inline review. Capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `FINDINGS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`, `TESTING PLAN`.

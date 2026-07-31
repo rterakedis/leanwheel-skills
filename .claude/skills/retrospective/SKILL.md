@@ -135,7 +135,8 @@ End the retro with a `## Next Epic Readiness` section:
 - PRD section exists for next epic?
 - Architecture pre-reqs met?
 - Blocking unknowns next epic inherits?
-- `epic-{N+1}-context.md` initialized?
+- `epic-{epic_num}-context.md` existed and accumulated `## Story ... Learnings` across this epic? If it never existed, the flywheel's Step-1 epic-context gate failed — record that under Process Changes; do **not** backfill it now (the epic is closed; nothing will read it).
+- `epic-{N+1}-context.md`: **not expected yet** — the first `/create-story` of Epic {N+1} generates it, and the flywheel verifies it exists before committing story 1. Never a HOLD item; note it only if you have epic-specific context worth pre-seeding.
 - All critical/high security findings logged and scheduled?
 - Explicit **GO / HOLD** verdict. HOLD if any critical/high security finding is unscheduled.
 
