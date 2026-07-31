@@ -113,7 +113,8 @@ Repeat until the epic is complete (see **Exit Conditions**):
 **Fallback mode:** if `swift_project`, issue a MODEL SWITCH GATE for **Sonnet**, then execute `skills/create-story/skill.md` inline.
 
 - Wait for the story file to be written and GitHub issue updated.
-- From the subagent report, capture `STORY FILE`, `COMPLEXITY`, `CLARIFICATIONS NEEDED`, `PREREQUISITES`, `DESIGN GAP`.
+- From the subagent report, capture `STORY FILE`, `EPIC CONTEXT`, `COMPLEXITY`, `CLARIFICATIONS NEEDED`, `PREREQUISITES`, `DESIGN GAP`.
+- **Epic context check (zero-token):** confirm `docs/epics/epic-{N}-context.md` exists on disk (`EPIC CONTEXT` says whether it was generated or reused this phase). If missing, re-spawn the creator with an explicit prompt to run create-story's **Generate Cache** section before proceeding — the cache is a Phase-1 deliverable; every later story in the epic depends on it for token economy and the `## Prior Story Learnings` channel.
 - **Clarification surfacing:** if the report lists material clarifications (the subagent assumed defaults rather than guessing silently), present them to the user now as a human-decision pause before Phase 2 — this is the Clarification Gate surfacing at the orchestration layer. Record the user's answers back into the story file (or confirm the assumed defaults) before proceeding.
 - Do not proceed to Phase 2 until the story file path is in hand and clarifications are resolved.
 
