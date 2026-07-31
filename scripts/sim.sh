@@ -334,6 +334,20 @@ build_and_install() {
   [ -d "$app" ] || die "built, but no .app found at $app"
   xcrun simctl install "$udid" "$app" || die "simctl install failed for $app"
   note "installed $(cfg bundle_id)"
+
+  # Absorb the first launch. The app seeds `AppSettings` synchronously precisely so the
+  # onboarding cover never latches, but that is a race and a *cold* first launch after an
+  # install is the slowest startup there is — which is when it loses. The result is a
+  # perfectly clean screenshot of the Welcome screen, and nothing in the output says so.
+  # This is not hypothetical: `app-route-light.png` shipped to the marketing site that way.
+  #
+  # A throwaway launch costs a couple of seconds and moves every subsequent capture off the
+  # cold path. It does not *fix* the race — that belongs in the app (see docs/deferred-items,
+  # onboarding-latch race) — it just stops the harness from being the thing that triggers it.
+  local bundle; bundle=$(cfg bundle_id)
+  xcrun simctl launch "$udid" "$bundle" --uitest --seed typical >/dev/null 2>&1 || true
+  sleep 3
+  xcrun simctl terminate "$udid" "$bundle" >/dev/null 2>&1 || true
 }
 
 route_url() {
