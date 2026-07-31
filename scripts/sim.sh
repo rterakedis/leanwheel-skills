@@ -47,7 +47,10 @@ DUMPS_DIR="$ART_DIR/dumps"
 RESULTS_DIR="$ART_DIR/results"
 
 SETTLE=2          # seconds to let the UI settle before a capture
-SHOT_MAX_PX=1000  # screenshots are downscaled to this longest edge (2.9MB -> ~0.4MB)
+# Screenshots are downscaled to this longest edge (2.9MB -> ~0.4MB) so an agent can
+# read them back cheaply. Set SHOT_MAX_PX=native in the environment to keep the raw
+# capture — marketing/App Store assets need the native pixels, agents do not.
+SHOT_MAX_PX="${SHOT_MAX_PX:-1000}"
 GRANT_OVERRIDE="" # --grant on launch/shots; else config's privacy_grant
 
 die() { echo "sim: $*" >&2; exit 1; }
@@ -357,10 +360,67 @@ open_route() {
   sleep "$SETTLE"
 }
 
+# ---------------------------------------------------------------- staleness guard
+
+newest_source_mtime() {
+  # Epoch seconds of the most recently modified source file, or empty if none found.
+  # Hidden directories are pruned, which also skips .leanwheel/ artifacts and .git.
+  ( cd "$PROJECT_DIR" 2>/dev/null || exit 0
+    /usr/bin/find . -path './.*' -prune -o \
+      \( -name '*.swift' -o -name '*.m' -o -name '*.h' -o -name '*.xcstrings' \
+         -o -name '*.pbxproj' -o -name '*.storyboard' -o -name '*.xib' \) \
+      -print0 2>/dev/null \
+    | xargs -0 /usr/bin/stat -f '%m' 2>/dev/null | sort -rn | head -1 )
+}
+
+ensure_fresh_install() {
+  # ensure_fresh_install <udid>
+  #
+  # `shots` and `launch` do NOT build — they launch whatever bundle is already installed
+  # (`dump` and `flow` go through xcodebuild, so they are always current). When that bundle
+  # is stale the failure is silent and total: every capture looks correct and shows an older
+  # app. That is not hypothetical. A website screenshot run on this project produced iPad
+  # captures containing a seeded customer record that had been REMOVED for privacy reasons
+  # several commits earlier, and nothing in the output hinted at it — the only reason it was
+  # caught is that a human recognised the name.
+  #
+  # Comparing the installed binary's timestamp against the newest source file is cheap and
+  # catches the case that matters. It can false-positive (a `git checkout` restamps files
+  # without changing them), which is why the fix is one command and there is an override —
+  # but the default has to be refusing to capture rather than capturing a lie.
+  [ "${SIM_SKIP_FRESHNESS_CHECK:-0}" = "1" ] && return 0
+  local udid="$1" bundle product container binary bin_mtime src_mtime
+  bundle=$(cfg bundle_id); product=$(cfg product)
+  container=$(xcrun simctl get_app_container "$udid" "$bundle" 2>/dev/null || true)
+  if [ -z "$container" ] || [ ! -d "$container" ]; then
+    die "$bundle is not installed on this device — there is nothing to launch.
+  Fix: scripts/sim.sh install"
+  fi
+  binary="$container/${product%.app}"
+  [ -f "$binary" ] || binary="$container"
+  bin_mtime=$(/usr/bin/stat -f '%m' "$binary" 2>/dev/null || echo 0)
+  src_mtime=$(newest_source_mtime)
+  [ -n "$src_mtime" ] || return 0
+  if [ "$src_mtime" -gt "$bin_mtime" ]; then
+    die "the installed build is OLDER than your sources — this run would capture a stale app.
+
+  installed: $(/bin/date -r "$bin_mtime" '+%Y-%m-%d %H:%M' 2>/dev/null)
+  newest source: $(/bin/date -r "$src_mtime" '+%Y-%m-%d %H:%M' 2>/dev/null)
+
+  'shots' and 'launch' never build; they launch what is already on the device, so a stale
+  bundle produces correct-looking captures of an old app.
+
+  Fix: scripts/sim.sh install
+  Override (rarely the right call): SIM_SKIP_FRESHNESS_CHECK=1 scripts/sim.sh ..."
+  fi
+}
+
 launch_app() {
   # launch_app <udid> <seed> <uitest:0|1> <reset:0|1> [route]
   local udid="$1" seed="$2" uitest="$3" reset="$4" route="${5:-}" bundle args grant
   bundle=$(cfg bundle_id)
+  # Refuse to launch a bundle older than the sources (see ensure_fresh_install).
+  ensure_fresh_install "$udid"
   # Pre-grant declared permissions, or the very first launch stalls behind a system
   # alert and every capture is a screenshot of that alert. GRANT_OVERRIDE wins;
   # otherwise use whatever `derive_config` inferred from the Info.plist.
@@ -389,7 +449,7 @@ capture() {
   xcrun simctl io "$udid" screenshot "$out" >/dev/null 2>&1 || die "screenshot failed"
   # Downscale in place: a native-resolution capture is ~2.9MB, which is expensive
   # for an agent to read back. ~1000px longest edge keeps text legible at ~0.4MB.
-  sips -Z "$SHOT_MAX_PX" "$out" >/dev/null 2>&1 || true
+  [ "$SHOT_MAX_PX" = native ] || sips -Z "$SHOT_MAX_PX" "$out" >/dev/null 2>&1 || true
 }
 
 # ---------------------------------------------------------------- subcommands
@@ -669,7 +729,8 @@ cmd_flow() {
   mkdir -p "$out_dir"
   xcrun xcresulttool export attachments --path "$bundle_out" --output-path "$out_dir" >/dev/null 2>&1 \
     || die "flow passed but attachments could not be exported from $bundle_out"
-  for f in "$out_dir"/*.png; do [ -f "$f" ] && sips -Z "$SHOT_MAX_PX" "$f" >/dev/null 2>&1 || true; done
+  [ "$SHOT_MAX_PX" = native ] || \
+    for f in "$out_dir"/*.png; do [ -f "$f" ] && sips -Z "$SHOT_MAX_PX" "$f" >/dev/null 2>&1 || true; done
   echo "${name}Flow green -> $out_dir"
   ls "$out_dir"
 }
