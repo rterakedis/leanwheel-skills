@@ -65,6 +65,8 @@ Per-phase routing (Conserve-Opus baseline, dynamic Swift exception):
 
 **How to set the model:** the subagent defs default to Sonnet. Pass a per-spawn `model` override on the Agent call **only** for Phase 2 when `swift_project = true` (`model: opus`). All other spawns use the default. If the user opts out for the run ("conserve everything", "stay on Sonnet"), drop the Opus override too and note it.
 
+**Effort routing (second axis, static):** reasoning effort is set only via `effort:` frontmatter in the agent defs — the Agent tool has no per-spawn effort override, so the dynamic-Swift-exception trick above cannot be replicated for effort. Current pins: `lw-docs-sync` = `low` (mechanical doc writing — the Haiku argument, one level deeper). The three phase-runners deliberately carry **no** `effort:` and inherit the session default: dev-story must not be pinned down (the Swift accuracy-first rationale above) nor pinned up (overspend on Python/web).
+
 **Spawning a phase = one literal Agent tool call.** Everywhere this skill says "spawn", make an actual Agent tool invocation — never a prose description of delegation, and never doing the phase's work inline in this thread:
 
 ```
