@@ -48,9 +48,9 @@ whatever is missing.
 | `sim.sh install` | Build for the simulator and install. Re-run after code changes. |
 | `sim.sh launch --seed heavy --route invoices` | Cold launch with seeded data, landing on a route. |
 | `sim.sh open <route>` | **Attended only.** `simctl openurl` against the running app; on iOS 26 a human must tap *Open* on the system alert before the route lands. Never use it in a script. |
-| `sim.sh shots <name> [--route R] [--seed S]` | Screenshot matrix: light/dark × default/accessibility-XL × iPhone/iPad. |
-| `sim.sh dump [--route R]` | Dump the accessibility hierarchy so you can *read* identifiers instead of guessing. |
-| `sim.sh flow <Name>` | Run one named XCUITest flow and export its step screenshots. |
+| `sim.sh shots <name> [--route R] [--seed S] [--orientation O]` | Screenshot matrix: light/dark × default/accessibility-XL × iPhone/iPad. `--orientation` is a single flag per invocation, not a matrix axis. |
+| `sim.sh dump [--route R] [--orientation O]` | Dump the accessibility hierarchy so you can *read* identifiers instead of guessing. |
+| `sim.sh flow <Name> [--orientation O]` | Run one named XCUITest flow and export its step screenshots. |
 | `sim.sh privacy grant\|reset [svc]` | Pre-grant permission alerts so a run doesn't stall behind one. |
 | `sim.sh erase` | Wipe the simulator (destructive) when it's wedged past what `--fresh` clears. |
 
@@ -68,7 +68,7 @@ different story and self-ignores.)
 ### Where output lands
 
 ```
-.leanwheel/sim/shots/<timestamp>/<name>-<device>-<appearance>-<default|axl>.png
+.leanwheel/sim/shots/<timestamp>/<name>-<device>-<appearance>-<default|axl>[-<orientation>].png
 .leanwheel/sim/shots/flow-<name>/…      ← flow step captures
 .leanwheel/sim/dumps/latest/…           ← hierarchy dumps
 .leanwheel/sim/{build,flow,dump}.log    ← full toolchain output on failure
@@ -141,11 +141,60 @@ invocation and a separate launch; that is the cost of the iOS 26 alert, and it i
 cheapest correct option.
 
 Defaults: `light,dark` × `large,accessibility-extra-large` × `iphone`. Override with
-`--appearances`, `--sizes`, `--devices iphone,ipad`.
+`--appearances`, `--sizes`, `--devices iphone,ipad`. Orientation (below) is a single
+flag for the whole invocation, never a fourth matrix axis — a landscape set is one
+more invocation, exactly like a different route.
 
 Consumed by `/design-verify`, which compares the captures against the story's Design
 Contract. The accessibility-XL column is not decoration — truncation and
 pushed-off-screen controls live there and nowhere else.
+
+### Orientation — landscape captures (especially iPad)
+
+**There is no host-side orientation control.** `xcrun simctl ui` supports only
+appearance, increase-contrast, and content-size (verified on Xcode 26.6); no simctl
+subcommand rotates a device. So `--orientation` rides the same two channels every
+other setting already uses, and each half is a small snippet the project implements
+once:
+
+`--orientation portrait|landscape|landscape-left|landscape-right` (`landscape` =
+`landscape-left`) on:
+
+- **`launch` / `shots`** — delivered as a launch argument, like `--seed`/`--route`.
+  The app's DEBUG launch-argument handler applies it:
+
+  ```swift
+  // DEBUG launch-argument handling, beside --seed/--route (testability.md):
+  if let i = args.firstIndex(of: "--orientation"), args.indices.contains(i + 1) {
+      let mask: UIInterfaceOrientationMask =
+          args[i + 1].hasPrefix("landscape") ? .landscape : .portrait
+      windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: mask))
+  }
+  ```
+
+- **`dump` / `flow`** — delivered as `TEST_RUNNER_LW_ORIENTATION` (the only env
+  delivery that reaches the runner — same rule as `LW_ROUTE`/`LW_SEED`). The shared
+  `launch()` helper applies it after `app.launch()`:
+
+  ```swift
+  if let o = ProcessInfo.processInfo.environment["LW_ORIENTATION"], !o.isEmpty {
+      XCUIDevice.shared.orientation = switch o {
+      case "landscape-left":  .landscapeLeft
+      case "landscape-right": .landscapeRight
+      default:                .portrait
+      }
+  }
+  ```
+
+**Loud-failure contract:** because the app-side path is a convention the app can
+simply not implement, `shots` verifies every capture's aspect ratio against the
+requested orientation and hard-fails on mismatch — you get an error naming this
+section, never a portrait capture filed under a landscape name. `dump`/`flow` cannot
+be verified host-side: if the `launch()` helper lacks the snippet above the env var
+is ignored silently, so implement it before relying on `--orientation` there. Also
+check the target actually declares landscape support (Info.plist / target General
+tab) — an iPhone target locked to portrait will fail the aspect check even with the
+handler in place.
 
 ---
 
@@ -238,10 +287,31 @@ extension XCTestCase {
   the captures alone.
 - Flows run in the Build & Test Gate like any other test — a red flow blocks `done`.
 
-**When to add one:** only when a screen has **stabilized** — at an epic boundary, or in
-a story that explicitly stabilizes a screen. Never speculatively, one-per-story. A
-flow over a UI you're about to redesign is negative-value work; seeds and routes are
-the opposite, because they keep getting cheaper to reuse.
+**When to add one — a tier per screen, not a lump at the epic boundary:**
+
+- **Tier 1 — same story that adds the screen:** no flow yet, just the route + one
+  landmark identifier (~2 lines, `testability.md` ▸ *Keeping It Current*). The screen
+  is dumpable and capturable from day one.
+- **Tier 2 — the story that ships the screen's mutations:** one flow that **writes**.
+  The data contract is settled when the ACs about what the screen reads/writes are
+  implemented — i.e. by the end of that story, never "when the epic is over". Layout
+  still in flux is no objection: a write-flow is the only thing that catches the
+  read-only/no-op failure mode, where mutations silently do nothing and every
+  screenshot still looks correct.
+- **Tier 3 — after the epic's manual test pass:** detailed per-field / per-state
+  assertions, targeted at what the pass actually found. This is where `/e2e-tests`
+  converts the stabilized test plan.
+
+❌ Doing all three at Tier 3, after the bugs shipped. A real epic did exactly that —
+nine screens, zero identifiers, zero drivable surface; 4 UI-layer bugs no unit test
+could see reached the owner's manual pass, costing two remediation stories.
+
+"The UI is too unstable to test" conflates two kinds of churn. Identifier-driven flows
+couple to **structure and semantics** (this control exists, this save mutates data) —
+not appearance, so re-theming, spacing, and motion changes never touch them. Evidence:
+with ~40 identifiers and 3 flow classes in place, a later story rewrote an entire form
+(342 insertions across 6 files) and the flows needed **zero** repairs. What does break
+a flow is renaming an identifier — which review already treats as HIGH.
 
 ### One concept, three consumers
 
@@ -256,6 +326,28 @@ each define their own:
 
 The first 2–4 flows a project gets are its smoke suite (launches, main navigation
 works, one create-happy-path). There is no separate "smoke suite" concept.
+
+---
+
+## SwiftUI × XCUITest — how elements actually surface
+
+Platform facts, not app bugs. **When an element can't be addressed, dump the hierarchy
+(`sim.sh dump`) before concluding the test framework is at fault** — every row below
+was diagnosed exactly that way.
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `.accessibilityIdentifier` on a `LabeledContent` never appears in a dump | The container doesn't surface it | Put the identifier on a concrete child (the `Text`) |
+| A unique identifier still throws "Multiple matching elements found" | A `Menu` wrapping a `Picker` publishes the identifier on both container and button; a `confirmationDialog` publishes its buttons twice (dialog + mirror) | Append `.firstMatch` — the expected shape for those two constructs, not a smell |
+| `app.textViews["…"]` finds nothing for a multi-line field | `TextField(…, axis: .vertical)` surfaces as a textField regardless of line count | Query `textFields` first, fall back to `textViews` |
+| A `Form`/`List` row below the fold reports `exists == false` | Rows outside the viewport are not instantiated at all (not a hit-testing issue) | Swipe until `exists`. Gate the loop on `exists`, **not** `isHittable` — a row partly under the keyboard accessory is hittable-false while on screen, which sends the helper swiping past the whole section |
+| Assertions on animated state flake right after a tap | A bare `.count` read races the animation | Poll to a deadline by spinning the runloop. Never register a throwaway `XCTestExpectation` you don't wait on — that's an XCTest API violation |
+| A field near the keyboard swallows taps | iOS 26: the keyboard accessory floats **over** the row above the keyboard rather than insetting the scroll view | Account for the accessory band, or dismiss the keyboard before tapping |
+| A `confirmationDialog`'s `role: .cancel` button can't be found by identifier or label | It may not be rendered into the hierarchy at all (dump while presented: only the destructive button existed) | Use `.alert` for destructive confirmations — both buttons render and are queryable. Also an app-code UX bug: `anti-patterns.md` #17 |
+
+Two of these have app-side fixes worth making regardless of testing: the shared
+`@FocusState` Bool that drops focus on field-to-field taps (`anti-patterns.md` #16)
+and the `confirmationDialog` row above.
 
 ---
 

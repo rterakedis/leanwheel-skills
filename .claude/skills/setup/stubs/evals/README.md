@@ -39,6 +39,9 @@ expect: exit-0                        # exit-0 | output-contains:"..." | output-
 ## Running
 
 - `/evals` — run all enabled `command` cases across every epic (zero-token).
+  Cases sharing an identical `run:` command are batched: the command runs once
+  and each case's `expect` is checked against the one combined output — so a
+  Simulator-launching suite costs one launch, not one per case.
 - `/evals --judge` — also run `judge` cases (token cost).
 - `dev-story` and `code-review` run the relevant epic's set automatically as part
   of the Build & Test Gate and Verify-green steps.

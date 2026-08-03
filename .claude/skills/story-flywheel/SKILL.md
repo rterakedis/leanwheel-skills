@@ -78,6 +78,10 @@ Agent tool call:
 
 Wait for the subagent's report, then act on its structured fields. Do **not** re-do the phase's work in this thread — the subagent owns it. If a phase ends with no Agent call in the transcript (only narration like "the creator subagent will handle this"), the phase did not run — go back and make the call. Inline execution is legal only in the documented fallback when subagents are unavailable.
 
+**A report missing its required fields is a non-return.** Each subagent owes a fixed set of report fields — `STORY FILE`/`EPIC CONTEXT` for the creator, `STATUS`/`BUILD & TEST` for the developer, the `RUBRIC` line and `STATUS` for the reviewer (see each agent def's "Report back"). If a subagent's final message is missing any of these — including a message that only narrates what it's about to do next, e.g. "I'll stop polling now and wait for the test suite to notify me" — the phase has **not** returned, no matter how long it ran. Resume it with SendMessage rather than proceeding: ask it to finish and emit the missing fields. Never advance to the next phase, the checkpoint, or a commit on a narration-only message standing in for a report.
+
+**Wait loops key on a specific PID or artifact, never on "no matching process anywhere."** When a subagent (or this thread) waits on a long-running command — a full test suite, a build — poll the specific PID it started or a completion marker/artifact that command produces. Never a condition like "no process of this kind is running" (e.g. a `ps aux | grep xcodebuild` emptiness check): the orchestrator or a sibling story may run the same tool concurrently, so that condition can stay permanently false and the wait never ends.
+
 ---
 
 ## Fallback: Manual Model Switching (only when subagents unavailable)

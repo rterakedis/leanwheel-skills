@@ -60,6 +60,11 @@ Input: a story file path (and its `{epic}.{story}`).
    a `type: command` case to `docs/evals/epic-{epic}.md`:
    - Prefer the project's existing test command with a filter to the new test(s)
      (`swift test --filter X`, `pytest -k x`, `npm test -- -t "x"`, `go test -run X`).
+   - **Exception — runners that boot a Simulator** (`xcodebuild … test`): use the
+     **same unfiltered suite command** for every case, with a per-case
+     `output-contains:` needle on the test/suite name. RUN batches identical
+     commands into one launch; per-case filtered invocations cost one Simulator
+     launch each and exhaust it on a long run.
    - If the AC is an HTTP/CLI behavior, a `curl`/CLI invocation with
      `output-contains:` is fine.
    - `expect: exit-0` unless a specific output assertion is needed.
@@ -76,9 +81,14 @@ Report: `N command cases, M judge cases appended to docs/evals/epic-{epic}.md`.
 ### RUN — execute the regression net (called by dev-story Build & Test Gate, code-review Verify-green, or `/evals`)
 
 1. Resolve scope: a single epic file, or all of `docs/evals/` (default for `/evals`).
-2. For each `enabled: true` `type: command` case: run `run:`, check `expect:`.
-   Record pass/fail and the failing line on failure. **Zero tokens** — this is just
-   running commands.
+2. Collect the `enabled: true` `type: command` cases and **group by identical
+   `run:` command**. Execute each distinct command **once**, capture combined
+   output + exit code, then check every case in the group against that single
+   result. Never one invocation per case — on Apple projects that means one
+   `xcodebuild … test` Simulator launch per case, and 50+ sequential launches
+   exhausts the Simulator; one launch scores the whole group. Genuinely distinct
+   commands still run separately. Record pass/fail **per case** and the failing
+   line on failure. **Zero tokens** — this is just running commands.
 3. For each `enabled: true` `type: judge` case **only if judging is requested**
    (the caller passes `judge=true`, or the user runs `/evals --judge`): read
    `target:`, score against `rubric:`, pass if all rubric points hold. Skipped by
