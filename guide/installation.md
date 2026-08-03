@@ -2,7 +2,7 @@
 
 ## Installation
 
-There are two ways to use these skills: **plugin install** (recommended for new setups, see the [README quickstart](../README.md#quickstart)) or **clone + symlink** (manual, useful if you want to track `main` directly instead of going through plugin marketplace updates).
+There are two ways to use these skills: **plugin install** (recommended for new setups, see the [README quickstart](../README.md#project-quickstart)) or **clone + symlink** (manual, useful if you want to track `main` directly instead of going through plugin marketplace updates).
 
 ### Option B — Clone + symlink
 
