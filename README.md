@@ -26,7 +26,9 @@ BMad™, BMad Method™, and BMad Core™ are trademarks of BMad Code, LLC (all 
 
 ---
 
-## Quickstart
+## Project Quickstart
+
+*Building (or documenting) a product with the full planning flywheel. Just want one task done in some folder, no project? Jump to the [Single-Goal Quickstart](#single-goal-quickstart--any-folder-no-project) below.*
 
 **The short version — you only need to remember three commands:**
 
@@ -98,6 +100,28 @@ Everything else is either invoked for you by those three, or `/next` will route 
 Already have an existing codebase instead of starting fresh? Run `/discover` first to reverse-engineer it into `docs/prd.md` + `docs/architecture.md`, then continue from step 3. See **[guide/workflows.md](guide/workflows.md)** for the full greenfield/brownfield flowcharts, and **[guide/skills-reference.md](guide/skills-reference.md)** for every skill and sub-command.
 
 Prefer to clone and symlink the skills locally instead of installing the plugin? See **[guide/installation.md](guide/installation.md)**.
+
+---
+
+## Single-Goal Quickstart — any folder, no project
+
+Not everything is a project. When you just want one task done in some folder — a coworker's repo, a scripts directory, a fresh clone — skip the planning flywheel entirely:
+
+1. **Install the plugin** (step 1 above), once. Skills load in every session, so nothing else to set up.
+
+2. **`cd` into the folder and state the goal:**
+
+   ```
+   /dev-single-goal fix the flaky retry logic in sync.sh
+   ```
+
+That's the whole quickstart. What the skill does with it:
+
+- **Grills you first** — intent, edge cases, illegal states, invariants — and stops to ask when something material is genuinely ambiguous, instead of guessing.
+- **Writes a verifiable plan** for your approval: frozen intent, Always/Ask-First/Never boundaries, file-level tasks, testable acceptance criteria, and the exact verification commands.
+- **Implements, then proves it** — the goal isn't "done" until the build and tests actually run green this session (or, with no toolchain, the plan's verification commands do).
+
+Zero footprint: no `docs/` tree is created, nothing is tracked on GitHub, and the plan lives in a self-ignoring `.leanwheel/goals/` folder that never shows up in the host repo's git status. If the work turns out to be the start of something real, the skill offers `/discover` (document an existing codebase) or `/setup` (full lifecycle) at the end — the on-ramp to the [Project Quickstart](#project-quickstart) above. It never scaffolds by default.
 
 ---
 
