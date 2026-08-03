@@ -119,3 +119,8 @@ flowchart TD
     style LOOP fill:#fff8e8,stroke:#FF9800
     style POSTMVP fill:#fdecea,stroke:#E74C3C
 ```
+
+## No Project At All
+*Use this when you just want one task done in some folder — no lifecycle, no docs.*
+
+Both maps above assume a project you'll keep working in. When you drop into an arbitrary folder (a coworker's repo, a scripts directory, a fresh clone) and want a single goal done, run **`/dev-single-goal`**: it grills you on intent and edge cases (Behavior Contract + Clarification Gate), writes a verifiable plan to a self-ignoring `.leanwheel/goals/` spec, gets your approval, implements, and verifies by actually running the build and tests — with zero doc prerequisites and zero doc obligations. If the work turns out to be a real ongoing project, it offers `/discover` or `/setup` at the end; it never scaffolds by default.
