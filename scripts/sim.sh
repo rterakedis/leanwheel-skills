@@ -22,10 +22,15 @@
 #   install                   Build for the simulator and install the app.
 #   open <route>              Deep-link the RUNNING app (ATTENDED — iOS 26 shows an
 #                             "Open in …?" alert a human must tap).
-#   launch [--seed S] [--route R]   Cold launch, optionally seeded and routed.
-#   shots <name> [--route R]  Screenshot matrix: appearance x text size x device.
-#   dump [--route R]          Dump the accessibility hierarchy (identifiers).
-#   flow <Name>               Run one named XCUITest flow, export its screenshots.
+#   launch [--seed S] [--route R] [--orientation O]   Cold launch, optionally seeded,
+#                             routed, and rotated (O: portrait|landscape|landscape-left|
+#                             landscape-right).
+#   shots <name> [--route R] [--orientation O]  Screenshot matrix: appearance x text
+#                             size x device. Orientation is a single flag per
+#                             invocation, not a matrix axis.
+#   dump [--route R] [--orientation O]   Dump the accessibility hierarchy (identifiers).
+#   flow <Name> [--orientation O]        Run one named XCUITest flow, export its
+#                             screenshots.
 #   privacy grant|reset [svc] Pre-grant permission alerts so a run doesn't stall.
 #   erase                     Wipe the simulator (destructive) when it is wedged.
 #   clean                     Remove captured artifacts.
@@ -350,6 +355,55 @@ build_and_install() {
   xcrun simctl terminate "$udid" "$bundle" >/dev/null 2>&1 || true
 }
 
+# ---------------------------------------------------------------- orientation
+#
+# There is NO host-side orientation control. `xcrun simctl ui` supports only
+# appearance / increase_contrast / content_size (verified on Xcode 26.6), and no other
+# simctl subcommand rotates a device. Orientation therefore rides the same two
+# channels every other setting uses:
+#   * shots/launch  -> `--orientation <O>` LAUNCH ARGUMENT, applied by the app's DEBUG
+#                      launch-argument handler (UIWindowScene.requestGeometryUpdate) —
+#                      the same contract as --seed/--route.
+#   * dump/flow     -> TEST_RUNNER_LW_ORIENTATION env var; the shared launch() helper
+#                      sets XCUIDevice.shared.orientation (see REGRESSION GUARD in
+#                      cmd_dump for why TEST_RUNNER_ is the only working delivery).
+# Both halves are documented in docs/setup/swift/simulator.md (Orientation).
+#
+# The app-side path can silently ignore the argument (an app that never implemented
+# the handler just launches portrait), so `shots` VERIFIES every capture's aspect
+# ratio against the requested orientation and dies on mismatch — a wrong-orientation
+# capture must be a hard error, never a quietly-wrong artifact.
+
+normalize_orientation() {
+  # normalize_orientation <value> -> canonical token, or die.
+  case "$1" in
+    portrait)                       echo "portrait" ;;
+    landscape|landscape-left)       echo "landscape-left" ;;
+    landscape-right)                echo "landscape-right" ;;
+    *) die "unknown orientation '$1' — use portrait, landscape, landscape-left, or landscape-right" ;;
+  esac
+}
+
+verify_capture_orientation() {
+  # verify_capture_orientation <png> <requested-orientation-or-empty>
+  local png="$1" want="$2" w h
+  [ -n "$want" ] || return 0
+  w=$(sips -g pixelWidth  "$png" 2>/dev/null | awk '/pixelWidth/  {print $2}')
+  h=$(sips -g pixelHeight "$png" 2>/dev/null | awk '/pixelHeight/ {print $2}')
+  [ -n "$w" ] && [ -n "$h" ] || return 0   # unreadable image is capture()'s problem
+  case "$want" in
+    portrait)    [ "$h" -gt "$w" ] && return 0 ;;
+    landscape-*) [ "$w" -gt "$h" ] && return 0 ;;
+  esac
+  die "requested --orientation $want but the capture is $( [ "$w" -gt "$h" ] && echo landscape || echo portrait ) ($png).
+
+  The app did not honor the --orientation launch argument. There is no simctl command
+  that rotates a device, so orientation is an app-side contract: the DEBUG
+  launch-argument handler must apply it via UIWindowScene.requestGeometryUpdate.
+  See docs/setup/swift/simulator.md (Orientation) for the snippet.
+  (Also check the target supports that orientation in its Info.plist / General tab.)"
+}
+
 route_url() {
   # route_url <route> — bare routes are prefixed with the app's URL scheme.
   local route="$1" scheme
@@ -430,8 +484,8 @@ ensure_fresh_install() {
 }
 
 launch_app() {
-  # launch_app <udid> <seed> <uitest:0|1> <reset:0|1> [route]
-  local udid="$1" seed="$2" uitest="$3" reset="$4" route="${5:-}" bundle args grant
+  # launch_app <udid> <seed> <uitest:0|1> <reset:0|1> [route] [orientation]
+  local udid="$1" seed="$2" uitest="$3" reset="$4" route="${5:-}" orientation="${6:-}" bundle args grant
   bundle=$(cfg bundle_id)
   # Refuse to launch a bundle older than the sources (see ensure_fresh_install).
   ensure_fresh_install "$udid"
@@ -450,6 +504,9 @@ launch_app() {
   # handler, different delivery. Delivery had to change because iOS 26 gates every
   # externally-opened custom-scheme URL behind a system confirmation (see open_route).
   [ -n "$route" ] && args="$args --route $route"
+  # Orientation is app-side by necessity — no simctl rotates a device (see the
+  # orientation section above). Delivered like --seed/--route; verified by `shots`.
+  [ -n "$orientation" ] && args="$args --orientation $orientation"
   xcrun simctl terminate "$udid" "$bundle" >/dev/null 2>&1 || true
   # shellcheck disable=SC2086
   xcrun simctl launch "$udid" "$bundle" $args >/dev/null || die "launch failed for $bundle — is it installed? Run: sim.sh install"
@@ -578,7 +635,7 @@ cmd_open() {
 
 cmd_launch() {
   ensure_config; ensure_artifacts_dir
-  local seed="" route="" device="iphone" uitest=0 reset=0 fresh=0
+  local seed="" route="" device="iphone" uitest=0 reset=0 fresh=0 orientation=""
   while [ $# -gt 0 ]; do
     case "$1" in
       --fresh)  fresh=1; shift ;;
@@ -586,6 +643,7 @@ cmd_launch() {
       --route)  route="$2"; shift 2 ;;
       --device) device="$2"; shift 2 ;;
       --grant)  GRANT_OVERRIDE="$2"; shift 2 ;;
+      --orientation) orientation=$(normalize_orientation "$2"); shift 2 ;;
       --uitest) uitest=1; shift ;;
       --reset)  reset=1; shift ;;
       *) die "unknown option for launch: $1" ;;
@@ -593,16 +651,21 @@ cmd_launch() {
   done
   local udid; udid=$(resolve_device "$device")
   boot_device "$udid" "$fresh"
-  launch_app "$udid" "$seed" "$uitest" "$reset" "$route"
-  note "launched${seed:+ --seed $seed}${route:+ --route $route}"
+  launch_app "$udid" "$seed" "$uitest" "$reset" "$route" "$orientation"
+  note "launched${seed:+ --seed $seed}${route:+ --route $route}${orientation:+ --orientation $orientation}"
+  [ -n "$orientation" ] && note "orientation is applied by the app's launch-argument handler — 'launch' cannot verify it; 'shots' can (it checks the capture's aspect ratio)."
+  return 0
 }
 
 cmd_shots() {
   ensure_config; ensure_artifacts_dir
   local name="${1:-}"; shift || true
-  [ -n "$name" ] || die "usage: sim.sh shots <name> [--route R] [--seed S] [--devices iphone,ipad]"
+  [ -n "$name" ] || die "usage: sim.sh shots <name> [--route R] [--seed S] [--devices iphone,ipad] [--orientation portrait|landscape|landscape-left|landscape-right]"
 
-  local seed="typical" route="" devices="iphone" appearances="light,dark" sizes="large,accessibility-extra-large" fresh=0
+  # Orientation is deliberately a SINGLE FLAG, not a matrix axis. Doubling the matrix
+  # would double every run's cost for captures most stories never look at; a landscape
+  # set is one more invocation, exactly like a different route.
+  local seed="typical" route="" devices="iphone" appearances="light,dark" sizes="large,accessibility-extra-large" fresh=0 orientation=""
   while [ $# -gt 0 ]; do
     case "$1" in
       --fresh)       fresh=1; shift ;;
@@ -612,6 +675,7 @@ cmd_shots() {
       --appearances) appearances="$2"; shift 2 ;;
       --sizes)       sizes="$2"; shift 2 ;;
       --grant)       GRANT_OVERRIDE="$2"; shift 2 ;;
+      --orientation) orientation=$(normalize_orientation "$2"); shift 2 ;;
       *) die "unknown option for shots: $1" ;;
     esac
   done
@@ -628,14 +692,19 @@ cmd_shots() {
     # One cold launch per device, carrying the route. Every subsequent state change in
     # the matrix is a simctl ui toggle, never a relaunch — the appearance x text-size
     # matrix still costs 1 launch per device, not 8.
-    launch_app "$udid" "$seed" 1 0 "$route"
+    launch_app "$udid" "$seed" 1 0 "$route" "$orientation"
     for appearance in $(echo "$appearances" | tr ',' ' '); do
       xcrun simctl ui "$udid" appearance "$appearance" >/dev/null 2>&1 || true
       for size in $(echo "$sizes" | tr ',' ' '); do
         xcrun simctl ui "$udid" content_size "$size" >/dev/null 2>&1 || true
         sleep 1
         case "$size" in accessibility-*) short="axl" ;; *) short="default" ;; esac
-        capture "$udid" "$out_dir/${name}-${dev}-${appearance}-${short}.png"
+        # Filenames carry the orientation only when one was requested, so default
+        # (portrait) runs keep the historic <name>-<device>-<appearance>-<size> shape.
+        capture "$udid" "$out_dir/${name}-${dev}-${appearance}-${short}${orientation:+-$orientation}.png"
+        # Fail LOUDLY if the app ignored --orientation — a portrait capture labeled
+        # landscape is exactly the silently-wrong artifact this script must never emit.
+        verify_capture_orientation "$out_dir/${name}-${dev}-${appearance}-${short}${orientation:+-$orientation}.png" "$orientation"
         count=$((count + 1))
       done
     done
@@ -658,12 +727,13 @@ cmd_dump() {
   app.debugDescription, which is what this subcommand runs. See
   docs/setup/swift/simulator.md (Hierarchy Dump)."
 
-  local route="" device="iphone" seed="typical"
+  local route="" device="iphone" seed="typical" orientation=""
   while [ $# -gt 0 ]; do
     case "$1" in
       --route)  route="$2"; shift 2 ;;
       --seed)   seed="$2"; shift 2 ;;
       --device) device="$2"; shift 2 ;;
+      --orientation) orientation=$(normalize_orientation "$2"); shift 2 ;;
       *) die "unknown option for dump: $1" ;;
     esac
   done
@@ -684,7 +754,9 @@ cmd_dump() {
   #                                                   launched by xcodebuild
   # Both fail silently: the dump is of the launch screen with the default seed, and
   # nothing anywhere says the route was dropped. Do not "simplify" this back.
-  TEST_RUNNER_LW_ROUTE="$route" TEST_RUNNER_LW_SEED="$seed" \
+  # LW_ORIENTATION rides the same channel; the shared launch() helper applies it via
+  # XCUIDevice.shared.orientation (see simulator.md, Orientation).
+  TEST_RUNNER_LW_ROUTE="$route" TEST_RUNNER_LW_SEED="$seed" TEST_RUNNER_LW_ORIENTATION="$orientation" \
   xcodebuild "$flag" "$container" -scheme "$scheme" \
     -destination "platform=iOS Simulator,id=$udid" \
     -only-testing:"$uitest/HierarchyDumpTests" \
@@ -709,10 +781,11 @@ cmd_flow() {
   local uitest; uitest=$(cfg ui_test_target)
   [ -n "$uitest" ] || die "no UI test target — flows need one (see 'sim.sh doctor')"
 
-  local device="iphone"
+  local device="iphone" orientation=""
   while [ $# -gt 0 ]; do
     case "$1" in
       --device) device="$2"; shift 2 ;;
+      --orientation) orientation=$(normalize_orientation "$2"); shift 2 ;;
       *) die "unknown option for flow: $1" ;;
     esac
   done
@@ -725,6 +798,10 @@ cmd_flow() {
   rm -rf "$bundle_out" "$out_dir"
   boot_device "$udid"
 
+  # REGRESSION GUARD — same delivery rule as cmd_dump: TEST_RUNNER_<NAME> is the ONLY
+  # way a value reaches the XCTest runner's environment. The launch() helper applies
+  # LW_ORIENTATION via XCUIDevice.shared.orientation (simulator.md, Orientation).
+  TEST_RUNNER_LW_ORIENTATION="$orientation" \
   xcodebuild "$flag" "$container" -scheme "$scheme" \
     -destination "platform=iOS Simulator,id=$udid" \
     -only-testing:"$uitest/${name}Flow" \

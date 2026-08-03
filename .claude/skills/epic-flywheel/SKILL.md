@@ -44,6 +44,8 @@ For each story in the epic, in story order. Spawn each phase as its subagent (co
 
 **"Spawn" = a literal Agent tool call**, exactly as defined in story-flywheel's **Spawning a phase**: invoke the Agent tool with `subagent_type` set to the named agent (`lw-story-creator` / `lw-story-developer` / `lw-story-reviewer` / `lw-docs-sync`), `model: "opus"` only where a step says so, and a prompt carrying the story identifier/path plus any context the cold subagent needs. Never narrate the delegation and never do the phase's work in this orchestrating thread — if a step ends with no Agent call in the transcript, the step did not run. Inline execution is legal only in the documented fallback when subagents are unavailable.
 
+The same paragraph's **non-return rule** applies here without modification: a report missing its required fields (or standing in with narration like "I'll wait for it to finish") means the phase hasn't returned — resume the subagent via SendMessage, don't advance. Same for wait loops — key on a PID or artifact, never "no matching process anywhere."
+
 ### GitHub tracking is orchestrator-owned (do not delegate-and-hope)
 
 A cold subagent does **not** reliably run the issue transitions, and nothing verifies it did — that is how issues drift (stuck on `ready-for-dev`, a stale `backlog` left beside a new label, dev'd stories never closed). epic-flywheel already gates every commit, so it knows the exact moment each phase ends and **drives the transition itself** using the deterministic script:

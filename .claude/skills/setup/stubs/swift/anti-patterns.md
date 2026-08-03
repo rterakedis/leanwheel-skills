@@ -327,3 +327,31 @@ Also rejections: force-unwrap / `try!` outside genuinely unrecoverable paths, an
 **Symptom (images):** `UIImage(data:)` / decode / downsample inline in `body` or a row view.
 
 **Why it's wrong:** Decoding happens on the main actor mid-scroll and drops frames. Decode and downsample off the main actor (`@concurrent` helper — see concurrency.md), cache the result, and hand views a ready-to-render image.
+
+---
+
+## 16. One `@FocusState` Bool Shared Across Fields
+
+**Symptom:** Tapping from one field to another drops focus entirely instead of moving it.
+
+**Why it's wrong:** A single Bool cannot express *which* field holds focus — the outgoing field's `false` write races the incoming field's `true`.
+
+```swift
+// ❌ One Bool, many fields — focus collapses on field-to-field taps
+@FocusState private var isFocused: Bool
+
+// ✅ Enum of fields
+enum Field { case customer, amount, notes }
+@FocusState private var focus: Field?
+TextField("Customer", text: $customer).focused($focus, equals: .customer)
+```
+
+---
+
+## 17. `confirmationDialog` for Destructive Confirmations
+
+**Symptom:** The dialog's `role: .cancel` button can't be found by identifier or label in an XCUITest — a hierarchy dump while presented showed it may not be rendered at all (only the destructive button existed).
+
+**Why it's wrong:** Twice over — a destructive prompt whose only visible action is destructive is a UX bug, and the flow driving it is undrivable.
+
+✅ Use `.alert` for destructive confirmations: both buttons render and are queryable.

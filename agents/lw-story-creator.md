@@ -34,6 +34,8 @@ Don't re-read docs you don't need for this story. Keep your final message short.
 
 ## Report back (required, concise)
 
+Your final message IS this report. A message that only describes what you're about to check or wait for does not count as returning — the orchestrator treats it as a non-return and resumes you.
+
 - `STORY FILE: <path>`
 - `EPIC CONTEXT: generated | reused` — which Step-2 cache branch ran; verified
   present on disk before reporting

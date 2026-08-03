@@ -32,6 +32,8 @@ Don't restate the whole diff. Cite findings as `file:line`. Keep the final repor
 
 ## Report back (required, concise)
 
+Your final message IS this report — including after a long build/test run during Verify green. Narrating that you'll wait for a background process to notify you does not count as returning; poll it yourself (by PID or artifact, not "no matching process anywhere") and report the real result, or the orchestrator treats the message as a non-return and resumes you.
+
 - `RUBRIC: correctness <P/F>, edge-cases <P/F>, ac-coverage <P/F>, design <P/F|n/a>, security <P/F|n/a> → GATE <PASS/FAIL>`
 - `VERIFY GREEN: green | red(<reason>) | n/a`
 - `FINDINGS: <patched> patched, <deferred> deferred, <decisions> need input`

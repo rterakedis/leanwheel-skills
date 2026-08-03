@@ -12,9 +12,9 @@ While the product is still shifting shape, invest where tests survive pivots:
 
 1. **Unit tests on logic** (services, state machines, validation — see `testing.md`) — grow continuously; they survive UI rewrites.
 2. **Seeds + routes + `/design-verify`** — how you *look at* the app cheaply; no test code to maintain.
-3. **Flows: 2–4 while iterating** — app launches, main navigation works, one create-happy-path. Expand at epic boundaries via `/e2e-tests` (converting the stabilized manual test plan), never speculatively. Definition and conventions in `simulator.md`.
+3. **Flows: grow by tier, not deferred to the epic boundary** — the 2–4-flow smoke suite (launches, main navigation, one create-happy-path), plus **one write-flow per screen once its data contract lands**. Detailed per-field assertions wait for the epic's manual test pass (`/e2e-tests` converts the stabilized plan). The tier ladder — and the failure mode it exists to prevent — lives in `simulator.md` (*Flows ▸ When to add one*).
 
-A big UI test suite over a UI you're about to redesign is negative-value work. Seeds and routes are the opposite: they get *more* valuable with every pivot, because reaching any app state stays free.
+A big *assertion-heavy* suite over a UI you're about to redesign is negative-value work — but identifier-driven flows couple to structure and semantics, not appearance, so re-theming/spacing/motion churn doesn't count against them (see `simulator.md`). Seeds and routes get *more* valuable with every pivot, because reaching any app state stays free.
 
 ---
 
@@ -221,6 +221,8 @@ app.buttons["Add Trip"].tap()
 
 Convention: `{feature}-{element}-{role}`, kebab-case. These double as the semantic locators `/e2e-tests` requires.
 
+**The floor is never zero.** The same story that adds a screen ships its route **and one landmark identifier on the screen's root** (~2 lines) — that alone makes the screen dumpable and capturable by `sim.sh dump`/`shots`. "We'll add identifiers when a flow needs them" combined with "flows wait for stability" means a whole epic can ship with zero drivable surface; the flow tier ladder in `simulator.md` exists to prevent exactly that.
+
 ---
 
 ## Deep-Link Routes — every screen is reachable by name
@@ -264,7 +266,7 @@ because on iOS 26 the external delivery is unavailable to a machine.
 
 ## UI Tests — the first four are the smoke suite
 
-The foundation story ships **one** XCUITest target, the shared `launch(seed:route:)` / `step(_:_:)` helpers, and 2–4 flows: app launches seeded, main navigation works, one empty state, one create-happy-path. That's the whole UI suite until the design stabilizes.
+The foundation story ships **one** XCUITest target, the shared `launch(seed:route:)` / `step(_:_:)` helpers, and 2–4 flows: app launches seeded, main navigation works, one empty state, one create-happy-path. That's the floor, not the ceiling — each screen adds one **write-flow** when its data-contract ACs land (Tier 2 in `simulator.md`'s ladder); detailed assertions wait for the manual test pass.
 
 Full conventions — file layout, naming, the screenshot-per-step helper, and when a flow may be added — live in `simulator.md`. Two rules matter enough to repeat here:
 
@@ -279,5 +281,5 @@ Full conventions — file layout, naming, the screenshot-per-step helper, and wh
 
 - A story that **adds or changes a persisted model entity** updates `SeedScenario` (at minimum `.typical` and `.edge`) in the same story. The compile-time break from `samples` makes skipping this hard — don't silence it with empty arrays.
 - A story that **adds user-facing views** assigns accessibility identifiers as the views are written, using the identifiers its Design Contract already names.
-- A story that **adds a screen** adds that screen's deep-link route in the same story — otherwise the screen is unreachable by `/design-verify` and by every future flow.
-- New screens do **not** automatically get flows mid-epic — they get manual Testing Plan entries, then `/e2e-tests` converts the stable ones at the epic boundary.
+- A story that **adds a screen** adds that screen's deep-link route **and a landmark identifier on its root** in the same story — otherwise the screen is unreachable by `/design-verify`, undumpable, and invisible to every future flow.
+- A story that **ships a screen's mutations** (its read/write ACs) adds one **write-flow** in the same story — even while layout is in flux. Detailed per-field flows still wait for the epic boundary; the tiering is in `simulator.md`.
