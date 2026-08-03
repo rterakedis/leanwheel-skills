@@ -41,7 +41,7 @@ echo "== done =="
 
 | # | Condition | Phase | NEXT |
 |---|---|---|---|
-| 1 | No CLAUDE.md/AGENTS.md scaffold | Not initialized | `/setup` (then `/github-tracking setup`) |
+| 1 | No CLAUDE.md/AGENTS.md scaffold | Not initialized | `/setup` (then `/github-tracking setup`) · just one task in this folder, no project intended → `/dev-single-goal` |
 | 2 | Scaffold + source tree present, no `docs/prd.md` | Brownfield, undocumented | `/discover` |
 | 3 | No prd, no brief | Idea | Ask once: idea formed? Yes → `/prd` · fuzzy → `/product-brief` |
 | 4 | Brief, no prd | Idea → Plan | `/prd` — optional first: `/forge-idea` if no `forged-idea-*.md` (pressure-test) |

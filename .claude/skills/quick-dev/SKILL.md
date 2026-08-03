@@ -7,7 +7,7 @@ description: Implement a one-off feature, bugfix, or change without the full epi
 
 **Goal:** Implement one-off features/bugfixes that follow architecture and keep docs current.
 
-**When:** Post-MVP one-offs where epic/story is overhead. Use full flywheel for large feature areas.
+**When:** Post-MVP one-offs where epic/story is overhead. Use full flywheel for large feature areas. For a one-off in a folder with **no** leanwheel docs (`docs/prd.md`/`docs/architecture.md` absent), use `/dev-single-goal` instead — this skill requires both.
 
 ## Activation
 
