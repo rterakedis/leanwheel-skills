@@ -73,7 +73,7 @@ before/after word estimate, then ask what to apply: **all / structure only /
 prose only / by number / none**. Apply accepted A+B edits directly.
 
 Pass C findings are **not** edits — a material content gap in a planning doc
-routes to `/prd update`, `/architecture`, or `/correct-course`; never silently
+routes to `/spec` (prd or architecture update) or `/correct-course`; never silently
 rewrite what the doc *means* under the banner of editing.
 
 Close with: `DOC REVIEW: {file} — {before} → {after} words ({pct}%), {n}
@@ -81,6 +81,6 @@ prose fixes, {m} adversarial findings ({routed where})`.
 
 ## When to run
 
-After `/prd` or `/architecture` create and before `/check-readiness`; any time
-a doc feels bloated; after several `/prd update` cycles have accreted
+After a `/spec` render and before `/check-readiness`; any time
+a doc feels bloated; after several `/spec` prd-update cycles have accreted
 sediment. Works on any markdown doc, including this repo's own skill files.

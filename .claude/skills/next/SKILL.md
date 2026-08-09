@@ -7,7 +7,7 @@ description: Detect where the project is in the leanwheel lifecycle and recommen
 
 **Goal:** Kill "which skill, in what order?" — route to exactly one next command from deterministic project state.
 
-**Token posture:** near-zero. Existence checks + frontmatter greps only. **Never read planning-doc contents** — the whole point is routing without loading `prd.md`/`architecture.md` into this session.
+**Token posture:** near-zero. Existence checks + frontmatter greps only. **Never read planning-doc contents** — the whole point is routing without loading `prd.md`/`architecture.md`/`decisions.md` into this session.
 
 ## Step 1 — Detect (one bash block, zero model reads)
 
@@ -17,7 +17,9 @@ echo "== scaffold =="
 for f in CLAUDE.md AGENTS.md .leanwheel/manifest.json; do [ -e "$f" ] && echo "HAVE $f"; done
 [ -f .leanwheel/manifest.json ] && grep -o '"surfaces":[^}]*}' .leanwheel/manifest.json
 echo "== planning docs =="
-for f in docs/project/brief.md docs/prd.md docs/ux/DESIGN.md docs/ux/EXPERIENCE.md docs/architecture.md docs/epics.md docs/deferred-items.md docs/project/forged-idea-*.md; do [ -e "$f" ] && echo "HAVE $f"; done
+for f in docs/project/decisions.md docs/project/brief.md docs/prd.md docs/ux/DESIGN.md docs/ux/EXPERIENCE.md docs/architecture.md docs/epics.md docs/deferred-items.md; do [ -e "$f" ] && echo "HAVE $f"; done
+echo "== decision log frontier =="
+[ -f docs/project/decisions.md ] && awk '/^## Not yet specified/{f=1;next}/^## /{f=0} f&&NF' docs/project/decisions.md | grep -vq '^<' && echo "OPEN QUESTIONS" || echo "frontier clear or no log"
 echo "== gates =="
 grep -m1 'readiness-check' docs/epics.md 2>/dev/null || echo "no readiness stamp"
 grep -o 'retro: epic [0-9]*' docs/epics.md 2>/dev/null || echo "no retro stamps"
@@ -35,7 +37,7 @@ find docs/setup/swift docs/setup/web -name '*.md' -mtime +90 2>/dev/null | head 
 echo "== done =="
 ```
 
-(The `null_glob`/`nullglob` line makes unmatched globs expand to nothing in both zsh and bash; the `/dev/null` arg keeps `grep` from reading stdin when no story files exist.)
+(The `null_glob`/`nullglob` line makes unmatched globs expand to nothing in both zsh and bash; the `/dev/null` arg keeps `grep` from reading stdin when no story files exist. The frontier probe reports OPEN QUESTIONS only when the `## Not yet specified` section has real content, ignoring the template's `<...>` placeholder.)
 
 ## Step 2 — Classify (first matching row wins)
 
@@ -43,22 +45,23 @@ echo "== done =="
 |---|---|---|---|
 | 1 | No CLAUDE.md/AGENTS.md scaffold | Not initialized | `/setup` (then `/github-tracking setup`) · just one task in this folder, no project intended → `/dev-single-goal` |
 | 2 | Scaffold + source tree present, no `docs/prd.md` | Brownfield, undocumented | `/discover` |
-| 3 | No prd, no brief | Idea | Ask once: idea formed? Yes → `/prd` · fuzzy → `/product-brief` |
-| 4 | Brief, no prd | Idea → Plan | `/prd` — optional first: `/forge-idea` if no `forged-idea-*.md` (pressure-test) |
-| 5 | Prd; manifest surfaces show UI (apple/web app/SSG); no `docs/ux/DESIGN.md` | Plan | `/ux` (no manifest → ask once: does this ship UI?) |
-| 6 | No `docs/architecture.md` | Plan | `/architecture` |
-| 7 | No `docs/epics.md`, or a freshly cut one (0 epics) | Plan | `/epics` — optional first: `/prd update` for the new phase's scope |
-| 8 | Epics, no readiness stamp | Gate | `/check-readiness` — optional first: `/doc-review` on prd/architecture |
-| 9 | Any story `status: review` | Dev loop | `/code-review` on that story |
-| 10 | Any story `status: in-progress` | Dev loop | `/dev-story` to resume it (or resume `/epic-flywheel {N}` if the epic was mid-flywheel) |
-| 11 | Current epic has unbuilt stories (`ready-for-dev` in files, or in `docs/epics.md` with no story file) | Dev loop | `/epic-flywheel {N}` (default) · hands-on alternative: `/story-flywheel` or `/create-story` |
-| 12 | Epic's stories all done; `epic-{N}-test-plan.md` has inline findings > 0 | Boundary | `/harvest-findings {N}` |
-| 13 | Test plan exists, findings = 0, no retro stamp for {N} | Boundary | Ask once: manual test pass done? No → run the test plan (optional: `/e2e-tests` to automate it) · Yes → `/retrospective` |
-| 14 | Retro stamped for {N}, later epics remain | Next epic | `/epic-flywheel {N+1}` — in a **fresh session** |
-| 15 | All epics done **and** every epic retro-stamped | Release boundary | Ask once: new phase, or one-offs? New phase → `/epic-archive cut-release {version}` first, then `/prd update` → `/epics` · one-offs → `/quick-dev`, no cut needed |
-| 16 | All epics done | Post-MVP | `/quick-dev` for one-offs · bigger feature area → `/prd update` then `/epics` · new product idea → `/product-brief` |
+| 3 | No prd, no `docs/project/decisions.md` | Idea | `/ideate` — vague or formed, the loop scales; it seeds from `brief.md` or other legacy inputs if present |
+| 4 | Decision log shows OPEN QUESTIONS; no prd | Ideating | `/ideate` (resume the loop) |
+| 5 | Decision log frontier clear (or legacy brief only); no prd | Plan | `/spec` (prd) |
+| 6 | Prd; manifest surfaces show UI (apple/web app/SSG); no `docs/ux/DESIGN.md` | Plan | `/spec` (ux) (no manifest → ask once: does this ship UI?) |
+| 7 | No `docs/architecture.md` | Plan | `/spec` (architecture) |
+| 8 | No `docs/epics.md`, or a freshly cut one (0 epics) | Plan | `/epics` — optional first: `/spec` prd update for the new phase's scope |
+| 9 | Epics, no readiness stamp | Gate | `/check-readiness` — optional first: `/doc-review` on prd/architecture |
+| 10 | Any story `status: review` | Dev loop | `/code-review` on that story |
+| 11 | Any story `status: in-progress` | Dev loop | `/dev-story` to resume it (or resume `/epic-flywheel {N}` if the epic was mid-flywheel) |
+| 12 | Current epic has unbuilt stories (`ready-for-dev` in files, or in `docs/epics.md` with no story file) | Dev loop | `/epic-flywheel {N}` (default) · hands-on alternative: `/story-flywheel` or `/create-story` |
+| 13 | Epic's stories all done; `epic-{N}-test-plan.md` has inline findings > 0 | Boundary | `/harvest-findings {N}` |
+| 14 | Test plan exists, findings = 0, no retro stamp for {N} | Boundary | Ask once: manual test pass done? No → run the test plan (optional: `/e2e-tests` to automate it) · Yes → `/retrospective` |
+| 15 | Retro stamped for {N}, later epics remain | Next epic | `/epic-flywheel {N+1}` — in a **fresh session** |
+| 16 | All epics done **and** every epic retro-stamped | Release boundary | Ask once: new phase, or one-offs? New phase → `/epic-archive cut-release {version}` first, then `/spec` prd update → `/epics` · one-offs → `/quick-dev`, no cut needed |
+| 17 | All epics done | Post-MVP | `/quick-dev` for one-offs · bigger feature area → `/spec` prd update then `/epics` · new product idea → `/ideate` |
 
-To resolve rows 11–14, `docs/epics.md`'s story table may be skimmed for epic/story numbering only — never the prose.
+To resolve rows 12–15, `docs/epics.md`'s story table may be skimmed for epic/story numbering only — never the prose.
 
 **Tickler (append max one line, only on signal):** guidance-age hit → suggest `/refresh-swift` / `/refresh-web`.
 
@@ -67,13 +70,13 @@ To resolve rows 11–14, `docs/epics.md`'s story table may be skimmed for epic/s
 ```
 LEANWHEEL NAVIGATOR
 Phase: {name}
-Done:  {compact artifact checklist, e.g. brief ✓ prd ✓ ux ✓ arch — epics —}
+Done:  {compact artifact checklist, e.g. log ✓ prd ✓ ux ✓ arch — epics —}
 NEXT → {one command}
 Why:   {one sentence}
 Optional: {0–2 branches, one line each}
 ```
 
-Then offer: run `{command}` now, or start a fresh session and run it there. Recommend the fresh session whenever the next phase is model-heavy (prd, architecture, epics, any flywheel) and this session already carries significant context — phase isolation is the core token discipline.
+Then offer: run `{command}` now, or start a fresh session and run it there. Recommend the fresh session whenever the next phase is model-heavy (ideate, spec, epics, any flywheel) and this session already carries significant context — phase isolation is the core token discipline.
 
 ## Step 4 — Act
 
@@ -84,6 +87,6 @@ Then offer: run `{command}` now, or start a fresh session and run it there. Reco
 ## Rules
 
 - Exactly **one** NEXT. Max two optionals. Never dump the full lifecycle map.
-- Ask at most **one** question per run, only when a row genuinely can't be resolved from detection (idea formed? ships UI? manual test done?). If the answer is durable (UI surfaces), record it into `.leanwheel/manifest.json` `surfaces` when the file exists.
+- Ask at most **one** question per run, only when a row genuinely can't be resolved from detection (ships UI? manual test done?). If the answer is durable (UI surfaces), record it into `.leanwheel/manifest.json` `surfaces` when the file exists.
 - Never re-run a completed phase; never route destructively. This skill only detects and routes.
 - Inconsistent state (e.g., story files but no `docs/epics.md`) → say what's inconsistent and route to the repair (`/setup` idempotent re-run, or name the missing artifact) instead of guessing forward.

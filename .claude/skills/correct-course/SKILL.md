@@ -25,6 +25,12 @@ Store trigger. Read `docs/epics.md` for status.
 
 ## Phase 1 — Triage the Trigger
 
+If `docs/project/decisions.md` exists, record the trigger there first (**PARK** from
+`skills/decision-log/SKILL.md`), then run the `/ideate` loop scoped to it — resolve only the
+questions this trigger raises, recording each impact decision with `source: /correct-course`.
+The recorded decisions are the triage output. (No decision log yet → assess inline as below;
+consider creating the log if the change is direction-setting.)
+
 Assess impact across: PRD (what/who), architecture (tech/patterns), epics (ACs/tasks/ordering), active story, done stories.
 
 Note what changes and why for each affected artifact.
@@ -76,4 +82,4 @@ Bug in **done** story: `/correct-course` (add remediation story forward).
 Bug in **active** story: inline auto-patch.
 Bug needs investigation: `/investigate` → `/correct-course`.
 Small post-MVP: `/quick-dev`.
-Requirements changed: `/correct-course` (may trigger `/prd` update).
+Requirements changed: `/correct-course` (may trigger `/spec` prd update).

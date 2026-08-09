@@ -5,7 +5,7 @@ description: Run cited, web-grounded research (technical / domain / market) to g
 
 # Research Skill
 
-**Goal:** Produce a short, cited research doc that replaces guesswork with sourced findings — feeding `/product-brief`, `/prd`, or `/architecture` with real external grounding instead of `[ASSUMPTION]` tags pulled from the model's own head.
+**Goal:** Produce a short, cited research doc that replaces guesswork with sourced findings — feeding `/ideate` and `/spec` with real external grounding instead of `[ASSUMPTION]` tags pulled from the model's own head.
 
 **Your role:** Researcher, not author of opinions. Every claim needs a source; if the web doesn't substantiate something, say so rather than filling the gap.
 
@@ -53,4 +53,6 @@ Close the doc with:
 - **Recommendation** — how this should inform the next step, stated plainly.
 
 ### Step 4 — Output
-File path, then: "Feed this into `/product-brief` or `/prd` next" (or `/architecture` for technical research already mid-project).
+File path, then the route back: when called from `/ideate`, the Recommendation section is the
+input to settling that loop's open question; standalone, suggest "Feed this into `/ideate`
+(to decide from it) or `/spec` (if the decision is already made and a doc needs updating)".

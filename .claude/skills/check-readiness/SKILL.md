@@ -16,7 +16,8 @@ Read all three planning documents fully:
 2. `docs/architecture.md`
 3. `docs/epics.md`
 
-Also read `docs/ux/DESIGN.md` and `docs/ux/EXPERIENCE.md` if present (needed for Check 9).
+Also read `docs/ux/DESIGN.md` and `docs/ux/EXPERIENCE.md` if present (needed for Check 9),
+and `docs/project/decisions.md` if present (needed for Check 11).
 
 **Collapsed epics are shipped — do not re-validate them.** An epic whose stories render as a summary table (id · title · status · spec link) instead of `### Story` bodies is closed. This skill gates *upcoming* work, so the story-body checks — 2, 3, 4, 6, 9, 10 — apply only to epics with live story bodies; a collapsed epic has no ACs to grade and its work is already built. Checks that still span closed epics: **1** and **5** count a collapsed row as coverage and read the untouched `## FR Coverage Map` plus the surviving per-epic **FRs covered:** lines, so FR traceability stays whole across shipped epics; **7** treats a closed epic as a *satisfied* provider — a live story depending on its artifacts is resolved, not a blocker; **8**'s Epic 1 testability-foundation requirement is met by a `done` row for that story in a collapsed Epic 1. Open a linked story file only if one specific dependency is genuinely unclear. Never read `docs/epics/releases/` — archived releases are out of scope.
 
@@ -25,6 +26,10 @@ Also read `docs/ux/DESIGN.md` and `docs/ux/EXPERIENCE.md` if present (needed for
 ## Check 1 — FR Coverage
 
 Each FR in PRD in ≥1 story. Flag uncovered (missing story or needs Non-Goals doc).
+
+If a decision log exists, also spot-check that load-bearing PRD sections trace to a logged
+decision rather than an orphan `[ASSUMPTION]` — a scope-defining claim backed by neither is
+a warning.
 
 ---
 
@@ -104,7 +109,7 @@ If `CLAUDE.md` doesn't exist, note this as a warning but do not create it — th
 
 ## Check 9 — UX Alignment (conditional)
 
-Run only if `docs/ux/DESIGN.md` or `docs/ux/EXPERIENCE.md` exists. If the product has user-visible UI but neither file exists, emit a warning: "UI stories planned with no design contract — run `/ux` or accept ad-hoc design."
+Run only if `docs/ux/DESIGN.md` or `docs/ux/EXPERIENCE.md` exists. If the product has user-visible UI but neither file exists, emit a warning: "UI stories planned with no design contract — run `/spec` (ux) or accept ad-hoc design."
 
 - **Design status:** DESIGN.md and EXPERIENCE.md are `status: final` before the first UI story is implemented. Draft status = warning; unresolved `[OPEN]` HIG items = blocker for the stories they affect.
 - **Surface coverage:** every story that builds user-visible UI maps to a named surface/flow in EXPERIENCE.md. A UI story with no EXPERIENCE.md coverage is a **blocker** — `/create-story` will have nothing to extract into the Design Contract, and the dev session will improvise.
@@ -122,15 +127,28 @@ Classify each cause:
 - **Unaddressed + material** — **blocker**: call **LOG-AND-SCHEDULE** for a mitigation story, or record an explicit user-confirmed "accepted risk" note in the PRD.
 - **Unaddressed + speculative** — warning: record it, don't block.
 
-This is plan-level red-teaming: `/forge-idea` pressure-tests the *idea*; this check pressure-tests the *plan*. It needs no extra reading — the three docs are already in context from Activation.
+This is plan-level red-teaming: `/ideate`'s pressure mode tests the *idea*; this check pressure-tests the *plan*. It needs no extra reading — the three docs are already in context from Activation.
+
+---
+
+## Check 11 — Open Decisions (conditional)
+
+Run only if `docs/project/decisions.md` exists. For each line in its `## Not yet specified`
+section and each `[OPEN: …]` tag in the planning docs, ask: would the answer change any story
+in the epics being gated?
+
+- **Yes** → **blocker**: resolve it via a scoped `/ideate` pass before `/create-story`, or
+  record an explicit user-confirmed "proceeding despite open question" note in the log.
+- **No** (post-MVP, optional flows, later epics) → warning: leave it parked, note which epic
+  it must be resolved before.
 
 ---
 
 ## Output
 
-Readiness report: ten checks, blockers (fix before `/create-story`), warnings (fix before epic).
+Readiness report: eleven checks, blockers (fix before `/create-story`), warnings (fix before epic).
 
-Blockers: uncovered FRs, circular deps, architecture contradictions, cross-epic runtime blockers, UI stories without design coverage, empty load-bearing tokens, unaddressed material pre-mortem causes. Call **LOG-AND-SCHEDULE** for remediation stories.
+Blockers: uncovered FRs, circular deps, architecture contradictions, cross-epic runtime blockers, UI stories without design coverage, empty load-bearing tokens, unaddressed material pre-mortem causes, open decisions that would change gated stories. Call **LOG-AND-SCHEDULE** for remediation stories.
 Warnings: weak ACs, scope overlap, missing security ACs, cross-epic runtime warnings, draft-status design specs, missing state coverage, speculative pre-mortem causes. Surface to user.
 Testing targets written to `CLAUDE.md` Conventions section as part of this check.
 

@@ -5,7 +5,7 @@
 **Navigator**
 | Invocation | What it does |
 |------------|-------------|
-| `/next` | The answer to "what do I run now?" at any point from empty folder to post-MVP. Detects project state deterministically (file existence + story-frontmatter greps — never reads planning-doc contents, so it's near-zero-token) and recommends exactly one next command with at most two optional branches, then offers to run it. Routes on the readiness stamp written by `/check-readiness` and the retro stamps written by `/retrospective`. |
+| `/next` | The answer to "what do I run now?" at any point from empty folder to post-MVP. Detects project state deterministically (file existence + story-frontmatter greps — never reads planning-doc contents, so it's near-zero-token) and recommends exactly one next command with at most two optional branches, then offers to run it. Routes on the readiness stamp written by `/check-readiness` and the retro stamps written by `/retrospective`; planning rows route to `/ideate` (no docs yet, or the decision log has open questions) and `/spec` (log settled but docs missing/stale). |
 
 **Project Initialization**
 | Invocation | What it does |
@@ -17,23 +17,24 @@
 | `/github-tracking backfill` | Retroactively create GitHub issues for stories written before tracking was configured |
 | `/upgrade-project` | Detection-based sync for projects scaffolded by older versions of leanwheel-skills. Scans for missing hooks, stubs, evals/metrics dirs, and CLAUDE.md sections; classifies each as ADD / REFRESH / CONFLICT / OK; shows a plan table and waits for confirmation before applying anything. CONFLICT = locally edited file — left untouched, flagged for manual merge. Writes `.leanwheel/manifest.json` for future runs. Run whenever you pull new leanwheel-skills changes. |
 
-**Pre-Planning** *(optional — for when the idea isn't formed yet)*
+**Ideation** *(the decision loop — planning progress lives in `docs/project/decisions.md`, not in doc completeness)*
 | Invocation | What it does |
 |------------|-------------|
-| `/product-brief` | Two motions in one skill: **diverge** (brainstorm, only if the user has no formed idea yet — stance choice, 3-4 techniques, explicit Converge phase) then **distill** (write `docs/project/brief.md`, Fast/Coaching path, `[ASSUMPTION]` tagging, overflow detail to `brief-addendum.md`). Ends by offering `/forge-idea` as a pressure-test before finalizing. Auto-detects create/update/validate like `/ux`. |
-| `/forge-idea` | Adversarially pressure-tests a formed idea via persona cross-examination (one outside-skeptic voice per turn — competitor, buyer, domain expert, support engineer) until it resolves to **Hardened** (writes `docs/project/forged-idea-{slug}.md`), **Killed** (idea didn't hold up, loops back to `/product-brief`'s diverge flow), or **Clearer** (no artifact). Invocable standalone or chained from the end of `/product-brief`. |
-| `/research` | Cited, web-grounded research — technical (stack/integration/architecture), domain (industry/regulatory/competitive), or market (customers/decision journey) — writes `docs/project/research/{type}-{slug}-{date}.md` to ground `/product-brief`, `/prd`, or `/architecture` in real external facts instead of model assumptions. |
+| `/ideate` | The recursive planning front door. Loop: load the decision log → surface the sharpest open question → resolve it (via the `elicit` engine, `/research`, or a cheap prototype) → record → repeat. Brainstorms when the idea is vague; pressure-tests (persona cross-examination via `elicit`'s Pressure mode) when it's formed. Exits when nothing decidable remains (→ `/spec`), when the idea is **Killed** (reason logged), or when the user parks the session — the log persists, so any later session resumes where this one left off. Replaces `/product-brief` and `/forge-idea`. |
+| `/decision-log` | View `docs/project/decisions.md` grouped as settled / open / out-of-scope, with a one-line "what's sharpest to resolve next" suggestion (read-only in this mode). The composable behind it owns the log format; `/ideate`, `/spec`, `/correct-course`, and `/retrospective` write through it. |
+| `elicit` | Composable questioning engine — one question at a time in dependency order, fuzzy terms never pass unexamined, concrete hypotheses over open prompts, persona pressure on demand ("attack this" / "defend this" / "switch roles"). Called by `/ideate`, `/spec`, and `/correct-course`; not normally invoked directly. |
+| `/research` | Cited, web-grounded research — technical (stack/integration/architecture), domain (industry/regulatory/competitive), or market (customers/decision journey) — writes `docs/project/research/{type}-{slug}-{date}.md` to ground `/ideate` and `/spec` decisions in real external facts instead of model assumptions. |
+| `/product-brief` | **Alias** — brainstorming/idea formation routes to `/ideate`; writing `docs/project/brief.md` routes to `/spec` (target `brief`). Kept for one release. |
+| `/forge-idea` | **Alias** → `/ideate` — the adversarial pressure-test now runs through `elicit`'s Pressure mode and records outcomes to the decision log instead of a `forged-idea-{slug}.md` file. Kept for one release. |
 
 **Planning**
 | Invocation | What it does |
 |------------|-------------|
-| `/prd` | Auto-detects intent: **create** (no PRD yet), **update** (PRD exists), or **validate** (critique only). On create, reads `docs/project/brief.md` if present and confirms it back instead of asking the user to describe the product cold. |
-| `/prd update` | Explicit update — reads `docs/project/` for upstream changes, then checks for in-progress/done stories and recommends `/correct-course` if any are affected |
-| `/prd validate` | Critique only — runs the PRD checklist and reports findings without modifying the file |
-| `/architecture` | Create or update `docs/architecture.md` — reads `docs/project/` for technical inputs |
-| `/ux` | Create, update, or validate UX design specs — produces `docs/ux/DESIGN.md` (visual identity: colors, typography, components) and `docs/ux/EXPERIENCE.md` (IA, behavior, states, interactions, accessibility, key flows). Primary surfaces: **responsive web apps**, **content sites / SSGs** (Astro · Hugo — typography-first tokens, content-model → layout mapping, performance budget with per-page JS justification), and **Apple platforms** (iOS · iPadOS · macOS via SwiftUI). Apple output includes a full HIG compliance checklist, SwiftUI component map, and multi-target layout cascade (iPhone → iPad → Mac). Android deferred as `[FUTURE: Android]`. Renders inline HTML mockups on demand to help visualize color and layout decisions. |
-| `/ux update` | Explicit update to existing spines — reads change signal, surfaces conflicts with prior decisions, re-triages HIG checklist items |
-| `/ux validate` | Critique only — runs the UX checklist across flow coverage, token completeness, component coverage, state coverage, Apple HIG compliance, and responsive breakpoints |
+| `/spec` | Renders, updates, or validates the planning documents **from the decision log** plus their templates — targets: `brief` (`docs/project/brief.md`), `prd` (`docs/prd.md`), `ux` (`docs/ux/DESIGN.md` + `EXPERIENCE.md`, incl. the platform presets: responsive web apps, content sites / SSGs, and Apple platforms with HIG checklist + multi-target cascade), `architecture` (`docs/architecture.md`). Detects **Create**/**Update**/**Validate** per target. Rendering is mostly mechanical — the thinking happened in `/ideate`; where a template section has no backing decision, `/spec` runs one bounded `elicit` pass or tags it `[OPEN: …]` into the log's Not-yet-specified. Templates, checklists, and UX presets live under the `spec/` skill directory. Replaces the create/update/validate flows of `/prd`, `/ux`, `/architecture`, and `/product-brief`'s distill flow. |
+| `/spec {target}` | Explicit target, e.g. `/spec prd`, `/spec architecture`, `/spec ux validate` |
+| `/prd` | **Alias** → `/spec` with target `prd`. Kept for one release. |
+| `/ux` | **Alias** → `/spec` with target `ux` — the platform presets moved to `spec/ux-presets.md`. Kept for one release. |
+| `/architecture` | **Alias** → `/spec` with target `architecture`. Kept for one release. |
 | `/discover` | Brownfield only: reverse-engineer existing codebase → `prd.md` + `architecture.md` + `CLAUDE.md` |
 | `/epics` | Break the PRD into epics and stories, create GitHub milestones |
 
@@ -41,7 +42,7 @@
 | Invocation | What it does |
 |------------|-------------|
 | `/doc-review` | Editorial review of a doc **as writing** (planning docs are re-read by the model every downstream session, so bloat is a recurring token cost). Three passes: **Structure** (purpose fit, CUT/MERGE/MOVE/CONDENSE recommendations with word estimates), **Prose** (minimal clarity fixes, three-column table), **Adversarial** (missing sections, unsupported claims, ambiguities a dev session would trip on, contradictions with sibling planning docs). Reader-type aware (`llm` for prd/architecture/epics/CLAUDE.md, `humans` for guides). Content is sacrosanct — applies accepted structure/prose edits only; substance gaps route to `/prd update` or `/correct-course`. Run after `/prd` or `/architecture`, before `/check-readiness`. |
-| `/check-readiness` | Validate PRD + architecture + epics are aligned — checks FR coverage, AC testability, story independence, architecture consistency, MVP scope drift, security coverage, cross-epic runtime dependencies, testing targets derived from architecture, UX alignment (UI stories must map to EXPERIENCE.md surfaces; design tokens ready before implementation), and a **pre-mortem** (assume the shipped project failed at month three; work backwards to specific causes in *this* plan; unaddressed material causes are blockers that get mitigation stories scheduled) |
+| `/check-readiness` | Validate PRD + architecture + epics are aligned — checks FR coverage, AC testability, story independence, architecture consistency, MVP scope drift, security coverage, cross-epic runtime dependencies, testing targets derived from architecture, UX alignment (UI stories must map to EXPERIENCE.md surfaces; design tokens ready before implementation), a **pre-mortem** (assume the shipped project failed at month three; work backwards to specific causes in *this* plan; unaddressed material causes are blockers that get mitigation stories scheduled), and **open decisions** (Check 11 — an `[OPEN]` decision-log question whose answer would change upcoming stories is a blocker, resolved via a scoped `/ideate` pass; one that wouldn't is a warning) |
 
 **Dev Flywheel**
 | Invocation | What it does |
@@ -74,7 +75,7 @@
 |------------|-------------|
 | `/investigate` | Start a new investigation — accepts a description, error message, stack trace, ticket ID, or file/module name |
 | `/investigate {slug}` | Resume an existing investigation from `docs/investigations/{slug}.md` |
-| `/correct-course` | Triggered by a known change — updates docs, schedules remediation stories forward, clears deferred items |
+| `/correct-course` | Triggered by a known change — Phase 1 appends the trigger to the decision log and runs a scoped `/ideate` loop until the impact decisions are made, then updates docs, schedules remediation stories forward, clears deferred items |
 | `/deferred` | Show the full `docs/deferred-items.md` log with status of each scheduled story. See [guide/deferred-items.md](deferred-items.md) for the full lifecycle (logging, scheduling, re-homing). |
 
 **Swift / Apple Platform**
@@ -100,6 +101,6 @@
 | Invocation | What it does |
 |------------|-------------|
 | `/status` | Show all epics and stories via GitHub milestones — epic progress, story status at a glance |
-| `/retrospective` | Facilitated **epic** retrospective (one per epic, not per sprint) — 7 questions scoped to the target epic's stories (including "what went well?" and a prior-retro conventions audit), updates `CLAUDE.md`, audits deferred items log for any unlogged `[Defer]` entries and `leanwheel:` in-code corner-cut markers, verifies scheduled items are in open work, writes `docs/epics/epic-{n}-retro-{date}.md` |
+| `/retrospective` | Facilitated **epic** retrospective (one per epic, not per sprint) — 7 questions scoped to the target epic's stories (including "what went well?" and a prior-retro conventions audit), updates `CLAUDE.md`, audits deferred items log for any unlogged `[Defer]` entries and `leanwheel:` in-code corner-cut markers, verifies scheduled items are in open work, writes `docs/epics/epic-{n}-retro-{date}.md`. Learnings that reverse or set a *direction* decision are also appended to `docs/project/decisions.md` (ordinary convention learnings keep their home in `CLAUDE.md`) |
 | `/retrospective epic {n}` | Explicit epic target, e.g. `/retrospective epic 2` — skip auto-detection |
 | `/epic-archive` | Composable size control for `docs/epics.md` (a file read in full 15–25 times over a project). **CONDENSE {N}** — called by `/retrospective` at epic close — collapses that epic's `status: done` story bodies to one summary-table row each (id · title · status · link to the story file) and folds fully-resolved post-test-findings blocks; non-`done` and unbuilt stories keep full entries, and the FR Coverage Map and Epic List are never touched. **CUT-RELEASE {version}** — explicit go-ahead only, all epics closed — moves the whole file to `docs/epics/releases/{version}-epics.md` and seeds a fresh one with a `## Shipped Releases` table; numbering stays **continuous** (the next phase starts at Epic 8 / FR-31, never resets, so milestone titles, story filenames, and deferred-item references keep resolving) and the readiness stamp is deliberately not carried forward, so `/next` routes the new phase to `/check-readiness`. Story files are never moved. Both ops idempotent. |

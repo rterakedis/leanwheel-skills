@@ -41,6 +41,20 @@ Treat the output as a worklist, not a patch — port the *idea* into the equival
 
 These skills have intentional divergence from upstream. Preserve these when syncing.
 
+### Planning consolidation (`ideate` / `spec` / `elicit` / `decision-log`) — structural divergence
+
+The planning surface no longer mirrors upstream's skill-per-document shape. Per
+[`guide/consolidation-map.md`](../../guide/consolidation-map.md): `product-brief`,
+`forge-idea`, `prd`, `ux`, and `architecture` are **thin aliases** (descriptions kept for
+triggering; bodies redirect) whose flows live in `ideate` (recursive decision loop, calls the
+`elicit` engine and `research`) and `spec` (renders brief/prd/ux/architecture from
+`docs/project/decisions.md`, owned by the `decision-log` composable). Templates, checklists,
+and the UX platform presets moved to `.claude/skills/spec/`. When syncing from upstream,
+port planning-skill ideas into `ideate`/`spec`/`elicit` — never resurrect the aliased flows.
+The decision-loop shape is credited to Matt Pocock's Wayfinder skill (idea-port, no file
+copies; nothing here is named "wayfinder" or "grill*" to avoid colliding with his skill
+names).
+
 ### `setup`
 Scaffold question 3 changed from a yes/no Apple platform question to a multi-select: "Which Apple platform(s)? (iOS / iPadOS / macOS / none)". Step 3b copies the 9 shared Swift stubs (incl. `testability.md` — seed scenarios, launch-argument contract, XCUITest smoke posture — plus `accessibility.md` and the self-gating `swiftdata.md`) unconditionally when any Apple platform is selected, then adds `ipados-specific.md` if iPadOS is selected and `macos-specific.md` if macOS is selected. Step 3a appends the guardrails block to CLAUDE.md (checks for `## Swift/SwiftUI Guardrails`, not the old `## Modern SwiftUI Patterns` heading).
 
