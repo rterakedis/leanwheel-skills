@@ -22,13 +22,13 @@ your-project/
 │       ├── log-activity.sh         ← streams tool-call events to docs/metrics/activity.jsonl
 │       └── README.md
 ├── docs/
-│   ├── project/           ← YOUR UPSTREAM INPUTS (read silently by /prd)
-│   │   ├── brief.md             ← from /product-brief — read by /prd Step 1
+│   ├── project/           ← YOUR UPSTREAM INPUTS + the decision log (read by /ideate and /spec)
+│   │   ├── decisions.md         ← decision ledger — written by /ideate, /spec, /correct-course, /retrospective (owned by decision-log)
+│   │   ├── brief.md             ← rendered by /spec (target: brief) from the decision log
 │   │   ├── brief-addendum.md    ← overflow detail that didn't fit the 1-2 page brief
-│   │   ├── forged-idea-{slug}.md ← Hardened output from /forge-idea
 │   │   └── research/            ← cited research docs from /research
 │   │       └── {type}-{slug}-{date}.md
-│   ├── prd.md             ← What we're building and why (generated from project/)
+│   ├── prd.md             ← What we're building and why (rendered by /spec from the decision log)
 │   ├── architecture.md    ← How we're building it (tech stack, patterns)
 │   ├── epics.md           ← Epic and story breakdown
 │   ├── deferred-items.md  ← Auto-managed deferred findings log
@@ -47,7 +47,7 @@ your-project/
 │   ├── investigations/    ← Case files from /investigate runs
 │   ├── specs/             ← Quick-dev specs (post-MVP one-off changes)
 │   │   └── {slug}.md
-│   ├── ux/                ← UX design specs (from /ux)
+│   ├── ux/                ← UX design specs (from /spec ux)
 │   │   ├── DESIGN.md      ← Visual identity (colors, typography, components)
 │   │   ├── EXPERIENCE.md  ← IA, behavior, states, interactions
 │   │   ├── components-built.md ← Reusable component inventory (auto-maintained by /code-review)

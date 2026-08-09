@@ -10,7 +10,7 @@ A lean, token-efficient set of Claude Code skills for structured AI-assisted sof
 
 A standalone skills library for [Claude Code](https://claude.ai/code) — a port and simplification of the [BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD) that separates planning from implementation and keeps each AI session focused on one well-scoped task.
 
-> **New to this?** BMAD is a way of using AI to build software in a structured, repeatable way. You write planning docs first, then AI helps you implement one small piece at a time. Each "skill" is a command you give Claude — like `/prd` to write requirements or `/dev-story` to write code.
+> **New to this?** BMAD is a way of using AI to build software in a structured, repeatable way. You write planning docs first, then AI helps you implement one small piece at a time. Each "skill" is a command you give Claude — like `/spec` to write planning docs or `/dev-story` to write code.
 
 It strips out the activation ceremony and customization overhead of the original BMAD Method while keeping the full planning flywheel (PRD → UX → Architecture → Epics → Stories → Dev → Review), and adds Swift/Apple + web platform guidance systems, autonomous epic/story flywheels with subagent delegation, and a living-documentation loop. See **[guide/features.md](guide/features.md)** for the complete feature list.
 
@@ -59,15 +59,19 @@ Everything else is either invoked for you by those three, or `/next` will route 
    /github-tracking setup
    ```
 
-4. **Write the planning docs, in order:**
+4. **Decide, then render the planning docs:**
 
    ```
-   /prd            → what you're building and why
-   /ux             → design specs (skip for pure backend)
-   /architecture   → tech stack and patterns
-   /epics          → break the PRD into epics and stories
+   /ideate          → work the idea into recorded decisions (brainstorm, pressure-test,
+                      resume across sessions — the log lives in docs/project/decisions.md)
+   /spec            → render the docs from those decisions: prd (what and why),
+                      ux (design specs — skip for pure backend), architecture (stack and patterns)
+   /epics           → break the PRD into epics and stories
    /check-readiness → validate everything lines up before coding
    ```
+
+   (The old `/prd`, `/ux`, `/architecture`, `/product-brief`, and `/forge-idea` commands
+   still work — they route into `/ideate` and `/spec`.)
 
 5. **Loop through stories until the epic is done:**
 
@@ -95,7 +99,7 @@ Everything else is either invoked for you by those three, or `/next` will route 
                                          (numbering stays continuous)
    ```
 
-   Then re-plan the new phase from step 4 (`/prd update` → `/epics` → `/check-readiness`).
+   Then re-plan the new phase from step 4 (`/ideate` if there's real fog, else `/spec` prd update → `/epics` → `/check-readiness`).
 
 Already have an existing codebase instead of starting fresh? Run `/discover` first to reverse-engineer it into `docs/prd.md` + `docs/architecture.md`, then continue from step 3. See **[guide/workflows.md](guide/workflows.md)** for the full greenfield/brownfield flowcharts, and **[guide/skills-reference.md](guide/skills-reference.md)** for every skill and sub-command.
 

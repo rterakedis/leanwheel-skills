@@ -50,6 +50,8 @@ Both systems grew — but not equally. The upstream v6 rewrite roughly **tripled
 
 Tokens loaded per full run of each skill (skill assets + ceremony; excludes project-doc reads, which are compared separately below).
 
+> The `prd`, `architecture`, and `ux` rows (here and in the project table below) were measured before those skills consolidated into `/ideate` + `/spec` (they remain as thin aliases); the numbers stand as the last measured comparison until the next recalculation measures `/spec` directly.
+
 | Skill | BMAD v6.10 | Leanwheel | Saved |
 |-------|-----------|-----------|-------|
 | Activation ceremony (every skill call) | ~1,000 | 0 | 1,000/call |

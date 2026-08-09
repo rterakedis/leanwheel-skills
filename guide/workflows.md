@@ -16,25 +16,21 @@ flowchart TD
 
     C --> IDEA
 
-    subgraph IDEA ["Idea Phase — optional, only if the idea isn't formed yet"]
-        PB["/product-brief\nBrainstorm (if needed) then distill\ninto docs/project/brief.md"]
-        PB -.->|"optional pressure-test"| FI["/forge-idea\nAdversarially stress-test the idea\nHardened / Killed / Clearer"]
-        FI -.->|"Hardened, no changes"| PB
-        FI -.->|"Killed"| PB
-        RS["/research\nCited web research —\ntechnical / domain / market"]
+    subgraph IDEA ["Ideate Phase — loop until the way is clear"]
+        PB["/ideate\nRecursive decision loop —\nbrainstorm, pressure-test, resolve\nRecords to docs/project/decisions.md"]
+        PB -.->|"open question\nneeds facts"| RS["/research\nCited web research —\ntechnical / domain / market"]
         RS -.-> PB
+        PB -->|"still open questions?\nkeep looping — the log persists\nacross sessions"| PB
     end
 
-    IDEA --> D
+    IDEA -->|"nothing left to decide"| D
 
-    subgraph PLAN ["Planning Phase — do this before writing any code"]
-        D["/prd\nWrite the Product Requirements Doc\nReads docs/project/brief.md if present"]
-        D --> DU["/ux\nWrite UX design specs\nDESIGN.md + EXPERIENCE.md\n(optional — skip for pure backend)"]
-        DU --> E["/architecture\nWrite the Architecture Doc\nWhat tech stack, patterns, and structure?"]
-        E --> F["/epics\nBreak the PRD into Epics and Stories\nCreates GitHub milestones automatically"]
+    subgraph PLAN ["Spec Phase — render the docs before writing any code"]
+        D["/spec\nRender the planning docs from the decision log —\nbrief / PRD / UX / architecture, as needed\n(UX optional — skip for pure backend)"]
+        D --> F["/epics\nBreak the PRD into Epics and Stories\nCreates GitHub milestones automatically"]
         F -.->|"optional editorial pass"| DR["/doc-review\nTighten PRD / architecture as writing\nCuts recurring re-read cost"]
         DR -.-> FR
-        F --> FR["/check-readiness\nValidate FR coverage, AC quality,\narchitecture alignment + pre-mortem"]
+        F --> FR["/check-readiness\nValidate FR coverage, AC quality,\narchitecture alignment, pre-mortem\n+ open decision-log questions"]
     end
 
     FR --> G
@@ -57,7 +53,7 @@ flowchart TD
 
     J -->|"More epics\nin this phase"| G
     J -->|"All epics closed —\nnew phase starting"| RC["/epic-archive cut-release\nArchive docs/epics.md into docs/epics/releases/\nSeed a fresh one — numbering stays continuous"]
-    RC -->|"re-plan the new phase"| D
+    RC -->|"re-plan the new phase"| PB
 
     style ONCE fill:#e8f4f8,stroke:#2196F3
     style IDEA fill:#f3e8fc,stroke:#9C27B0
@@ -92,10 +88,10 @@ flowchart TD
     D1 & D2 & D3 --> E
 
     subgraph PLAN ["Planning Phase — decide what to build next"]
-        E["/ux\nWrite UX design specs\nDESIGN.md + EXPERIENCE.md\n(optional — skip for pure backend)"]
+        E["/spec ux\nWrite UX design specs\nDESIGN.md + EXPERIENCE.md\n(optional — skip for pure backend)"]
         E -.->|"optional: safety net first"| BT["/e2e-tests\nBackfill automated tests over\nexisting features before changing them\nRegisters zero-token eval cases"]
         E --> EA["/epics\nBreak new work into Epics and Stories\nBuilds on top of the discovered docs\nCreates GitHub milestones"]
-        EA --> ER["/check-readiness\nValidate FR coverage, AC quality,\narchitecture alignment + pre-mortem"]
+        EA --> ER["/check-readiness\nValidate FR coverage, AC quality,\narchitecture alignment, pre-mortem\n+ open decision-log questions"]
     end
 
     ER --> F
