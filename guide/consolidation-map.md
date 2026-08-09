@@ -51,10 +51,10 @@ composable. Sections:
 <one or two lines: what this planning effort is finding its way to>
 
 ## Decisions
-- {date} — {decision, one line} — why: {reason}      <!-- append-only -->
+- {date} — {decision, one line} — why: {reason} — source: {/skill}   <!-- append-only -->
 
 ## Rejected
-- {date} — {what was considered and dropped} — why
+- {date} — {what was considered and dropped} — why — source: {/skill}
 
 ## Not yet specified
 <questions you can tell are coming but can't phrase sharply yet — the frontier>
@@ -69,7 +69,31 @@ gets a home instead of a fabricated placeholder. The log is what makes planning 
 across sessions: any session reloads it and continues the loop; nothing depends on
 conversation memory.
 
-### New composable engine: `grill`
+**One ledger for the whole project lifecycle, not just the pre-PRD phase.** Every skill that
+makes or reverses a direction-setting decision appends here, with a `source:` attribution.
+Writers and non-writers:
+
+| Skill | Writes to the log? | What |
+|---|---|---|
+| `/ideate` | Yes — primary writer | Every resolved question; kills; scope rulings |
+| `/spec` | Yes | Decisions settled during a bounded `elicit` pass while rendering a doc section |
+| `/correct-course` | Yes | The trigger and each impact decision (what changed direction and why) — its Phase 1 output |
+| `/retrospective` | Yes, narrowly | Only learnings that *reverse or set a decision* ("we chose X, it was wrong, now Y"). Ordinary convention learnings keep their existing home (CLAUDE.md conventions / guardrail stubs) — the log records direction, not habits |
+| `/discover` (later, optional) | Yes | Seeds the log with the decisions it reverse-engineers from a brownfield codebase |
+| `dev-story`, `quick-dev`, `code-review`, flywheels | **No** | Their findings already have homes: deferred items → `docs/deferred-items.md` (via `deferred`), doc drift → `docs-sync`. A dev session that hits a genuine direction question stops and routes to `/correct-course`, which is the writer |
+| `epics`, `create-story` | **No** | They *read* the log (and the specs) but decompose, don't decide |
+
+This "one home per fact" split is deliberate: `decisions.md` holds *why we're going this way*,
+`deferred-items.md` holds *work we owe*, CLAUDE.md conventions hold *how we work*, and the
+spec docs hold *what we're building*. No fact is recorded in two of them.
+
+**Growth control:** entries are one-liners; the Decisions section is append-only but the
+Destination, Not-yet-specified, and Out-of-scope sections are living text. If the log ever
+gets long enough to tax session startup, `/epic-archive` grows a CONDENSE analog that folds
+pre-release decisions into a summary block — same pattern already used for `docs/epics.md`.
+Don't build that until it's needed.
+
+### New composable engine: `elicit`
 
 The one elicitation engine, called by `/ideate` and `/spec` (and available to `correct-course`).
 Its SKILL.md carries — exactly once, for the whole repo — the discipline currently duplicated
@@ -91,13 +115,13 @@ when a diverge pass actually runs.
 
 | Skill | Role |
 |---|---|
-| **`/ideate`** (new) | The recursive front door. Subsumes product-brief + forge-idea; calls `grill`, `research`, and `decision-log`. Loop: load log → surface the sharpest open question → resolve it (grill / research / cheap prototype) → record → re-check what fog cleared → repeat. Exits when nothing decidable remains (→ `/spec`), when the idea is **Killed** (log the reason, offer re-diverge), or when the user parks the session (log persists). Scales from one session on a small idea to many sessions on a deep one — same skill, no mode switch. |
-| **`/spec`** (new) | Renders `docs/project/brief.md`, `docs/prd.md`, `docs/ux/DESIGN.md` + `EXPERIENCE.md`, and `docs/architecture.md` **from the decision log** plus their templates. Subsumes the write/update/validate flows of product-brief, prd, ux, and architecture. Where a template section has no backing decision: run one bounded `grill` pass for it, or (user's call) tag `[OPEN: …]` and add it to Not-yet-specified. Rendering is mostly mechanical — that's the point. |
+| **`/ideate`** (new) | The recursive front door. Subsumes product-brief + forge-idea; calls `elicit`, `research`, and `decision-log`. Loop: load log → surface the sharpest open question → resolve it (elicit / research / cheap prototype) → record → re-check what fog cleared → repeat. Exits when nothing decidable remains (→ `/spec`), when the idea is **Killed** (log the reason, offer re-diverge), or when the user parks the session (log persists). Scales from one session on a small idea to many sessions on a deep one — same skill, no mode switch. |
+| **`/spec`** (new) | Renders `docs/project/brief.md`, `docs/prd.md`, `docs/ux/DESIGN.md` + `EXPERIENCE.md`, and `docs/architecture.md` **from the decision log** plus their templates. Subsumes the write/update/validate flows of product-brief, prd, ux, and architecture. Where a template section has no backing decision: run one bounded `elicit` pass for it, or (user's call) tag `[OPEN: …]` and add it to Not-yet-specified. Rendering is mostly mechanical — that's the point. |
 | **`/check-readiness`** | Kept, lightly extended (see §3). |
 | **`/correct-course`** | Kept; its triage phase becomes a scoped re-entry into the `/ideate` loop (see §3). |
 | **`/next`** | Kept as router; table rows updated (see §3). |
 
-Composables underneath: `grill` (new), `decision-log` (new), `research` (kept, now also
+Composables underneath: `elicit` (new), `decision-log` (new), `research` (kept, now also
 callable from `/ideate`), `deferred` (unchanged). `/discover` and `/dev-single-goal` are
 unchanged entry points.
 
@@ -112,8 +136,8 @@ loop at every altitude — new product, new feature area, mid-sprint change.
 
 ### Retire into `/ideate` — `product-brief`, `forge-idea`
 
-- **Keep as content** (moves into `/ideate` + `grill` reference files): the technique table
-  and convergence menu (→ `grill/techniques.md`); the stance question (facilitator / creative
+- **Keep as content** (moves into `/ideate` + `elicit` reference files): the technique table
+  and convergence menu (→ `elicit/techniques.md`); the stance question (facilitator / creative
   partner / ideate-for-me); "never fabricate a moat" and the brief-length rules (→ `/spec`'s
   brief renderer); forge-idea's exit states (Hardened / Killed / Clearer become loop exits);
   the stakes-calibration question (asked once, recorded in the log's Destination).
@@ -134,7 +158,7 @@ loop at every altitude — new product, new feature area, mid-sprint change.
 - **Delete as structure:** each skill's brain-dump step, stakes question, fast-vs-coaching
   mode fork, and per-section confirm-then-wait choreography (architecture's "do not proceed
   until the user explicitly says to continue" is exactly the over-prescription §4 removes).
-  `/spec` reads the log, drafts the doc, and grills only the genuinely open sections.
+  `/spec` reads the log, drafts the doc, and elicits only the genuinely open sections.
 - **`[ASSUMPTION]` tags narrow, not vanish:** still used *inside a rendered doc* for small
   inferences, but anything decision-shaped goes to the log as `[OPEN]`/Not-yet-specified
   instead. The tag stops being the overflow bucket for unmade decisions.
@@ -164,9 +188,15 @@ loop at every altitude — new product, new feature area, mid-sprint change.
   detection gains one probe (`docs/project/decisions.md` existence + a grep for `## Not yet
   specified` content). Rows 8+ unchanged.
 
+### `retrospective` — keep, one-line extension
+
+- When a retro learning reverses or sets a direction decision (not a convention), append it to
+  `docs/project/decisions.md` with `source: /retrospective` — see the writers table in §2.
+  Convention promotion into CLAUDE.md is unchanged.
+
 ### Unchanged
 
-`epics`, `create-story`, `dev-story`, `code-review`, both flywheels, `retrospective`,
+`epics`, `create-story`, `dev-story`, `code-review`, both flywheels,
 `harvest-findings`, `epic-archive`, `deferred`, `docs-sync`, `evals`, `github-tracking`,
 `discover` (optionally: teach it to seed a decision log from reverse-engineered choices —
 later, not part of this consolidation), `doc-review`, `investigate`, `setup`,
@@ -179,7 +209,7 @@ later, not part of this consolidation), `doc-review`, `investigate`, `setup`,
 Anthropic's guidance for prompting Claude 5-family models (Fable 5 / Opus 5 / Sonnet 5) —
 from the model migration guide's behavioral-shift sections and the prompt-audit patterns —
 changes how the new SKILL.md files should be written, not just what they contain. Apply these
-while writing `/ideate`, `/spec`, and `grill`, and treat them as the bar for future edits to
+while writing `/ideate`, `/spec`, and `elicit`, and treat them as the bar for future edits to
 any skill in this repo:
 
 1. **State goals and constraints, not step choreography.** "Prompts and skills written for
@@ -202,7 +232,7 @@ any skill in this repo:
    as the desired behavior with its reason. Keep prohibitions that encode a real constraint
    (dark-pattern rejection in the engagement levers, trademark rule) — those carry provenance.
 5. **Every rule lives in exactly one skill.** The engine factoring is itself the application
-   of this: elicitation discipline in `grill` only, session-hygiene routing in `/next` only,
+   of this: elicitation discipline in `elicit` only, session-hygiene routing in `/next` only,
    deferred mechanics in `deferred` only. Duplicated rules make the model reconcile wordings
    and drift over time. Cross-reference by invocation, never by restating.
 6. **Scope discipline stated once.** 5-series models expand task scope and delegate readily;
@@ -225,7 +255,7 @@ Each step is independently shippable and leaves the repo working:
 
 1. **`decision-log` composable + `docs/project/decisions.md` format** — new skill, no callers
    changed yet. (Re-run the symlink sync after adding it.)
-2. **`grill` composable** — extract from forge-idea/product-brief verbatim-then-tighten;
+2. **`elicit` composable** — extract from forge-idea/product-brief verbatim-then-tighten;
    forge-idea and product-brief updated to call it (shrinking, not yet retired).
 3. **`/ideate`** — new skill wrapping the loop; product-brief and forge-idea become aliases,
    `/next` rows 3–4 re-route.
@@ -237,4 +267,4 @@ Each step is independently shippable and leaves the repo working:
 
 Naming note: per the repo trademark rule, nothing ships named "BMAD"; likewise don't name
 anything "wayfinder" — credit above is reference, the shipped names are `ideate`, `spec`,
-`grill`, `decision-log`.
+`elicit`, `decision-log`.
