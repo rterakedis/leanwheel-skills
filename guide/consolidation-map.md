@@ -1,10 +1,10 @@
 # Planning-Skill Consolidation Map
 
-**Status: proposal.** Nothing in `.claude/skills/` has been changed yet. This document is the
-target shape and the per-skill worklist for collapsing the planning/ideation surface from ~11
-user-facing skills to 4–5, built around a recursive decision loop instead of a staged document
-pipeline. Execution-side skills (epics → dev-story → review → flywheels → retro) are out of
-scope and unchanged.
+**Status: implemented** (2026-08-09) — kept as the design record. The five retired skills
+remain as thin aliases for one release; delete them once nothing routes there. This document
+describes the collapse of the planning/ideation surface from ~11 user-facing skills to 4–5,
+built around a recursive decision loop instead of a staged document pipeline. Execution-side
+skills (epics → dev-story → review → flywheels → retro) were out of scope and are unchanged.
 
 Inspiration credit: the decision-loop shape is adapted as an *idea* (never a file copy) from
 Matt Pocock's [Wayfinder skill](https://github.com/mattpocock/skills/tree/main/skills/engineering/wayfinder)

@@ -95,7 +95,7 @@ Routing is driven by *kind* first, then *disposition*:
 | Kind | in-scope | defer |
 |---|---|---|
 | **bug** / **tweak** (corrective) | → AC in the remediation story (below) | → `deferred`/LOG-AND-SCHEDULE (item 5) |
-| **enhancement** (additive) | → **not** a remediation AC — treat as a backlog candidate: `deferred`/LOG-AND-SCHEDULE, and if it's material scope, flag it for a product decision (`/correct-course` or `/prd update`) in the output | → `deferred`/LOG-AND-SCHEDULE |
+| **enhancement** (additive) | → **not** a remediation AC — treat as a backlog candidate: `deferred`/LOG-AND-SCHEDULE, and if it's material scope, flag it for a product decision (`/correct-course` or `/spec` prd update) in the output | → `deferred`/LOG-AND-SCHEDULE |
 | **question** | → surface to the user for an answer; do **not** auto-create a story. Leave its epics.md row `needs decision` until answered, then re-triage | (same) |
 
 So the **remediation story holds only corrective (bug/tweak) `[in-scope]` findings.** Everything else is scheduled or surfaced, never silently converted into remediation ACs.
@@ -122,7 +122,7 @@ Author the story **only if there is ≥1 corrective (bug/tweak) `[in-scope]` fin
    > A remediation story goes straight to `ready-for-dev` (not `backlog`) because it's actionable immediately — consistent with how the `deferred` skill schedules new remediation stories. From here the status lifecycle is automatic: the flywheels and `gh-track.sh` drive the label transitions off the `github_issue:` frontmatter, and `/code-review` closes the issue when the story is done.
 
 5. **Schedule / surface everything not in the remediation story.** For each finding routed away from the story per the table above, call **LOG-AND-SCHEDULE** from `skills/deferred/SKILL.md` (`title` = short summary, `detail` = finding-text, `source` = `docs/epics/epic-{N}-test-plan.md` scenario). This covers: every `[defer]` bug/tweak, and **every `enhancement`** (both dispositions — an enhancement is backlog work, not remediation). It slots each into an existing backlog story or a new remediation/feature story — **never** into the post-test-corrections story. Capture the returned D-IDs.
-   - For any **enhancement** that is material new scope, also add a one-line flag in the output recommending `/correct-course` or `/prd update` so it gets a deliberate product decision rather than quietly entering the backlog.
+   - For any **enhancement** that is material new scope, also add a one-line flag in the output recommending `/correct-course` or `/spec` prd update so it gets a deliberate product decision rather than quietly entering the backlog.
    - For any **question**, do **not** schedule — list it in the output as "needs decision" so the user answers it; leave its epics.md row marked `needs decision`. Once answered, re-run harvest or hand-triage it into bug/tweak/enhancement.
 
 If there is **no corrective (bug/tweak) `[in-scope]`** finding, skip story authoring entirely — everything was deferred, additive, or a question, and is already routed/surfaced in item 5 — and still proceed to Step 4.

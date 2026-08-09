@@ -174,7 +174,7 @@ RELEASE CUT: {version} — {E} epics, {S} stories archived → docs/epics/releas
 New docs/epics.md seeded. Next epic: {last+1}. Next FR: FR-{last+1}.
 Readiness stamp reset — the new phase must pass /check-readiness.
 {R} deferred items re-homed.
-Next: `/prd update` for the new phase scope, then `/epics`, then `/check-readiness`.
+Next: `/spec` prd update for the new phase scope, then `/epics`, then `/check-readiness`.
 ```
 
 ---
