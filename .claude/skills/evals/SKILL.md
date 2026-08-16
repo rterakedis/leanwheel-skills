@@ -96,6 +96,11 @@ Report: `N command cases, M judge cases appended to docs/evals/epic-{epic}.md`.
    exhausts the Simulator; one launch scores the whole group. Genuinely distinct
    commands still run separately. Record pass/fail **per case** and the failing
    line on failure. **Zero tokens** — this is just running commands.
+   **Empty output fails.** An `output-contains:` / `output-matches:` case whose
+   command produced no stdout is a **fail** (`empty output — gate cannot
+   discriminate`), regardless of exit code — the mechanical form of "a gate that
+   enumerates must assert it enumerated": a walk/glob/grep that found nothing
+   must not pass vacuously.
 3. For each `enabled: true` `type: judge` case **only if judging is requested**
    (the caller passes `judge=true`, or the user runs `/evals --judge`): read
    `target:`, score against `rubric:`, pass if all rubric points hold. Skipped by

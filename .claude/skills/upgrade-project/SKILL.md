@@ -59,6 +59,7 @@ Check these:
 | Web guardrails block | `## Web Guardrails` in CLAUDE.md (only if `is_web`) |
 | Commit script | `scripts/commit-push.sh` present + executable; `## Git Workflow` in CLAUDE.md |
 | Tracking script | `scripts/gh-track.sh` present + executable |
+| Sabotage script | `scripts/sabotage.sh` present + executable |
 | Simulator harness | `scripts/sim.sh` present + executable, and `docs/setup/swift/simulator.md` present (only if `is_apple`) |
 | Docs structure | `## Docs Structure`, `## Task Tracking Emoji` in CLAUDE.md |
 
@@ -103,7 +104,8 @@ In dependency order, applying only ADD and REFRESH items:
 5. **Scripts:** if `scripts/commit-push.sh` is missing, copy from
    `{skills_path}/scripts/commit-push.sh` and `chmod +x`. If `## Git Workflow` is
    missing from CLAUDE.md, append `---` + `stubs/commit-workflow.md`. Likewise copy
-   `{skills_path}/scripts/gh-track.sh` if `scripts/gh-track.sh` is missing and `chmod +x`.
+   `{skills_path}/scripts/gh-track.sh` if `scripts/gh-track.sh` is missing and `chmod +x`,
+   and `{skills_path}/scripts/sabotage.sh` if `scripts/sabotage.sh` is missing and `chmod +x`.
    On Apple projects (`is_apple`), likewise copy `{skills_path}/scripts/sim.sh` if
    `scripts/sim.sh` is missing, and `chmod +x`. `sim.sh` derives its own
    `.leanwheel/sim.json` on first run — never author that file here.
