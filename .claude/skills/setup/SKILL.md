@@ -121,6 +121,7 @@ Copy the **zero-token** guardrail hook scripts from `{skills_path}/.claude/skill
 - `guard-design-tokens.sh` — advisory off-token color warning (active only when `docs/ux/DESIGN.md` exists)
 - `guard-dark-pattern.sh` — advisory dark-pattern warning (confirmshaming copy, pre-checked marketing/consent opt-ins) on UI files
 - `guard-a11y-id.sh` — advisory warning when a Swift file gains an interactive element with no `.accessibilityIdentifier` (active only when `docs/setup/swift/testability.md` exists)
+- `asc-lint.sh` — advisory App Store Connect metadata lint (active only when `docs/store/` exists)
 - `log-activity.sh` — appends the raw tool-call stream to `docs/metrics/activity.jsonl`
 - `README.md` — hook reference
 

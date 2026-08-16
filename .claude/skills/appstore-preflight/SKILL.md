@@ -132,6 +132,7 @@ These need judgment, not just grep. Read the relevant source (auth flows, paywal
 2. **Login services — 4.8.** Third-party login SDK present (`GoogleSignIn`, `FBSDKLoginKit`, social OAuth via `ASWebAuthenticationSession`) → an equally-prominent privacy-protective option is required (SIWA is the safe choice; email/password meeting the data-minimization criteria can qualify). Missing → **HIGH**.
 3. **ATT — 5.1.2.** Ad/attribution SDKs or IDFA reads → `requestTrackingAuthorization` flow + usage-description key + manifest tracking flags, and functionality must not be gated on consent. Fingerprinting is never allowed, even with consent. Violation → **HIGH**.
 4. **Subscriptions/IAP — 3.1.1/3.1.2.** StoreKit present → paywall must show price + period + auto-renew terms; **functional Privacy Policy and Terms links on the paywall**; a working **Restore Purchases** control for restorable products. Digital goods sold via non-StoreKit checkout → **HIGH**. ⚠️VOLATILE: external purchase links are currently permitted on the **US storefront only** (post-Epic injunction; commission rules still in litigation) — if present, verify storefront-gating and re-check current rules.
+   **Product reconciliation:** run the `appstore-connect` skill's **PRODUCTS DIFF** op (`{skills_path}/.claude/skills/appstore-connect/SKILL.md`) — spec ↔ `.storekit` ↔ Swift product-ID literals, plus its recommendations (group/level structure, missing localizations, missing review screenshots, immutable-ID renames, family-sharing/offer gaps). No `docs/store/products.md` yet → its IMPORT sub-op seeds one from the existing `.storekit`/code first (never ask the user to re-type what the code declares). Each mismatch becomes a `[HIGH][BEHAVIOR]` or `[MEDIUM][BEHAVIOR]` finding; the recommendations flow into the Step 7 IAP section.
 5. **Third-party AI data sharing — 5.1.2(i), since Nov 2025.** App sends user data to an external AI API (OpenAI/Gemini/Claude endpoints in networking code) → needs explicit, provider-named consent before first send, reflected in the privacy label. Missing → **HIGH**.
 6. **In-app privacy policy access — 5.1.1.** A privacy-policy link must be reachable inside the app (settings screen is fine). Missing → **MEDIUM**.
 7. **iPad compatibility — 2.4.1.** Every app is reviewed on iPad, **even iPhone-only apps** (compatibility mode). Note as a checklist test item; flag obvious fixed-width/fixed-orientation layouts in a universal app → **MEDIUM**.
@@ -188,6 +189,8 @@ Generated: {date}
 
 Write `docs/maintainer/appstore-submission-checklist.md` (overwrite on re-runs — it's a living gate, not a log). Pre-fill every item the audit can infer: mark `[x] verified — {evidence}`, `[ ]` for human-required items, and **omit sections that don't apply** (no StoreKit → drop the IAP section; note the omission at the top).
 
+**`docs/store/` hand-off (zero-token):** if `docs/store/metadata/` exists, run the lint — `bash .claude/hooks/asc-lint.sh docs/store` (or `{skills_path}/.claude/skills/appstore-connect/asc-lint.sh`) — and stamp the App Record name/subtitle line, the Required URLs lines, and the Media screenshot line `[x] verified — asc-lint passed ({date}, {locales})` when it exits 0; on errors leave `[ ]` and append `— asc-lint: {N} errors, run /appstore-connect metadata`. If `docs/store/` is absent, the Media / App Record `[ ]` lines gain the pointer `→ /appstore-connect {assets|metadata}` so the human knows the authoring lane exists. The IAP section embeds the PRODUCTS DIFF summary from Step 5.
+
 ```markdown
 # App Store Submission Checklist — regenerated {date} by /appstore-preflight
 
@@ -233,6 +236,7 @@ Write `docs/maintainer/appstore-submission-checklist.md` (overwrite on re-runs �
 ## In-App Purchases {omit if no StoreKit}
 - [ ] First IAP/subscription products ATTACHED to the version submission (creating them isn't submitting them — #1 IAP rejection)
 - [ ] Subscription group has ≥1 localization; review screenshot per product
+- [ ] `docs/store/products.md` reconciled — PRODUCTS DIFF: {n mismatches, m recommendations — or "not run: no .storekit"}; create products in ASC from that spec (`/appstore-connect products`)
 - [ ] Paywall shows price/period/auto-renew terms + Privacy & Terms links + Restore Purchases (verified in Step 5: {result})
 
 ## Signing (verify in Apple Developer portal — not visible in repo)
@@ -256,5 +260,5 @@ Write `docs/maintainer/appstore-submission-checklist.md` (overwrite on re-runs �
 | PLIST / MANIFEST / SIGNING / ASSET / CODE / BEHAVIOR | | | | |
 
 2. State both output paths.
-3. Say: "Run `/dev-story docs/maintainer/appstore-preflight-{date}.md` to fix the code/config findings. The checklist items in `appstore-submission-checklist.md` are human actions in App Store Connect — work through them before submitting. Re-run `/appstore-preflight` after fixes to confirm clean."
+3. Say: "Run `/dev-story docs/maintainer/appstore-preflight-{date}.md` to fix the code/config findings. The checklist items in `appstore-submission-checklist.md` are human actions in App Store Connect — work through them before submitting; `/appstore-connect` authors the screenshots, listing copy, and product spec those items ask for. Re-run `/appstore-preflight` after fixes to confirm clean."
 4. If any ⚠️VOLATILE finding was flagged (external purchase links, SDK-floor, UIRequiresFullScreen), remind the user those rules are in flux and name the one(s) to re-verify.

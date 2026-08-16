@@ -179,6 +179,8 @@ Then update in `appstore-preflight/SKILL.md`:
 
 **Facts only** — never restructure that skill's steps, severity scheme, or output formats. This updates the skills-repo file only; `appstore-preflight` has no per-project guidance copies.
 
+Same gate, same run: refresh the store facts embedded in `{skills_path}/.claude/skills/appstore-connect/` — the required screenshot classes and accepted pixel sizes (SKILL.md Currency note, `compose.swift` output-size table, `asc-lint.sh` accepted-size table, `sim.sh` `verify_store_capture`) and the metadata character limits (SKILL.md METADATA rules, `asc-lint.sh` limits). Sources: developer.apple.com/help/app-store-connect/reference/screenshot-specifications/ and the App Store Connect help "app information" field limits. Facts only.
+
 ---
 
 ## Step 5 — Report to User

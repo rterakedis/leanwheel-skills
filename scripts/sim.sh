@@ -28,6 +28,16 @@
 #   shots <name> [--route R] [--orientation O]  Screenshot matrix: appearance x text
 #                             size x device. Orientation is a single flag per
 #                             invocation, not a matrix axis.
+#                             --store switches to App Store Connect capture mode:
+#                             devices default to the two required store classes
+#                             (iphone69, ipadPro13), sizes are forced to `large` only,
+#                             captures are kept at native pixel size (no downscale), and
+#                             each capture is verified against Apple's accepted store
+#                             pixel sizes. Output lands at a stable (no-timestamp) path
+#                             under .leanwheel/sim/store/ so compose.swift can find it.
+#                             --locale <ll-RR> applies AppleLanguages/AppleLocale launch
+#                             overrides to capture a localized UI (default en-US with
+#                             --store, otherwise empty/unset).
 #   dump [--route R] [--orientation O]   Dump the accessibility hierarchy (identifiers).
 #   flow <Name> [--orientation O]        Run one named XCUITest flow, export its
 #                             screenshots.
@@ -48,6 +58,7 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG="$PROJECT_DIR/.leanwheel/sim.json"
 ART_DIR="$PROJECT_DIR/.leanwheel/sim"
 SHOTS_DIR="$ART_DIR/shots"
+STORE_DIR="$ART_DIR/store"
 DUMPS_DIR="$ART_DIR/dumps"
 RESULTS_DIR="$ART_DIR/results"
 
@@ -177,7 +188,8 @@ derive_config() {
   "ui_test_target": "$uitest",
   "privacy_grant": "$(suggest_privacy_services "$srcroot/$plist" "$bs_json")",
   "privacy_blocked": "$(unpregrantable_services "$srcroot/$plist" "$bs_json")",
-  "devices": { "iphone": "iPhone 17", "ipad": "iPad Pro 11-inch (M5)" }
+  "devices": { "iphone": "iPhone 17", "ipad": "iPad Pro 11-inch (M5)" },
+  "store_devices": { "iphone69": "iPhone 17 Pro Max", "ipadPro13": "iPad Pro 13-inch (M5)" }
 }
 EOF
   rm -rf "$tmp"
@@ -260,7 +272,7 @@ apply_privacy() {
 }
 
 ensure_artifacts_dir() {
-  mkdir -p "$SHOTS_DIR" "$DUMPS_DIR" "$RESULTS_DIR"
+  mkdir -p "$SHOTS_DIR" "$DUMPS_DIR" "$RESULTS_DIR" "$STORE_DIR"
   # Self-ignoring: no edit to the project's own .gitignore required.
   [ -f "$ART_DIR/.gitignore" ] || printf '*\n' > "$ART_DIR/.gitignore"
 }
@@ -273,6 +285,25 @@ resolve_device() {
   case "$key" in
     iphone) name=$(cfg devices.iphone) ;;
     ipad)   name=$(cfg devices.ipad) ;;
+    # Store classes read from store_devices, added by derive_config alongside devices.
+    # An older sim.json predates the key — fall back to the App Store Connect default
+    # (which is exactly what derive_config would have written) rather than failing, and
+    # tell the user why, since silently using a hardcoded name would look like config
+    # was being read when it wasn't.
+    iphone69)
+      name=$(cfg store_devices.iphone69)
+      if [ -z "$name" ]; then
+        name="iPhone 17 Pro Max"
+        note "store_devices.iphone69 not in $CONFIG (it predates store_devices) — using default '$name'. Delete $CONFIG to re-derive."
+      fi
+      ;;
+    ipadPro13)
+      name=$(cfg store_devices.ipadPro13)
+      if [ -z "$name" ]; then
+        name="iPad Pro 13-inch (M5)"
+        note "store_devices.ipadPro13 not in $CONFIG (it predates store_devices) — using default '$name'. Delete $CONFIG to re-derive."
+      fi
+      ;;
     *)      name="$key" ;;
   esac
   [ -n "$name" ] || die "no device configured for '$key'. Edit devices in $CONFIG"
@@ -404,6 +435,48 @@ verify_capture_orientation() {
   (Also check the target supports that orientation in its Info.plist / General tab.)"
 }
 
+# App Store Connect accepts exactly two pixel sizes per required screenshot class
+# (native resolution of the current-generation device, plus one legacy size Apple still
+# accepts). Landscape is the portrait size with width/height swapped. This table must
+# stay in lockstep with guide/appstore-connect.md's Device classes table and with
+# store_devices in derive_config — if you add a device class there, add it here too.
+verify_store_capture() {
+  # verify_store_capture <png> <class> <orientation-or-empty>
+  local png="$1" class="$2" orientation="${3:-}" w h want
+  w=$(sips -g pixelWidth  "$png" 2>/dev/null | awk '/pixelWidth/  {print $2}')
+  h=$(sips -g pixelHeight "$png" 2>/dev/null | awk '/pixelHeight/ {print $2}')
+  [ -n "$w" ] && [ -n "$h" ] || die "could not read pixel dimensions of $png"
+
+  local -a portrait_sizes=()
+  case "$class" in
+    iphone69)   portrait_sizes=("1320x2868" "1290x2796") ;;
+    ipadPro13)  portrait_sizes=("2064x2752" "2048x2732") ;;
+    *) die "--store devices must be store classes (iphone69, ipadPro13), not '$class'.
+  See guide/appstore-connect.md (Device classes) — these are the only two screenshot
+  classes App Store Connect currently requires." ;;
+  esac
+
+  local accepted="" size pw ph ok=0
+  for size in "${portrait_sizes[@]}"; do
+    pw="${size%x*}"; ph="${size#*x}"
+    case "$orientation" in
+      landscape*) want="${ph}x${pw}" ;;
+      *)          want="${pw}x${ph}" ;;
+    esac
+    accepted="$accepted $want"
+    [ "$w" = "${want%x*}" ] && [ "$h" = "${want#*x}" ] && ok=1
+  done
+  [ "$ok" = 1 ] && return 0
+
+  die "screenshot for '$class' is ${w}x${h}, which is not an App Store Connect accepted
+  size. Accepted sizes (portrait; landscape = swapped):${accepted}
+  ($png)
+
+  The configured store device for $class is not a 6.9-inch iPhone / 13-inch iPad — edit
+  store_devices in $CONFIG, or add that simulator in Xcode > Window > Devices and
+  Simulators."
+}
+
 route_url() {
   # route_url <route> — bare routes are prefixed with the app's URL scheme.
   local route="$1" scheme
@@ -484,8 +557,8 @@ ensure_fresh_install() {
 }
 
 launch_app() {
-  # launch_app <udid> <seed> <uitest:0|1> <reset:0|1> [route] [orientation]
-  local udid="$1" seed="$2" uitest="$3" reset="$4" route="${5:-}" orientation="${6:-}" bundle args grant
+  # launch_app <udid> <seed> <uitest:0|1> <reset:0|1> [route] [orientation] [locale]
+  local udid="$1" seed="$2" uitest="$3" reset="$4" route="${5:-}" orientation="${6:-}" locale="${7:-}" bundle args grant
   bundle=$(cfg bundle_id)
   # Refuse to launch a bundle older than the sources (see ensure_fresh_install).
   ensure_fresh_install "$udid"
@@ -508,8 +581,23 @@ launch_app() {
   # orientation section above). Delivered like --seed/--route; verified by `shots`.
   [ -n "$orientation" ] && args="$args --orientation $orientation"
   xcrun simctl terminate "$udid" "$bundle" >/dev/null 2>&1 || true
+  # Locale is delivered as UserDefaults overrides, NOT a --locale launch arg: simctl
+  # launch forwards argv straight to the app process, and -AppleLanguages/-AppleLocale
+  # are the standard iOS/macOS mechanism the system frameworks read at startup — no app
+  # code has to implement anything for this to take effect, unlike --route/--seed. This
+  # is the supported way to capture a localized UI without changing the whole device's
+  # language (which would also localize the Simulator chrome and system alerts).
+  #
+  # REGRESSION GUARD — the (ll-RR) value must reach simctl as ONE argv element. Passing
+  # it unquoted through the accumulated $args string (like every other flag here) would
+  # let the shell word-split "(ll-RR)" apart from -AppleLanguages, so locale args are
+  # appended as literal array elements below instead of folded into $args.
+  local -a locale_args=()
+  if [ -n "$locale" ]; then
+    locale_args=(-AppleLanguages "($locale)" -AppleLocale "${locale/-/_}")
+  fi
   # shellcheck disable=SC2086
-  xcrun simctl launch "$udid" "$bundle" $args >/dev/null || die "launch failed for $bundle — is it installed? Run: sim.sh install"
+  xcrun simctl launch "$udid" "$bundle" $args ${locale_args[@]+"${locale_args[@]}"} >/dev/null || die "launch failed for $bundle — is it installed? Run: sim.sh install"
   sleep "$SETTLE"
 }
 
@@ -635,7 +723,7 @@ cmd_open() {
 
 cmd_launch() {
   ensure_config; ensure_artifacts_dir
-  local seed="" route="" device="iphone" uitest=0 reset=0 fresh=0 orientation=""
+  local seed="" route="" device="iphone" uitest=0 reset=0 fresh=0 orientation="" locale=""
   while [ $# -gt 0 ]; do
     case "$1" in
       --fresh)  fresh=1; shift ;;
@@ -644,6 +732,7 @@ cmd_launch() {
       --device) device="$2"; shift 2 ;;
       --grant)  GRANT_OVERRIDE="$2"; shift 2 ;;
       --orientation) orientation=$(normalize_orientation "$2"); shift 2 ;;
+      --locale) locale="$2"; shift 2 ;;
       --uitest) uitest=1; shift ;;
       --reset)  reset=1; shift ;;
       *) die "unknown option for launch: $1" ;;
@@ -651,7 +740,7 @@ cmd_launch() {
   done
   local udid; udid=$(resolve_device "$device")
   boot_device "$udid" "$fresh"
-  launch_app "$udid" "$seed" "$uitest" "$reset" "$route" "$orientation"
+  launch_app "$udid" "$seed" "$uitest" "$reset" "$route" "$orientation" "$locale"
   note "launched${seed:+ --seed $seed}${route:+ --route $route}${orientation:+ --orientation $orientation}"
   [ -n "$orientation" ] && note "orientation is applied by the app's launch-argument handler — 'launch' cannot verify it; 'shots' can (it checks the capture's aspect ratio)."
   return 0
@@ -660,51 +749,77 @@ cmd_launch() {
 cmd_shots() {
   ensure_config; ensure_artifacts_dir
   local name="${1:-}"; shift || true
-  [ -n "$name" ] || die "usage: sim.sh shots <name> [--route R] [--seed S] [--devices iphone,ipad] [--orientation portrait|landscape|landscape-left|landscape-right]"
+  [ -n "$name" ] || die "usage: sim.sh shots <name> [--route R] [--seed S] [--devices iphone,ipad] [--orientation portrait|landscape|landscape-left|landscape-right] [--locale ll-RR] [--store]"
 
   # Orientation is deliberately a SINGLE FLAG, not a matrix axis. Doubling the matrix
   # would double every run's cost for captures most stories never look at; a landscape
   # set is one more invocation, exactly like a different route.
-  local seed="typical" route="" devices="iphone" appearances="light,dark" sizes="large,accessibility-extra-large" fresh=0 orientation=""
+  local seed="typical" route="" devices="iphone" appearances="light,dark" sizes="large,accessibility-extra-large" fresh=0 orientation="" locale="" store=0
+  local seed_set=0 devices_set=0
   while [ $# -gt 0 ]; do
     case "$1" in
       --fresh)       fresh=1; shift ;;
-      --seed)        seed="$2"; shift 2 ;;
+      --seed)        seed="$2"; seed_set=1; shift 2 ;;
       --route)       route="$2"; shift 2 ;;
-      --devices)     devices="$2"; shift 2 ;;
+      --devices)     devices="$2"; devices_set=1; shift 2 ;;
       --appearances) appearances="$2"; shift 2 ;;
       --sizes)       sizes="$2"; shift 2 ;;
       --grant)       GRANT_OVERRIDE="$2"; shift 2 ;;
       --orientation) orientation=$(normalize_orientation "$2"); shift 2 ;;
+      --locale)      locale="$2"; shift 2 ;;
+      --store)       store=1; shift ;;
       *) die "unknown option for shots: $1" ;;
     esac
   done
 
-  local stamp out_dir count=0
-  stamp=$(date +%Y%m%d-%H%M%S)
-  out_dir="$SHOTS_DIR/$stamp"
-  mkdir -p "$out_dir"
+  local out_dir count=0
 
-  local dev udid appearance size short
+  if [ "$store" = 1 ]; then
+    # App Store Connect capture mode: fixed device classes, one text size (store
+    # screenshots are never captured at accessibility sizes), native pixels (App Store
+    # assets need the real resolution; the agent-friendly downscale in capture() is for
+    # in-loop review, not marketing artifacts), and a stable (no-timestamp) output path
+    # so compose.swift always finds the latest capture at a known location.
+    [ "$devices_set" = 1 ] || devices="iphone69,ipadPro13"   # explicit --devices wins (and must name store classes)
+    sizes="large"
+    SHOT_MAX_PX=native
+    [ "$seed_set" = 1 ] || seed="heavy"
+    [ -n "$locale" ] || locale="en-US"
+    out_dir="$STORE_DIR/$locale/$name"
+    mkdir -p "$out_dir"
+  else
+    local stamp; stamp=$(date +%Y%m%d-%H%M%S)
+    out_dir="$SHOTS_DIR/$stamp"
+    mkdir -p "$out_dir"
+  fi
+
+  local dev udid appearance size short devclass png
   for dev in $(echo "$devices" | tr ',' ' '); do
+    devclass="$dev"   # filenames carry the class key as passed (iphone69/ipadPro13 in --store mode)
     udid=$(resolve_device "$dev")
     boot_device "$udid" "$fresh"
     # One cold launch per device, carrying the route. Every subsequent state change in
     # the matrix is a simctl ui toggle, never a relaunch — the appearance x text-size
     # matrix still costs 1 launch per device, not 8.
-    launch_app "$udid" "$seed" 1 0 "$route" "$orientation"
+    launch_app "$udid" "$seed" 1 0 "$route" "$orientation" "$locale"
     for appearance in $(echo "$appearances" | tr ',' ' '); do
       xcrun simctl ui "$udid" appearance "$appearance" >/dev/null 2>&1 || true
       for size in $(echo "$sizes" | tr ',' ' '); do
         xcrun simctl ui "$udid" content_size "$size" >/dev/null 2>&1 || true
         sleep 1
         case "$size" in accessibility-*) short="axl" ;; *) short="default" ;; esac
-        # Filenames carry the orientation only when one was requested, so default
-        # (portrait) runs keep the historic <name>-<device>-<appearance>-<size> shape.
-        capture "$udid" "$out_dir/${name}-${dev}-${appearance}-${short}${orientation:+-$orientation}.png"
+        if [ "$store" = 1 ]; then
+          png="$out_dir/${name}-${devclass}-${appearance}${orientation:+-$orientation}.png"
+        else
+          # Filenames carry the orientation only when one was requested, so default
+          # (portrait) runs keep the historic <name>-<device>-<appearance>-<size> shape.
+          png="$out_dir/${name}-${dev}-${appearance}-${short}${orientation:+-$orientation}.png"
+        fi
+        capture "$udid" "$png"
         # Fail LOUDLY if the app ignored --orientation — a portrait capture labeled
         # landscape is exactly the silently-wrong artifact this script must never emit.
-        verify_capture_orientation "$out_dir/${name}-${dev}-${appearance}-${short}${orientation:+-$orientation}.png" "$orientation"
+        verify_capture_orientation "$png" "$orientation"
+        [ "$store" = 1 ] && verify_store_capture "$png" "$devclass" "$orientation"
         count=$((count + 1))
       done
     done

@@ -20,7 +20,8 @@
         "hooks": [
           { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-design-tokens.sh\"" },
           { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-dark-pattern.sh\"" },
-          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-a11y-id.sh\"" }
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-a11y-id.sh\"" },
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/asc-lint.sh\"" }
         ]
       },
       {

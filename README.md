@@ -137,6 +137,7 @@ Zero footprint: no `docs/` tree is created, nothing is tracked on GitHub, and th
 | [guide/installation.md](guide/installation.md) | Workspace-directory install option, keeping skills up to date |
 | [guide/workflows.md](guide/workflows.md) | Greenfield and brownfield process flowcharts |
 | [guide/migration.md](guide/migration.md) | Migrating an existing full-BMAD project to Leanwheel |
+| [guide/appstore-connect.md](guide/appstore-connect.md) | `/appstore-connect` usage, artifact contract, decision tree, and scripts — the App Store Connect authoring lane |
 | [guide/token-budget.md](guide/token-budget.md) | How the epic-context cache works, and measured token savings |
 | [guide/project-knowledge.md](guide/project-knowledge.md) | Feeding existing docs/research into the PRD, and session hygiene |
 | [guide/project-layout.md](guide/project-layout.md) | Full `docs/` folder layout a scaffolded project ends up with |
