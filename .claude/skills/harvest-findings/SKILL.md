@@ -111,7 +111,7 @@ Author the story **only if there is ≥1 corrective (bug/tweak) `[in-scope]` fin
    - `status: ready-for-dev` in frontmatter (the pinned format).
    - **Definition of Done additions** (write these explicitly into the story so dev-story enforces them at close):
      - [ ] Reconcile `docs/architecture.md`, `docs/prd.md`, and `docs/ux/*` for any behavior these changes affect (via `docs-sync` **OPERATIONAL** — an Agent tool call with `subagent_type: "lw-docs-sync"`, Haiku).
-     - [ ] Reset `docs/epics/epic-{N}-test-plan.md` (Step 4 below) so the plan is clean for the next re-test pass.
+     - [ ] Reset `docs/epics/epic-{N}-test-plan.md` and fold this story's ACs back into it as new verification steps (Step 4 below) so the plan is clean **and** re-proves the fix for the next re-test pass.
 
 3. **Append the story row to `docs/epics.md`** under Epic {N}'s stories and bump the epic's story count (mirror the `deferred` skill's new-story entry format). Do this **before** the tracking step so the milestone/issue is filed against a story that exists in the backlog.
 
@@ -133,7 +133,9 @@ If there is **no corrective (bug/tweak) `[in-scope]`** finding, skip story autho
 
 Remove the **harvested inline finding bullets** from `docs/epics/epic-{N}-test-plan.md` — leave the scenarios, flows, steps, each flow's **Starting state** prerequisites block (see `epic-flywheel` → Rolled-up Test Plan), and the physical-device section fully intact. The plan must be clean and re-runnable for the next test pass; only the tester's finding annotations come out (they now live durably in `docs/epics.md` and the story).
 
-This reset is also listed in the remediation story's DoD (Step 3.2) — running it here keeps the plan clean immediately; the DoD item is the backstop ensuring it happened before the story closes.
+**Fold the remediation story's ACs back in.** Stripping findings makes the plan re-runnable but not provable — a re-test would otherwise only re-exercise the original surfaces and never confirm a fix landed. For each AC of the remediation story authored in Step 3, add one verification step under the flow/scenario its source finding was harvested from (each AC already cites `_(source: Flow: ... → step '...')_`) — phrase it to prove the AC's asserted behavior, not just repeat the original step. If an AC changed a surface the plan describes (a flow's Starting state, a setup note), update that text too, so the plan's premises match what actually shipped.
+
+This reset — strip **and** fold-back — is also listed in the remediation story's DoD (Step 3.2) — running it here keeps the plan current immediately; the DoD item is the backstop ensuring it happened before the story closes.
 
 ---
 
@@ -143,13 +145,14 @@ Report one line, broken out by kind:
 
 ```
 Epic {N}: {n} findings harvested — {c} corrective in-scope → story {N}.{last+1} (issue #{issue});
-{s} scheduled ({D-ids}, incl. {e} enhancements); {q} questions need a decision. Test plan reset.
+{s} scheduled ({D-ids}, incl. {e} enhancements); {q} questions need a decision. Test plan reset
+and folded back with {c} verification steps.
 ```
 
 If any enhancement is material new scope, add: `Recommend /correct-course for: {short list}.`
 If there are questions, list them so the user can answer.
 
-Zero cases: `No test findings to harvest.` (Step 1 empty), or `{n} findings harvested — 0 corrective in-scope; {s} scheduled ({D-ids}); {q} questions. No remediation story needed. Test plan reset.` (nothing corrective).
+Zero cases: `No test findings to harvest.` (Step 1 empty), or `{n} findings harvested — 0 corrective in-scope; {s} scheduled ({D-ids}); {q} questions. No remediation story needed. Test plan reset.` (nothing corrective — nothing to fold back).
 
 ---
 

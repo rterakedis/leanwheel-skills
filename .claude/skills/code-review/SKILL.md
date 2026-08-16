@@ -94,34 +94,48 @@ For each finding assign both a category and severity:
 **Category:**
 - `decision-needed` — ambiguous; needs user input before a fix is possible
 - `patch` — clear bug; unambiguous fix exists
+- `fix-now` — outside the story's ACs but small and obviously right; apply it instead of deferring
 - `defer` — pre-existing issue not introduced by this diff
 - `dismiss` — confirmed false positive (state reason)
+
+**`fix-now` ceiling** — a finding qualifies only when **all** hold:
+- small (≤ ~10 lines, one file) and adjacent to the diff already under review;
+- provably safe — covered by an existing test, or by one written in the same pass;
+- introduces no new dependency, schema change, public API change, or user-visible copy change;
+- describable in one line of the commit message.
+
+Anything failing a condition is `defer`, unchanged. Do not stretch the ceiling to avoid logging — `fix-now` is a shorter door, not a wider one.
 
 **Severity** (for `patch` and `decision-needed`):
 - `HIGH` — data loss, auth bypass, secret exposure, injection, crash in main path
 - `MEDIUM` — incorrect behavior under reachable conditions, missing error handling, IDOR
 - `LOW` — edge case with low probability, best-practice gap, missing guard on unlikely path
 
-**Pass F (over-engineering) findings** route as `patch` when the cut is clear (usually LOW/MEDIUM), or `defer` / `decision-needed` when removing code needs a judgment call. They are cleanups, not correctness bugs — never HIGH.
+**Pass F (over-engineering) findings** route as `patch` when the cut is clear (usually LOW/MEDIUM), `fix-now` when the cut is clear but outside the ACs and within the ceiling below, or `defer` / `decision-needed` when removing code needs a judgment call. They are cleanups, not correctness bugs — never HIGH.
 
-Merge duplicates. Drop `dismiss`. If zero remain: write `Clean review — no patches or deferred items.` and justify briefly why each pass came up empty.
+Merge duplicates. Drop `dismiss`. If zero remain: write `Clean review — no patches, fix-nows, or deferred items.` and justify briefly why each pass came up empty.
 
 ## Step 5 — Report and Act
 
 **Write findings:** If story loaded, write to `### Review Findings`:
-- If clean review: write `Clean review — no patches or deferred items.` plus one-sentence justification per pass.
+- If clean review: write `Clean review — no patches, fix-nows, or deferred items.` plus one-sentence justification per pass.
 - Otherwise, order by severity (HIGH first), then category:
   - `- [ ] [HIGH/MEDIUM/LOW] [Decision] {title} — {detail}`
   - `- [ ] [HIGH/MEDIUM/LOW] [Patch] {title} [{file}:{line}]`
+  - `- [x] [Fix-Now] {title} [{file}:{line}]`
   - `- [ ] [Defer] {title} — pre-existing ({file}:{line})`
 
-**Summary:** "Review complete. {D} decision, {P} patches, {W} deferred."
+Every `fix-now` is recorded here even though it's already applied — the line is what makes it reviewable rather than invisible.
 
-**Resolve decisions:** All at once, wait for answers, record, convert to patch/defer/dismiss.
+**Summary:** "Review complete. {D} decision, {P} patches, {F} fix-now, {W} deferred."
 
-**Auto-patch:** Apply immediately, mark `[x]`. If can't auto-apply, leave `[ ]`.
+**Resolve decisions:** All at once, wait for answers, record, convert to patch/fix-now/defer/dismiss.
 
-**Verify green:** If any patch changed code and a toolchain is present, **run a real build + test** before marking the review done (`xcodebuild … build test` / `swift build && swift test` / `npm run build && npm test` / documented command). A patch is only resolved once the toolchain confirms it compiles and tests stay green — never close a review on a fix verified by reading alone. If red, fix and re-run, or leave the finding `[ ]` and set Status `in-progress`. Skip only on a clean review or when no toolchain exists (state which). If `docs/evals/` exists, also execute **RUN** from `skills/evals/SKILL.md` for the story's epic — a failing eval is a regression and blocks closing just like a red build.
+**Auto-patch:** Apply immediately, mark `[x]`. If can't auto-apply, leave `[ ]`. Apply `fix-now` items the same way — but if one turns out to need more than the ceiling allows, revert it and re-triage as `defer`.
+
+**Verify green:** If any patch or fix-now changed code and a toolchain is present, **run a real build + test** before marking the review done (`xcodebuild … build test` / `swift build && swift test` / `npm run build && npm test` / documented command). A patch is only resolved once the toolchain confirms it compiles and tests stay green — never close a review on a fix verified by reading alone. If red, fix and re-run, or leave the finding `[ ]` and set Status `in-progress`. Skip only on a clean review or when no toolchain exists (state which). If `docs/evals/` exists, also execute **RUN** from `skills/evals/SKILL.md` for the story's epic — a failing eval is a regression and blocks closing just like a red build.
+
+**A new gate is not done until it has been shown to fail.** Scoped to tests, evals, and assertions *written during this review's patches* — not every run. Before claiming one passes, break the thing it guards (revert the fix, reintroduce the defect, corrupt the input) and confirm the gate fails **and names the specific item**; then restore and confirm green. Record the discriminating check in the story's Completion Notes (`{gate} — sabotaged {what}, failed naming {item}, restored green`). A gate only ever observed green is unverified, however many times it ran.
 
 **Eval Scorecard:** Emit a structured pass/fail line — this is just turning the passes you already ran into scored output, **no extra model calls**. Execute **SCORE** from `skills/evals/SKILL.md`: one verdict per applicable dimension and an overall gate. Append to `### Review Findings`:
 
@@ -131,7 +145,7 @@ RUBRIC: correctness PASS · edge-cases PASS · ac-coverage PASS · design PASS �
 
 The `simplicity` dimension scores Pass F (it's just reporting a pass already run — no extra model calls). A dimension is FAIL if any unresolved `[ ]` finding maps to it; GATE is PASS only when every applicable dimension is PASS. The gate feeds the flywheel checkpoint and the ledger.
 
-**Pull deferred forward:** If any `[ ] [Defer]`, execute **LOG-AND-SCHEDULE** from `skills/deferred/skill.md` for each deferred item (title = finding title, detail = finding detail, source = file:line).
+**Pull deferred forward:** If any `[ ] [Defer]`, execute **LOG-AND-SCHEDULE** from `skills/deferred/skill.md` for each deferred item (title = finding title, detail = finding detail, source = file:line). `[Fix-Now]` items never go to the log — they're already fixed, and that intake rejects them.
 
 **Update epic context:** Before updating status, check for discoveries made during review or fix application that future stories/epics should know about. Look for:
 - Constraints or invariants uncovered while fixing bugs

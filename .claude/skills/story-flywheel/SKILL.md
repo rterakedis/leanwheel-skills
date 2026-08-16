@@ -147,7 +147,7 @@ The developer subagent already ran the inline review in Phase 2. **Independent r
 
 When a separate review runs:
 - Pass the story file path so it skips auto-detection.
-- It runs Passes A–E, emits the **SCORE rubric line**, auto-patches `patch` findings, logs `defer` via the deferred skill, and **re-verifies green**.
+- It runs Passes A–E, emits the **SCORE rubric line**, auto-patches `patch` findings, applies `fix-now` findings within the ceiling, logs `defer` via the deferred skill, and **re-verifies green**.
 - `decision-needed` findings surface in its report — present them to the user and wait for answers, then have the patches applied.
 
 **On unresolvable patches:** Do not proceed to Phase 4. Leave story status `in-progress`, report which items need attention, and stop the flywheel. Resume with `/story-flywheel {epic}.{story}`.
@@ -170,6 +170,9 @@ DECISIONS MADE THIS STORY
 
 PATCHES APPLIED
 {list each [Patch] auto-applied — "none" if clean}
+
+FIX-NOW APPLIED
+{list each [Fix-Now] applied outside the ACs, with file:line — "none" if clean}
 
 DEFERRED ITEMS
 {list each [Defer] item with its D-ID and scheduled story — "none" if clean}

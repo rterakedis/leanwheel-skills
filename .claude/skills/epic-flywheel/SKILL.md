@@ -82,7 +82,7 @@ Spawn `lw-story-creator` with `{epic}.{story}`. Capture `STORY FILE`, `EPIC CONT
 ### Step 3 — Code Review + patch → commit
 Per story-flywheel's Phase 3 economy and its **blast-radius trigger set** (do not duplicate it here — read it): the developer subagent already ran the inline review.
 - **Clean report (no `UNRESOLVED`, PASS gate, not security-sensitive) and no blast-radius trigger:** skip a separate reviewer — carry Phase 2 findings forward. Saves a full review's tokens.
-- **Otherwise:** spawn `lw-story-reviewer` for an independent adversarial pass. It emits the SCORE rubric line, auto-patches `patch` findings, logs `defer` via the `deferred` skill (re-homing each — slot as AC or remediation story), and **re-verifies green**. `decision-needed` findings surface to the user.
+- **Otherwise:** spawn `lw-story-reviewer` for an independent adversarial pass. It emits the SCORE rubric line, auto-patches `patch` findings, applies `fix-now` findings within the ceiling (recorded in Review Findings, never logged as deferred), logs `defer` via the `deferred` skill (re-homing each — slot as AC or remediation story), and **re-verifies green**. `decision-needed` findings surface to the user.
 - **Deferred re-homing check:** confirm every `[Defer]` from this story landed in `docs/deferred-items.md` with a `Scheduled As` target. An orphan is a loop bug — fix before advancing.
 - **Track:** on green, `gh-track.sh close {issue#} "Story {epic}.{story} complete"` (applies `done` + closes — milestone progress ticks up here).
 - **Commit (only if green after patches):** `story {epic}.{story}: review+patch`. If patches couldn't resolve, leave status `in-progress`, don't commit, HALT.

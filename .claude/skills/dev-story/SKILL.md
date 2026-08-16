@@ -50,6 +50,8 @@ Don't ask for clarification (use Dev Notes; log ambiguous calls in Completion No
 
 **Manual steps belong to the user, explicitly.** If Dev Notes has a `### Manual Steps` subsection (see create-story ▸ *Manual steps*), surface those steps to the user verbatim rather than attempting or silently skipping them — and if the story didn't already verify a named GUI/console path, verify it against the installed toolchain version before the user relies on it (vendors move menu paths between releases; a wrong path is a hard stop for a new operator).
 
+**Migration-shaped stories: the invariant test is Task 1.** If Dev Notes says `**Shape:** migration` — or the story's core is plainly a repeated mechanical change (a rename across N call sites, a type migration across N properties, a dependency swap) even when create-story didn't label it — write the invariant test **before** the edits, run it, and confirm it fails **enumerating every violation**. Then make the edits. At the end, re-prove it by reverting exactly **one** instance and confirming a failure that names that instance. A test written after the sweep is authored against already-corrected code and can only be shown to pass. If the task list is ordered otherwise, reorder it.
+
 **Keep testability current as you go** (Apple projects with `docs/setup/swift/testability.md`): a task that adds or changes a persisted model entity updates the `SeedScenario` registry (at minimum `.typical` and `.edge`) in the same task; new user-facing views get the **exact** `.accessibilityIdentifier`s the story's Design Contract names (never invented, never backfilled); a task that adds a screen adds its deep-link route in the same task.
 
 **Keep files maintainable as you go.** If a file you create or touch crosses the file-size / decomposition target in the routed guidance (`docs/setup/swift/ui-composition.md` or `docs/setup/web/`), decompose it **as part of the task** — don't defer it. Split along responsibility seams (Swift: `extension TypeName {}` files for members, named `private struct` sub-views for layout), never by mechanical line-cutting, and never by giving a sub-view its own data access. A 280-line file with one cohesive job is fine; a smaller file doing three jobs is not — cohesion decides the cut.
@@ -106,6 +108,12 @@ Before review, verify all items in `checklist.md` pass. Fix any failures first.
 2b. **A flaky or hanging test suite is a first-class bug — file it the moment it is observed**, via **LOG-AND-SCHEDULE** in `skills/deferred/SKILL.md`. Never "it passes in isolation, ignore it": a festering hang blocks the next epic-boundary gate and masquerades as agent or dev failures. Then continue with the targeted/known-good invocation.
 3. **Run the cumulative eval set.** If `docs/evals/` exists, execute **RUN** from `skills/evals/SKILL.md` for this story's epic (zero-token: it just runs the accumulated `type: command` cases). A failing case is a **regression** of an earlier story — treat it exactly like a red build: fix and re-run, or HALT. This is what makes the regression net *cumulative* across stories, not just per-story.
 4. **Update the eval set.** If `docs/evals/` exists and this story added tests that cover an AC or invariant, execute **BUILD** from `skills/evals/SKILL.md` to append (or flip `enabled: true` on) the corresponding `type: command` cases, so the next story inherits them.
+4b. **A new gate is not done until it has been shown to fail.** For every test, eval case, or assertion **written this story** (not every run of the existing suite): break the thing it guards — revert the fix, reintroduce the defect, or corrupt the input — and confirm the gate fails **and names the specific item**. Restore, confirm green. A gate that has only ever been observed green is unverified, however many times it ran. Record the discriminating check in Completion Notes (`{gate} — sabotage: {what was broken} → failed naming {item}; restored green`) so a reviewer can see it happened.
+
+4c. **Any gate that enumerates must assert it enumerated.** A test that walks a source tree, globs files, or greps the codebase must assert a plausible lower bound on what it found and fail if the count is implausible — otherwise it passes vacuously when a moved directory or broken path returns zero items.
+
+4d. **Before accepting a zero as proof, prove the channel can see a one.** When verification takes the form "search output for X and find none," first produce an X deliberately and confirm it appears on the channel being searched. An unvalidated zero is not evidence of absence. Needed only for a **novel or assumed** channel (a log stream, a grep over runtime output) — not for ordinary test output.
+
 5. Record the result in the Debug Log: the command run and `build+test green` (or the manual-required note), plus `evals: P/T`. This is the executable regression net that prevents a later story from silently reverting a prior fix — it only works if it actually runs every story.
 
 ## On Completion
@@ -143,8 +151,15 @@ The diff is uncommitted changes. Story file is loaded. Go straight to the passes
 Tag each finding:
 - `decision-needed` — ambiguous; fix needs user input
 - `patch` — clear bug; unambiguous fix
+- `fix-now` — outside the ACs but trivially and safely fixable now (see ceiling)
 - `defer` — pre-existing, not from this diff
 - `dismiss` — noise or false positive
+
+**`fix-now` ceiling — all four must hold**, or it is `defer`:
+1. Small (≤ ~10 lines, one file) and adjacent to the diff already under review.
+2. Provably safe — covered by an existing test, or by one written in the same pass.
+3. No new dependency, schema change, public API change, or user-visible copy change.
+4. Describable in one line in the commit message.
 
 Merge duplicates. Drop `dismiss`.
 
@@ -153,13 +168,17 @@ Merge duplicates. Drop `dismiss`.
 Write non-dismissed findings to `### Review Findings` subsection:
 - `- [ ] [Decision] {title} — {detail}`
 - `- [ ] [Patch] {title} [{file}:{line}]`
+- `- [x] [Fix-Now] {title} [{file}:{line}] — out of scope, applied under the fix-now ceiling`
 - `- [ ] [Defer] {title} — pre-existing`
+
+`[Fix-Now]` items are recorded, never invisible — a fix applied without an AC still gets reviewed.
 
 ### Resolve and Patch
 
 - Zero findings: skip to Wrap Up
 - `decision-needed`: list all, wait for answers, record decisions, convert to patch/defer/dismiss
 - Auto-patch all `patch` (including resolved decisions). Mark `[x]`.
+- Apply all `fix-now` items in the same pass, each with its covering test. Mark `[x]`. Anything that grew past the ceiling while fixing it reverts to `defer`.
 - If patch can't auto-apply: surface explicitly, leave `[ ]`
 
 ### Pull Deferred Items Forward

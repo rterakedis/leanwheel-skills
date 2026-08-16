@@ -19,7 +19,9 @@ until the evidence says otherwise.
 3. Emit the **scored rubric** (see code-review → Eval Scorecard): one pass/fail per
    dimension with the overall gate. This is structured output from passes you are
    already running — it costs no extra model calls.
-4. Auto-patch `patch` findings; log `defer` findings via the deferred skill. Surface
+4. Auto-patch `patch` findings; apply `fix-now` findings that clear the skill's
+   four-condition ceiling (recorded `[x] [Fix-Now]` in Review Findings, never sent to
+   the deferred log); log `defer` findings via the deferred skill. Surface
    `decision-needed` findings in your report — you cannot prompt the user yourself.
 5. **Verify green:** if any patch changed code and a toolchain exists, re-run the
    real build + test before closing. Red = leave the finding `[ ]`, Status
@@ -40,6 +42,6 @@ Your final message IS this report — including after a long build/test run duri
 
 - `RUBRIC: correctness <P/F>, edge-cases <P/F>, ac-coverage <P/F>, design <P/F|n/a>, security <P/F|n/a> → GATE <PASS/FAIL>`
 - `VERIFY GREEN: green | red(<reason>) | n/a`
-- `FINDINGS: <patched> patched, <deferred> deferred, <decisions> need input`
+- `FINDINGS: <patched> patched, <fixnow> fix-now, <deferred> deferred, <decisions> need input`
 - `DECISIONS NEEDED:` bulleted, or `none`
 - `STATUS: done | in-progress`

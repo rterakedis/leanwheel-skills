@@ -14,6 +14,10 @@ Every deferred item is a row in `docs/deferred-items.md` — the single source o
 
 `Scheduled As` is the load-bearing column: every deferred item must point at an **open** (not-started or in-progress) story. An item with no schedule, or one pointing at a story that's since been completed or removed, is an **orphan**.
 
+### Not everything belongs in the log — `[Fix-Now]`
+
+Deferral is cheap at the moment of discovery (thirty seconds to log; fixing risks the story's green gate), so with only `[Patch]` and `[Defer]` available a small, obviously-right fix outside the story's ACs defaults to the log — and the log grows faster than it drains (one 14-story epic went 13 → 27 open items while four such fixes shipped only because a human said "fix it now"). Review triage therefore has a third disposition, **`[Fix-Now]`**: apply immediately without an AC when *all* hold — the change is small (≈ ≤10 lines, one file) and adjacent to the diff under review; it is provably safe (covered by an existing test or one written in the same pass); it introduces no new dependency, schema change, public API change, or user-visible copy change; and it can be described in one commit-message line. Anything failing a condition is `[Defer]`, unchanged. Fix-Now items are recorded in the story's Review Findings so they stay reviewable, and `LOG-AND-SCHEDULE`'s intake rejects items that meet the Fix-Now bar — the log's value is proportional to its signal.
+
 ### How an item gets logged and scheduled
 
 The composable [`/deferred`](../.claude/skills/deferred/SKILL.md) skill's `LOG-AND-SCHEDULE` operation runs automatically whenever a calling skill triages a finding as "defer" — the user never manages a queue by hand:

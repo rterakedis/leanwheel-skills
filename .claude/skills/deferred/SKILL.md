@@ -33,6 +33,8 @@ Called by: dev-story/code-review/correct-course/investigate/quick-dev when triag
 
 **Gate — surface a decision instead of logging it.** Before completing the steps below: if the item you are about to write contains "decide: (a)/(b)/(c)", "needs a product decision", or similar, you have already done the analysis and the only thing being deferred is *asking*. Ask in that turn instead. A decision needs the owner when **any** of: both choices destroy or strand something the user created; the options differ in what they promise the user (not just how it's built); the answer depends on product intent not in the repo; or it is expensive to reverse once users build habits on it. Everything else — implementation shape, equally-correct APIs, anything strictly better on every axis — just decide and mention it. This is the biggest cause of deferred-log bloat.
 
+**Gate — reject anything that meets the `[Fix-Now]` bar.** Before logging, test the item against `code-review` → Step 4's `fix-now` ceiling (≤ ~10 lines in one file adjacent to the diff under review, provably safe, no new dependency/schema/public-API/user-visible-copy change, one commit line). If it clears all four, do **not** log it: return `fix-now — not logged` and tell the caller to apply it in this pass. The log's value is proportional to its signal, and a two-line fix sitting in it costs more to schedule than to make.
+
 Steps:
 1. Get next ID from last row of `docs/deferred-items.md` (or D-1 if new).
 2. Call **SCHEDULE** (which tries **SLOT-INTO-BACKLOG** first, falls back to new remediation story).

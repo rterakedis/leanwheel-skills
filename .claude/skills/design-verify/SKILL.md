@@ -83,6 +83,6 @@ Write results into the story file under `### Design Verification` (create if mis
 
 Severity: `HIGH` = wrong/missing state, unreadable text, broken layout, missing dark mode on a load-bearing surface. `MEDIUM` = off-token value, spacing drift. `LOW` = polish nits.
 
-**When invoked from `/dev-story`:** hand findings to the inline review's triage — mismatches become `patch` or `decision-needed` findings like any other. The story does not reach `done` with an unresolved HIGH design finding.
+**When invoked from `/dev-story`:** hand findings to the inline review's triage — mismatches become `patch`, `fix-now`, or `decision-needed` findings like any other. The story does not reach `done` with an unresolved HIGH design finding.
 
 **When standalone:** report the table, fix `patch`-grade mismatches on request.

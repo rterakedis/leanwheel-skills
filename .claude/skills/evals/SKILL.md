@@ -68,6 +68,13 @@ Input: a story file path (and its `{epic}.{story}`).
    - If the AC is an HTTP/CLI behavior, a `curl`/CLI invocation with
      `output-contains:` is fine.
    - `expect: exit-0` unless a specific output assertion is needed.
+2b. **A case that enumerates must assert it enumerated.** If the check walks a
+   source tree, globs files, or greps the codebase, the underlying test must
+   assert a plausible lower bound on what it found — `expect: output-contains:"X"`
+   over a walk that produced no output is a gate that cannot fail. Also pick the
+   needle so it can only match the intended target: a generic summary line
+   (`output-contains:"Test run with"`) matches whichever target printed first and
+   passes while the target you care about is red.
 3. Only when an AC is **inherently non-deterministic** (LLM output quality, "reads
    naturally", visual judgment not covered by design-verify) add a `type: judge`
    case — and note in your report that it carries per-run token cost.
