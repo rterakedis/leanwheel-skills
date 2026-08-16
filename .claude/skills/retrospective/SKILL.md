@@ -27,7 +27,7 @@ the *user's* perspective, not to restate what the code already shows.
 2. **What went well?** → Approaches that paid off — patterns to keep, not change. Distinct from Q4 (codifying); this is reinforcement.
 3. **What slowed us down?** → Blockers and root causes. For each blocker, ask "why didn't we catch this earlier?" at least twice (5-whys-lite).
 4. **What patterns emerged?** → Approaches/structures/decisions worth codifying.
-5. **Did last sprint's conventions hold?** → Read the previous retro's "CLAUDE.md Conventions Added" section. Audit one or two stories from this epic for each convention. Record violations as new blockers or pattern reinforcement.
+5. **Did last sprint's conventions hold?** → Read the previous retro's "CLAUDE.md Conventions Added" section. Audit one or two stories from this epic for each convention. Record violations as new blockers or pattern reinforcement. While auditing, also check each convention for a **half-rule**: does it establish a precondition without addressing its consequence? (e.g. "every attribute optional in the model" said nothing about the generated property it produces.) Tentative is fine — flag it as a question for Q6/Q7 rather than asserting a fix.
 6. **What should change?** → Process changes for next sprint (story creation, architecture, Dev Notes, testing).
 7. **What goes into CLAUDE.md?** → Standing rules for all future sessions.
 

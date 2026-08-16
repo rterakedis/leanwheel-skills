@@ -17,6 +17,8 @@ All items must pass before status is set to `review`.
 - [ ] Unit tests written/updated for all changed logic
 - [ ] Integration tests written/updated where Dev Notes require them
 - [ ] Test suite **executed this session and green** (no regressions) — cite the run; a passing build is not a passing test suite
+- [ ] Every gate **new this story** (test, eval case, assertion) was shown to fail — sabotage run recorded in Completion Notes, naming the specific item it flagged — or N/A if the story added none
+- [ ] Any gate that enumerates (tree walk, glob, grep) asserts a plausible lower bound on what it found — or N/A
 - [ ] Test framework and patterns from Dev Notes followed
 
 ## Story File

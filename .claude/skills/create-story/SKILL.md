@@ -56,7 +56,10 @@ Extract from documents:
 
 **Story complexity (set this first — it scales the rest of this step):**
 - **Stateful / multi-step** — has a state machine, a multi-step flow, concurrent actions, an async lifecycle, or non-trivial failure handling. Gets the full Behavior Contract + edge-case enumeration below and passes through the Clarification Gate.
+- **Migration-shaped** — the story's core is one repeated mechanical change: a rename across N call sites, a type migration across N properties/entities, a dependency or API swap. Record `**Shape:** migration` as the first line of Dev Notes and order the tasks as below. (Orthogonal to the two below — a migration story is usually otherwise simple.)
 - **Simple** — CRUD, config, copy, styling, or a pure refactor/migration with one obvious path. Behavior Contract is one line or omitted; the edge-case pass is a quick sanity check, not a full enumeration; the Clarification Gate is a no-op unless a real fork surfaces. Do not manufacture ceremony for simple stories.
+
+**Task ordering for migration-shaped stories:** the durable deliverable is the *invariant test*, not the N edits — written afterward it is authored against already-corrected code and can only be shown to pass. So **Task 1 is "write the invariant test; run it; confirm it fails, enumerating every violation"**, the sweep follows, and the final task re-proves the test by reverting exactly one instance and confirming a failure that names it. Give the test its own AC.
 
 **Behavior Contract & edge-case enumeration (stateful/multi-step stories):**
 Before writing any ACs, draft the `### Behavior Contract` section (template) and enumerate edge cases explicitly. Do not lean on the passive "edge cases?" bullet above — produce a real list:
