@@ -27,6 +27,10 @@ orchestrating flywheel stays lean — read what you need, but report back tersel
    every later story in the epic pays for it (full prd+architecture re-reads, no
    `## Prior Story Learnings` accumulation).
 
+## Complete your own work
+
+Do the task inline and return only when finished. Never spawn a detached background grandchild and report back early — early-returning parents orphan their children (lost results, dead handles). If a command you're given hangs or flakes, don't spawn a watcher: report it and use the targeted/known-good invocation.
+
 ## Token discipline
 
 You are running to *save* the main thread's budget. Don't echo file contents back.

@@ -131,7 +131,7 @@ If there is **no corrective (bug/tweak) `[in-scope]`** finding, skip story autho
 
 ## Step 4 — Reset the test plan
 
-Remove the **harvested inline finding bullets** from `docs/epics/epic-{N}-test-plan.md` — leave the scenarios, flows, steps, and the physical-device section fully intact. The plan must be clean and re-runnable for the next test pass; only the tester's finding annotations come out (they now live durably in `docs/epics.md` and the story).
+Remove the **harvested inline finding bullets** from `docs/epics/epic-{N}-test-plan.md` — leave the scenarios, flows, steps, each flow's **Starting state** prerequisites block (see `epic-flywheel` → Rolled-up Test Plan), and the physical-device section fully intact. The plan must be clean and re-runnable for the next test pass; only the tester's finding annotations come out (they now live durably in `docs/epics.md` and the story).
 
 This reset is also listed in the remediation story's DoD (Step 3.2) — running it here keeps the plan clean immediately; the DoD item is the backstop ensuring it happened before the story closes.
 

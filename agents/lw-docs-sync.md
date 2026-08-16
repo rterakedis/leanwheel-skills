@@ -25,6 +25,13 @@ prompt:
   promote durable project-canonical learnings from `docs/epics/epic-{N}-context.md`
   into `docs/architecture.md`, idempotently.
 
+PROMOTE's symbol-verification step is mandatory; never commit a name you didn't grep.
+
+**Complete your own work.** Do the task inline and return only when it is finished. Never
+spawn a detached background grandchild and report back early — early-returning parents
+orphan their children (lost results, dead handles). If a command hangs or flakes, don't
+spawn a watcher: report it.
+
 Follow the skill exactly, including its hard rules: never write
 `docs/setup/swift|web/`, never create the top-level area directories, ground every
 edit in the actual diff/CI/code, and tag inferred operational steps

@@ -66,11 +66,12 @@ Write to root using template. If exists, append missing sections (never replace)
 If not exists: create from template.
 If exists: check for `## Docs Structure` + `## Task Tracking Emoji`. Add missing sections at top (after project desc). Don't modify existing.
 
-### Step 3s — Append Simplicity Guardrails (unconditional — all projects)
+### Step 3s — Install Simplicity Guardrails (unconditional — all projects)
 
-Applies to every project, not gated on platform:
-- Check whether `## Simplicity & Anti-Over-Engineering` already exists in CLAUDE.md. If it does, skip (never duplicate).
-- Otherwise, append the full contents of `{skills_path}/.claude/skills/setup/stubs/simplicity.md` to CLAUDE.md, preceded by a `---` separator.
+Applies to every project, not gated on platform. The doctrine lives in its own file; CLAUDE.md carries only a pointer (it is loaded every turn — see the tier preamble in `claude-template.md`):
+- Write `{skills_path}/.claude/skills/setup/stubs/simplicity.md` to `docs/setup/simplicity.md`. Skip if that file already exists (never overwrite).
+- Check whether CLAUDE.md already references `docs/setup/simplicity.md`. If it does, skip. Otherwise append one line: `- Simplicity & anti-over-engineering doctrine (laziness ladder, `leanwheel:` markers): `docs/setup/simplicity.md` — read before adding a dependency or abstraction.`
+- Never inline the stub's contents into CLAUDE.md.
 
 ### Step 3a — Append Apple Platform Guardrails (conditional)
 

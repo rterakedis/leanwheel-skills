@@ -48,6 +48,8 @@ For each task in order:
 
 Don't ask for clarification (use Dev Notes; log ambiguous calls in Completion Notes).
 
+**Manual steps belong to the user, explicitly.** If Dev Notes has a `### Manual Steps` subsection (see create-story ▸ *Manual steps*), surface those steps to the user verbatim rather than attempting or silently skipping them — and if the story didn't already verify a named GUI/console path, verify it against the installed toolchain version before the user relies on it (vendors move menu paths between releases; a wrong path is a hard stop for a new operator).
+
 **Keep testability current as you go** (Apple projects with `docs/setup/swift/testability.md`): a task that adds or changes a persisted model entity updates the `SeedScenario` registry (at minimum `.typical` and `.edge`) in the same task; new user-facing views get the **exact** `.accessibilityIdentifier`s the story's Design Contract names (never invented, never backfilled); a task that adds a screen adds its deep-link route in the same task.
 
 **Keep files maintainable as you go.** If a file you create or touch crosses the file-size / decomposition target in the routed guidance (`docs/setup/swift/ui-composition.md` or `docs/setup/web/`), decompose it **as part of the task** — don't defer it. Split along responsibility seams (Swift: `extension TypeName {}` files for members, named `private struct` sub-views for layout), never by mechanical line-cutting, and never by giving a sub-view its own data access. A 280-line file with one cohesive job is fine; a smaller file doing three jobs is not — cohesion decides the cut.
@@ -59,7 +61,7 @@ Stop if:
 - Required file/dependency missing and can't infer
 - AC contradictory or impossible
 - Task requires out-of-scope changes risking breakage
-- **Build or test suite cannot be made green** after a reasonable number of fix attempts (see Build & Test Gate). Do not mark the story `review` over a red build — report the failing output and HALT.
+- **Build or test suite cannot be made green** after 3 consecutive red runs (see Build & Test Gate escalation limit). Do not mark the story `review` over a red build — report the failing output and HALT.
 
 ## Story File Updates
 
@@ -80,6 +82,10 @@ Don't modify: User Story statement, Dev Notes prose, References.
 
 Before review, verify all items in `checklist.md` pass. Fix any failures first.
 
+**Maintainer doc gate:** if the story introduced a new external dependency, a build-system change, or a new platform capability, its maintainer runbook/doc must exist or be updated **before** the story is marked done — never left as an action item for later.
+
+**Never reopen a `done` story.** `status: done` stories are immutable; new work becomes a new story `{N}.{last+1}` (canonical rule: `skills/harvest-findings/SKILL.md`).
+
 ## Build & Test Gate
 
 **Verification is by running, not by reading.** Static reasoning is not a substitute for the toolchain — especially for Swift, where result builders, macros (`@Observable`/`@Model`), actor isolation, and `some View` produce errors that cannot be reliably predicted by reading. Before the story can leave `in-progress`, the project must **compile clean and its tests must pass this session** — verified by actually invoking the toolchain, not by inspection.
@@ -95,7 +101,9 @@ Before review, verify all items in `checklist.md` pass. Fix any failures first.
    - **Web / SSG** (`package.json` present): run the project's build + test scripts (e.g. `npm run build && npm test`, or the lint/typecheck script if no tests).
    - **Other toolchains:** run the project's documented build + test command.
    - **No toolchain detected:** record a `Build & Test Gate: manual-required` note in the Debug Log with the exact command a human should run, and continue. Never fake a green result.
-2. **Red build or failing test = not done.** Read the compiler/test output, fix the cause, and re-run. Loop until green. Do not patch the story file to `review` over a failure. If it cannot be made green after a reasonable number of attempts, **HALT** (see HALT Conditions).
+2. **Red build or failing test = not done.** Read the compiler/test output, fix the cause, and re-run. Loop until green. Do not patch the story file to `review` over a failure.
+   **Escalation limit:** after **3 consecutive red runs** with no new fix succeeding, stop, report the failing output, and ask the user — do not keep retrying. Retry thrash burns tokens and, on GUI toolchains, ties up the device/UI. This is the HALT condition below.
+2b. **A flaky or hanging test suite is a first-class bug — file it the moment it is observed**, via **LOG-AND-SCHEDULE** in `skills/deferred/SKILL.md`. Never "it passes in isolation, ignore it": a festering hang blocks the next epic-boundary gate and masquerades as agent or dev failures. Then continue with the targeted/known-good invocation.
 3. **Run the cumulative eval set.** If `docs/evals/` exists, execute **RUN** from `skills/evals/SKILL.md` for this story's epic (zero-token: it just runs the accumulated `type: command` cases). A failing case is a **regression** of an earlier story — treat it exactly like a red build: fix and re-run, or HALT. This is what makes the regression net *cumulative* across stories, not just per-story.
 4. **Update the eval set.** If `docs/evals/` exists and this story added tests that cover an AC or invariant, execute **BUILD** from `skills/evals/SKILL.md` to append (or flip `enabled: true` on) the corresponding `type: command` cases, so the next story inherits them.
 5. Record the result in the Debug Log: the command run and `build+test green` (or the manual-required note), plus `evals: P/T`. This is the executable regression net that prevents a later story from silently reverting a prior fix — it only works if it actually runs every story.
@@ -103,6 +111,8 @@ Before review, verify all items in `checklist.md` pass. Fix any failures first.
 ## On Completion
 
 When tasks done, DoD passes, **and the Build & Test Gate is green** (or manual-required is recorded):
+
+**Verify reachability, not presence.** A string, control, or affordance existing in source is *not* evidence it renders — dev, inline review, and automated validation can all pass while only confirming the string is in the source. Confirm by driving the app or dumping the view hierarchy. **Corollary:** when a UI element can't be addressed in a UI test, dump the tree before blaming the test framework — the element may not exist.
 
 1. **Invariant verification (stateful stories):** if the story's `### Behavior Contract` lists invariants, verify each one holds in the built code with **evidence** — a test that exercises it, or a cited assertion/guard in the source (`file:line`). Record results under `### Invariant Verification` in the story file: each invariant as `- [x] {invariant} — {test name | file:line}` or `- [ ] {invariant} — UNVERIFIED: {why}`. An invariant with no test and no enforcing code is **not** a pass — add a one-test cover if cheap, otherwise leave it `[ ]` and let it feed the inline review as a finding. Never assert an invariant holds without citing the evidence. Skip entirely for simple stories or stories with no invariants.
 2. **Design verification (UI stories):** if the story changed user-visible UI, execute **VERIFY** from `skills/design-verify/SKILL.md` — render the changed surfaces (simulator or dev server + screenshots), compare against the Design Contract, and write results to `### Design Verification` in the story file. Mismatches feed into the inline review triage below as findings. If no rendering tooling is available, record the manual checklist and continue. Skip entirely for stories with no user-visible surface.

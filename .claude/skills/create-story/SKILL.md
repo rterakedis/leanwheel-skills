@@ -70,6 +70,9 @@ Every enumerated edge case with a non-obvious outcome must become its own Given/
 
 **Simplicity lens (scaled by complexity):** before finalizing, ask *does each AC and Dev Notes section need to exist?* — prune speculative ACs and boilerplate scaffolding. For a **simple** story this is a one-line sanity check: do not manufacture ceremony (no invented edge cases, no Behavior Contract padding). For any new dependency or abstraction the story would introduce, apply ladder rungs ①–⑤ (`## Simplicity & Anti-Over-Engineering`): prefer reuse of an existing helper/pattern, the standard library, or a native platform feature before writing new machinery or adding a dependency.
 
+**Manual steps (Dev Notes structure):**
+Any step the user must perform in a GUI or console — not the terminal — goes in a clearly labeled `### Manual Steps` subsection of Dev Notes as **numbered** steps, never buried in prose. This covers test-plan setup steps too. Any step naming a GUI path must be verified against the installed toolchain version before the user relies on it — vendors move menu paths between releases, and a wrong path is a hard stop for a new operator.
+
 **Cross-epic runtime dependency check (mandatory):**
 Before writing, explicitly answer: does this story require a runtime artifact — database table, seed data row, API endpoint, migration, or service — that lives in a *different* epic and may not be complete yet?
 
@@ -144,6 +147,8 @@ Use template. Rules:
 - Dev Notes: everything dev session needs (extract content, don't say "see docs")
 - ACs: Given/When/Then format, independently testable; every material edge case from the Behavior Contract has its own AC
 - References: cite specific files/sections
+
+- Never reopen a `status: done` story to absorb new work — done stories are immutable; author a new story `{N}.{last+1}` instead (canonical rule: `skills/harvest-findings/SKILL.md`)
 
 Output: `docs/epics/{epic}-{story}-{slug}.md`
 

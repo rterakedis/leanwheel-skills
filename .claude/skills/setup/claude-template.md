@@ -2,6 +2,22 @@
 
 {project_description}
 
+<!-- How this file is maintained — read before adding a rule.
+This file is loaded every turn, so every line is paid for constantly. Each rule gets a tier:
+  T1 — a test, hook, linter, or type already enforces it. Root carries ≤2 lines: the rule as
+       one clause + the enforcing artifact's name. The full explanation lives in that
+       artifact's doc comment, where someone debugging a failure actually reads it.
+  T2 — cannot be automated, applies repo-wide. Full prose here — the only tier that earns
+       real estate in this file.
+  T3 — applies to one directory/feature. Lives in a nested CLAUDE.md there. Root keeps at most
+       a one-line invariant, and only if violating it corrupts data rather than drifting style:
+       nested files load lazily (possibly after the model has formed a plan), so T3 trades a
+       guarantee for size — safety-critical tripwires stay in root.
+Budget: ≤300 lines. Over budget means demote (T2→T1) or move (T3→nested), never append.
+/retrospective audits tiers + budget at every epic close. The Simplicity doctrine lives at
+`docs/setup/simplicity.md` — link it, never inline it.
+-->
+
 ---
 
 ## Docs Structure

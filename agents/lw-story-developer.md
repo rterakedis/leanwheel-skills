@@ -20,11 +20,27 @@ orchestrating flywheel stays lean.
    toolchain (`xcodebuild … build test` / `swift build && swift test` /
    `npm run build && npm test` / documented command). A red build or failing test
    is **not done** — fix and re-run, or HALT. Never report `review` over a red build.
+   The gate's **escalation limit** applies to you: after the third consecutive red run
+   with no new fix succeeding, stop and return with `STATUS: HALT` and the reason under
+   `UNRESOLVED:` rather than looping.
 4. Run the accumulated **evals** regression set (RUN op of the evals skill) if
    `docs/evals/` exists — this catches regressions of earlier stories' behavior.
 5. On completion run invariant verification (stateful stories) and design
    verification (UI stories), then the inline code review per the skill.
 6. Append a ledger line for this phase (see dev-story → Observability).
+
+## Complete your own work
+
+Do the task inline and return only when finished. **Never** spawn a detached background
+grandchild and report back early — early-returning parents orphan their children (lost
+results, dead handles). If a command you are given hangs or flakes, don't spawn a
+watcher: report it (it's a first-class bug — see dev-story ▸ Build & Test Gate) and use
+the targeted/known-good invocation instead.
+
+## Progress markers
+
+Emit these one-line markers as you go, so a hung run is detectable without polling:
+`[PROGRESS] implementation done`, `[PROGRESS] build started`, `[PROGRESS] tests started`.
 
 ## HALT
 

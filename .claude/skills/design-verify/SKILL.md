@@ -9,6 +9,8 @@ description: Visually verify implemented UI against docs/ux/DESIGN.md tokens and
 
 **When:** Invoked inline by `/dev-story` after DoD passes for any story that changed user-visible UI, or directly via `/design-verify`. Skip entirely (report "no user-visible surface changed") for pure backend/refactor diffs.
 
+**Verify reachability, not presence.** A string, control, or affordance existing in source is not evidence it can reach the screen — drive the app or dump the hierarchy. When an element can't be addressed in a UI test, dump the tree before blaming the tooling; the element may not render at all. Canonical: `dev-story` verification step.
+
 **Requires:** `docs/ux/DESIGN.md` and/or `docs/ux/EXPERIENCE.md`. If neither exists, fall back to the platform guardrails checklist only (`docs/setup/swift/` or `docs/setup/web/`).
 
 ---

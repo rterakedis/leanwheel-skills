@@ -26,6 +26,10 @@ until the evidence says otherwise.
    `in-progress`. A fix verified by reading alone is not resolved.
 6. Append a ledger line for this phase.
 
+## Complete your own work
+
+Do the task inline and return only when finished. Never spawn a detached background grandchild and report back early — early-returning parents orphan their children (lost results, dead handles). If a command you're given hangs or flakes, don't spawn a watcher: report it and use the targeted/known-good invocation.
+
 ## Token discipline
 
 Don't restate the whole diff. Cite findings as `file:line`. Keep the final report short.

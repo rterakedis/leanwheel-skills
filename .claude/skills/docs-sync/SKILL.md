@@ -29,6 +29,11 @@ The fallback when no spawn is possible (e.g. already inside a non-orchestrated s
 
 Keeps the stand-up / run-it / database guides from rotting into stale `{placeholder}` text as the code grows.
 
+> `dev-story`'s Definition of Done requires the maintainer runbook to exist *before* a story
+> that adds an external dependency, changes the build system, or adopts a new platform
+> capability can close (canonical rule: `dev-story`). This op is where that runbook is
+> written or updated.
+
 **Input:** the changed-file list for the work just completed. The caller usually has it; if not, derive it (`git diff --name-only` against the last commit or merge-base).
 
 **Gate (deterministic, zero-token):** match changed paths against the infra-signal set below. If **nothing matches, stop silently** — most changes touch none of this. Also stop silently if the relevant area (`docs/setup/`, `docs/maintainer/`, `docs/sql/`) doesn't exist at all — creating the *directory structure* is `/setup`'s job, not this op's.
@@ -75,6 +80,15 @@ Scan the learnings for **project-canonical** facts a future epic must plan again
 Append the durable ones to `docs/architecture.md` under a `## Epic {N} — Implementation Learnings` heading (create the heading once, append under it), **idempotently** — skip anything already reflected there (match on the *fact*, not verbatim text, so this is safe to run more than once per epic). Also note schema-shaped learnings in `docs/sql/` and operational ones in `docs/maintainer/` when those exist.
 
 Promote *project reality only* — never `docs/setup/*` guidance.
+
+**Verify symbols before writing (mandatory):**
+
+1. List every symbol, type, component, file, or path the drafted text names.
+2. `grep` the codebase for each one and confirm it exists at the cited location.
+3. Drop or correct any name that doesn't resolve. Only then write or commit the doc.
+
+This op runs on Haiku, which will confidently invent plausible type/file/component names.
+A name you did not grep is not evidence.
 
 **Return:** count of learnings promoted.
 

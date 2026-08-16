@@ -48,19 +48,28 @@ Check these:
 
 | Area | Detection |
 |---|---|
-| Guardrail hooks | `.claude/hooks/{guard-secrets,guard-design-tokens,guard-dark-pattern,guard-a11y-id,asc-lint,log-activity}.sh` present + executable |
+| Guardrail hooks | `.claude/hooks/{guard-secrets,guard-design-tokens,guard-dark-pattern,guard-a11y-id,guard-context-budget,asc-lint,log-activity}.sh` present + executable |
 | Hook wiring | `.claude/settings.json` `hooks.PreToolUse/PostToolUse` reference the leanwheel guard scripts |
 | Eval set | `docs/evals/README.md` present |
 | Metrics ledger | `docs/metrics/README.md` present |
 | Swift stubs | each `docs/setup/swift/*.md` vs `{skills_path}/.../stubs/swift/*.md` (only if `is_apple`) |
 | Web stubs | each `docs/setup/web/*.md` vs stubs (only if `is_web`) |
-| Simplicity guardrails block | `## Simplicity & Anti-Over-Engineering` in CLAUDE.md (all projects — not gated) |
+| Simplicity doctrine | `docs/setup/simplicity.md` present, and CLAUDE.md references it (all projects — not gated). A legacy inlined `## Simplicity & Anti-Over-Engineering` block in CLAUDE.md counts as missing — see **Missing stubs** below |
 | Swift guardrails block | `## Swift/SwiftUI Guardrails` in CLAUDE.md (only if `is_apple`) |
 | Web guardrails block | `## Web Guardrails` in CLAUDE.md (only if `is_web`) |
 | Commit script | `scripts/commit-push.sh` present + executable; `## Git Workflow` in CLAUDE.md |
 | Tracking script | `scripts/gh-track.sh` present + executable |
 | Simulator harness | `scripts/sim.sh` present + executable, and `docs/setup/swift/simulator.md` present (only if `is_apple`) |
 | Docs structure | `## Docs Structure`, `## Task Tracking Emoji` in CLAUDE.md |
+
+**Stub-install verification.** Walk every stub under `{skills_path}/.claude/skills/setup/stubs/`
+that applies to this project's surfaces, using the target mapping the rows above already
+define (`stubs/swift/*` → `docs/setup/swift/`, `stubs/web/*` → `docs/setup/web/`,
+`stubs/hooks/*` → `.claude/hooks/`, `stubs/simplicity.md` → `docs/setup/simplicity.md`,
+`stubs/evals|metrics/README.md` → `docs/evals|metrics/`). Report every one that is absent at
+its target under a **Missing stubs** heading. A missing stub is a strong hint its content was
+**inlined somewhere expensive** — usually CLAUDE.md, which is loaded every turn. For each,
+recommend installing the stub and collapsing the inlined copy to a one-line pointer.
 
 **REFRESH vs CONFLICT for stubs** — the safe-overwrite test:
 - Compare the project file against **every** historical version of that stub the
@@ -102,8 +111,11 @@ In dependency order, applying only ADD and REFRESH items:
    if the project copy matches a historical committed version; CONFLICT otherwise).
 6. **CLAUDE.md sections:** append any missing guardrail/structure blocks (same logic as
    `/setup` Steps 3/3s/3a/3c) — check-heading-then-append, never modify existing prose.
-   The `## Simplicity & Anti-Over-Engineering` block (`stubs/simplicity.md`) is
-   unconditional — append it on all projects when the heading is absent.
+   The simplicity doctrine is unconditional but is **not** a CLAUDE.md block: write
+   `stubs/simplicity.md` to `docs/setup/simplicity.md` (skip if present) and ensure CLAUDE.md
+   carries a one-line pointer to it (check-then-add). If a legacy project has the doctrine
+   inlined under `## Simplicity & Anti-Over-Engineering`, install the file and offer to
+   collapse the inlined block to the pointer — never inline it again.
 6. **Manifest:** if a legacy `.bmad-lite/` directory exists, rename it to `.leanwheel/`
    first (contents unchanged). Then write/update `.leanwheel/manifest.json` with the
    current `scaffolded_at` date, surfaces, and asset flags.
@@ -113,6 +125,9 @@ In dependency order, applying only ADD and REFRESH items:
 Print:
 - **Added:** new assets installed (hooks, evals/metrics dirs, etc.)
 - **Refreshed:** stubs updated from source (with the from→to if a version is known)
+- **Missing stubs:** stubs absent at their target path (from the stub-install verification in
+  Step 3) — with the note that a missing stub usually means its content was inlined into
+  CLAUDE.md, and the recommendation to install + collapse to a pointer.
 - **Conflicts (manual):** locally-edited files left untouched — tell the user to merge
   by hand or run `/refresh-swift` / `/refresh-web` to reconcile guidance.
 - **Already current:** count only.

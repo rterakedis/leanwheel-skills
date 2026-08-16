@@ -122,6 +122,31 @@ The benefit is therefore a function of project *length*, not of any single run. 
 
 The ops themselves are near-free: a structured edit over one file, once per epic close — no doc synthesis, no subagent, idempotent.
 
+### The file this analysis kept missing: `CLAUDE.md`
+
+Every number above measures a file read *when a skill runs*. The project's `CLAUDE.md` is
+read **every turn**, by every skill, forever — the highest-leverage file in the budget and
+invisible in the tables: a 600-line CLAUDE.md is 6K on every turn of every session.
+Hence the **≤300-line budget** and the T1/T2/T3 tier system defined in
+`.claude/skills/setup/claude-template.md` (over budget → demote or move, never append),
+enforced advisorily by `guard-context-budget.sh` at write time and audited by
+`/retrospective`'s tier audit at every epic close.
+
+### Per-file ceilings for leanwheel's own assets
+
+The failure mode this document criticizes upstream for — a single 67KB `retrospective`
+SKILL.md — is reachable from here by pure accretion. Each addition is defensible; the sum is not.
+
+| Asset | Ceiling | Over it → |
+|---|---|---|
+| `.claude/skills/*/SKILL.md` | **300 lines** | extract to a JIT-loaded reference file in the skill's directory that the skill reads *only when the branch needs it* — never pad the main file |
+| `agents/*.md` | **80 lines** | same: the agent's job list and report contract stay; detail moves to the skill it invokes |
+| Stubs (`stubs/**`) | no fixed ceiling — they are project-installed, not per-invocation | keep them one topic per file |
+
+Current debt against the SKILL.md ceiling: `swift-audit` (355) and `setup` (~310). Both are
+step-list skills whose branches are mostly mutually exclusive — the natural fix is routing
+the conditional platform blocks out to reference files, not prose trimming.
+
 ### Bottom line
 
 Leanwheel uses roughly **a third of the tokens** of BMAD v6 for the same 12-story project (~220K vs ~600K on the loading side) — while running more verification (build gates, evals, invariant checks, inline review) than upstream does. The savings come from the same four levers as before, all of which survived both systems' growth: no activation ceremony, epic-context caching, inline review, and session hygiene — now compounded by subagent isolation, model routing, and the zero-token guardrail/eval/tracking layers.

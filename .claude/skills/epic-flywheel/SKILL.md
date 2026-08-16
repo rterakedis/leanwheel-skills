@@ -80,8 +80,8 @@ Spawn `lw-story-creator` with `{epic}.{story}`. Capture `STORY FILE`, `EPIC CONT
 - **Stash the TESTING PLAN** for the boundary roll-up (keep just the text — append it to a scratch list `docs/epics/.epic-{N}-test-plans.md`, one block per story, so the orchestrator never has to hold all plans in context at once).
 
 ### Step 3 — Code Review + patch → commit
-Per story-flywheel's Phase 3 economy: the developer subagent already ran the inline review.
-- **Clean report (no `UNRESOLVED`, PASS gate, not security-sensitive):** skip a separate reviewer — carry Phase 2 findings forward. Saves a full review's tokens.
+Per story-flywheel's Phase 3 economy and its **blast-radius trigger set** (do not duplicate it here — read it): the developer subagent already ran the inline review.
+- **Clean report (no `UNRESOLVED`, PASS gate, not security-sensitive) and no blast-radius trigger:** skip a separate reviewer — carry Phase 2 findings forward. Saves a full review's tokens.
 - **Otherwise:** spawn `lw-story-reviewer` for an independent adversarial pass. It emits the SCORE rubric line, auto-patches `patch` findings, logs `defer` via the `deferred` skill (re-homing each — slot as AC or remediation story), and **re-verifies green**. `decision-needed` findings surface to the user.
 - **Deferred re-homing check:** confirm every `[Defer]` from this story landed in `docs/deferred-items.md` with a `Scheduled As` target. An orphan is a loop bug — fix before advancing.
 - **Track:** on green, `gh-track.sh close {issue#} "Story {epic}.{story} complete"` (applies `done` + closes — milestone progress ticks up here).
@@ -116,6 +116,9 @@ Two-pass, mirroring `/retrospective`:
 - **Pass 1:** scan this epic's story files for `[Defer]` entries not present in `docs/deferred-items.md`; LOG-AND-SCHEDULE any orphan so it gets a home.
 - **Pass 2:** verify every logged deferred item has a non-empty `Scheduled As` pointing at open work. Report the count re-homed; nothing is left to rot.
 
+### 4a. CLAUDE.md budget check (zero-token, non-blocking)
+`wc -l CLAUDE.md` > 300 → report as a finding in the boundary report: root CLAUDE.md is over the 300-line budget; something must be demoted (T2→T1) or moved to a nested CLAUDE.md, **not** appended — see `setup/claude-template.md` tiers and `/retrospective`'s CLAUDE.md tier-audit step.
+
 ### 4b. Tracking reconcile (safety net)
 Even with orchestrator-owned transitions, reconcile the whole epic's issues against story frontmatter so nothing is left drifted:
 ```bash
@@ -129,6 +132,7 @@ Call the Agent tool with `subagent_type: "lw-docs-sync"` (Haiku) and a prompt na
 
 ### 5. Rolled-up, deduplicated Test Plan (the manual pass)
 This is the payoff of deferring manual testing to here. Read the accumulated `docs/epics/.epic-{N}-test-plans.md` scratch list (collected plan text only — no source). Then, in a **single LLM pass**:
+0. **Every flow opens with a "Starting state" prerequisites block** before step 1 — the required data and settings state the tester must have in place. Steps then follow **real usage order, not story order**. Never assume the tester knows the setup; a flow that jumps between features because that's how the stories were sequenced is unrunnable.
 1. **Deduplicate & merge** overlapping steps across stories into end-to-end flows (e.g. five stories each touching the cart → one "complete a purchase" flow plus the per-story edge cases that aren't covered by the flow).
 2. **Enumerate edge cases** the individual story plans listed, deduped against the flows.
 3. **Classify every test** by where it can run:
@@ -144,6 +148,7 @@ _To log a finding: add an **indented** plain bullet (`-` or `*`, no checkbox) di
 
 ## A. Simulator / local-runnable (do now)
 ### Flow: {name}
+**Starting state:** {required data, settings state — everything that must be true before step 1}
 - [ ] {step} → {expected}
 ### Edge cases
 - [ ] {case} → {expected}
@@ -207,7 +212,9 @@ Next:
 ```
 Append the epic-level ledger roll-up. Wait for the user — the boundary is always a human gate (it's where *they* do the manual testing).
 
-**Retrospective reminder is mandatory.** The Epic Boundary Gate must always surface the retrospective prompt — never close an epic silently. If the user picks `"continue"` (skip retro), confirm once: "Starting Epic {N+1} without a retrospective for Epic {N} — the learnings/conventions from this epic won't be captured. Proceed?" Honor their choice, but make the skip explicit. If the user runs `"test"` first, then returns, re-surface the retrospective reminder before advancing to the next epic.
+**Retrospective reminder is mandatory.** The Epic Boundary Gate must always surface the retrospective prompt — never close an epic silently.
+
+**`/retrospective` is human-in-the-loop even here.** It asks retrospective's `## Seven Questions` one at a time and waits for answers; autonomously generating the retro from git history is forbidden — the flywheel boundary is exactly where the pressure to skip comes from, and the questions exist to capture the user's perspective, not to confirm what the code already shows. If the user picks `"continue"` (skip retro), confirm once: "Starting Epic {N+1} without a retrospective for Epic {N} — the learnings/conventions from this epic won't be captured. Proceed?" Honor their choice, but make the skip explicit. If the user runs `"test"` first, then returns, re-surface the retrospective reminder before advancing to the next epic.
 
 **Last epic of the phase.** If no later epic remains in `docs/epics.md`, add one more line to the recommended flow after step 3: `4. → Optionally /epic-archive cut-release {version} to archive this phase's epics.md and seed a fresh one for the next phase.` An offer only — never cut a release automatically.
 

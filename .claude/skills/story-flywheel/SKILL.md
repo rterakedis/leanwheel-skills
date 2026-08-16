@@ -76,6 +76,8 @@ Agent tool call:
   prompt: the story identifier/path + any context the subagent needs (it starts cold)
 ```
 
+**Never hand a subagent a command known to hang or flake** (e.g. a flaky full test run) — give it the targeted/known-good invocation. An agent handed a hanging command spawns a watcher and early-returns, orphaning its work.
+
 Wait for the subagent's report, then act on its structured fields. Do **not** re-do the phase's work in this thread — the subagent owns it. If a phase ends with no Agent call in the transcript (only narration like "the creator subagent will handle this"), the phase did not run — go back and make the call. Inline execution is legal only in the documented fallback when subagents are unavailable.
 
 **A report missing its required fields is a non-return.** Each subagent owes a fixed set of report fields — `STORY FILE`/`EPIC CONTEXT` for the creator, `STATUS`/`BUILD & TEST` for the developer, the `RUBRIC` line and `STATUS` for the reviewer (see each agent def's "Report back"). If a subagent's final message is missing any of these — including a message that only narrates what it's about to do next, e.g. "I'll stop polling now and wait for the test suite to notify me" — the phase has **not** returned, no matter how long it ran. Resume it with SendMessage rather than proceeding: ask it to finish and emit the missing fields. Never advance to the next phase, the checkpoint, or a commit on a narration-only message standing in for a report.
@@ -138,9 +140,10 @@ Repeat until the epic is complete (see **Exit Conditions**):
 
 ### Phase 3 — Code Review
 
-The developer subagent already ran the inline review in Phase 2. Decide:
-- **Clean report (no `UNRESOLVED`, gate PASS):** skip a separate review pass — carry the Phase 2 findings/rubric straight into the checkpoint. (Saves a full extra review's tokens.)
-- **`UNRESOLVED` items, FAIL gate, or security-sensitive story:** spawn `lw-story-reviewer` (default model: Sonnet) for an independent adversarial pass. **Fallback mode:** MODEL SWITCH GATE for **Sonnet**, then execute `skills/code-review/skill.md` inline.
+The developer subagent already ran the inline review in Phase 2. **Independent review is gated on blast radius, not just a clean inline pass** — the inline review shares the dev's mental model and can miss a lost side-effect. Decide:
+- **Blast-radius trigger — spawn the reviewer even when the inline pass is clean** if the change touches a shared side-effect pipeline every feature routes through, money/billing, auth, or a service with many callers.
+- **Clean report (no `UNRESOLVED`, gate PASS) and no blast-radius trigger:** skip a separate review pass — carry the Phase 2 findings/rubric straight into the checkpoint. (Saves a full extra review's tokens.)
+- **`UNRESOLVED` items, FAIL gate, security-sensitive story, or a blast-radius trigger:** spawn `lw-story-reviewer` (default model: Sonnet) for an independent adversarial pass. **Fallback mode:** MODEL SWITCH GATE for **Sonnet**, then execute `skills/code-review/skill.md` inline.
 
 When a separate review runs:
 - Pass the story file path so it skips auto-detection.

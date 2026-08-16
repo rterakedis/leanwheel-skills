@@ -9,6 +9,8 @@ description: Review code changes adversarially. Use when the user says "review",
 
 **Note:** Inline in `/dev-story` skips Steps 1–2 (context already loaded). This is for PRs/branches/commits outside the flywheel.
 
+**When an independent review is owed:** a clean inline pass is not the only trigger — blast radius is. See `story-flywheel` → Phase 3 for the trigger set.
+
 ## Step 1 — Find the Diff
 
 Check in order (stop when found):
@@ -57,6 +59,7 @@ Work each pass independently. Look for what's *missing* (absent behavior, unhand
 - Callers outside the diff: does this change break existing call sites?
 - Unchecked assumptions baked into the new code (e.g., "list is always non-empty")
 - Regression: does the change touch behavior relied on elsewhere?
+- **Serialization-shaped stories** (backup, export/import, sync, any serializer): round-trip tests must assert the at-risk fields **by name**, never entity counts, and the field set must have been enumerated against the live schema — a curated subset silently drops data every round-trip. Source of the rule: `create-story` → Behavior Contract.
 
 **Pass D: Acceptance Audit** (only if story loaded)
 - Each AC: implemented? fully? or only the happy path?
@@ -72,6 +75,7 @@ Work each pass independently. Look for what's *missing* (absent behavior, unhand
 - New component that near-duplicates one in `docs/ux/components-built.md`
 - **Automation contract** (Apple projects with `docs/setup/swift/testability.md`): an interactive element or dynamic list row shipped with **no** `.accessibilityIdentifier`; an identifier that **differs from the name the story's Design Contract assigned** (HIGH — a silently renamed identifier breaks every flow, eval, and screenshot addressing it, and the break surfaces later as a red test in someone else's story); an identifier not matching `{feature}-{element}-{role}` kebab-case (MEDIUM); a **new screen with no deep-link route** (MEDIUM — unreachable by `/design-verify` and by every future flow). Skip on projects without the testability foundation — route those to `/swift-audit` instead of filing per-diff findings.
 - Unresolved findings in the story's `### Design Verification` section
+- **Never accept "the string/control is in the source" as evidence a UI change is reachable** — presence ≠ renders; require rendered evidence (see `dev-story` verification step).
 - **Dark patterns** (check the diff against EXPERIENCE.md's `## Engagement & Persuasion`, if present): pre-checked paid or consent opt-ins; smart defaults that pre-select the higher-cost/higher-commitment choice; fake or endowed progress indicators; countdown/urgency with no real deadline; guilt-decline (confirmshaming) copy; decoy pricing. Flag any lever in the diff that isn't backed by an honest entry in that section — shipping user-hostile behavior is HIGH severity (it erodes trust and is a support/churn liability, not just a style nit).
 
 **Pass F: Over-Engineering** — hunt complexity and code that shouldn't exist (correctness/security belong to Passes A–D; do not duplicate them here). One tagged line per finding:

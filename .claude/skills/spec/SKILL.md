@@ -61,7 +61,10 @@ different" is thin in the log, say so plainly in the doc. Real detail that doesn
 internal ~5, launch as long as needed). Features grouped; FRs nested with globally stable IDs
 (FR-1, FR-2…). Capabilities only — no tech choices in the PRD body. Index assumptions in §9.
 
-**ux** — read `ux-presets.md` first: resolve the platform surface, apply the matching
+**ux** — *before an epic that adds or reorganizes navigation/screens*, map jobs-to-be-done →
+convergence points (what must live together from the same starting view) → workflow, and only
+then design UX to support it. Never accrete a sheet/button per story wherever it is locally
+convenient — that is what produces disjointed flows. Then read `ux-presets.md` first: resolve the platform surface, apply the matching
 preset(s), and treat its discovery areas as the section-by-section decision checklist. Two
 peer contracts: DESIGN.md (visual identity) and EXPERIENCE.md (IA, behavior, states,
 interactions, accessibility). Never duplicate PRD content — inherit by reference;

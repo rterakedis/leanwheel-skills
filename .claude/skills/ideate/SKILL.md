@@ -66,4 +66,6 @@ fabricate a differentiator or a moat to close a question — if "what makes this
 genuinely thin, record that plainly and let the user decide whether it kills the idea. Work
 that surfaces here (a bug, a task, a chore) isn't a decision — route it to `deferred`
 LOG-AND-SCHEDULE if a backlog exists, or park it as a question if it's really a decision in
-disguise.
+disguise. When the idea touches information architecture (new or reorganized
+navigation/screens), the JTBD → convergence-points → workflow mapping in `/spec`'s ux rule is
+the shape the answer has to take — don't settle IA one affordance at a time here.
