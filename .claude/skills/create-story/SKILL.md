@@ -5,15 +5,13 @@ description: Create a comprehensive story file for a specific epic/story. Use wh
 
 # Create Story Skill
 
-**Goal:** Story file complete enough that dev session needs only the story. All decisions, patterns, constraints in Dev Notes.
-
-**Critical:** Thorough Dev Notes = dev tokens spent on coding, not re-discovery. Thin stories cause rework and regressions.
+**Goal:** Story file complete enough that dev session needs only the story. All decisions, patterns, constraints in Dev Notes — thin stories cause rework.
 
 ## Activation
 
 ### Step 1 — Identify target story
 - If user specified epic/story (e.g., "1-2"), use it.
-- Otherwise read `docs/epics.md`, find first story with no file in `docs/epics/`. Scan only epics with live `### Story` bodies — an epic collapsed to a summary table is closed and every row there already has a file, so it can never be the target. A summary row is a pointer to a story file, never a spec to author from.
+- Otherwise read `docs/epics.md`, find first story with no file in `docs/epics/`. Scan only epics with live `### Story` bodies — a collapsed epic (summary table) is closed; its rows already have files and are pointers, not specs.
 - Confirm: "Creating story {epic}-{story}: {title}?"
 
 ### Step 2 — Load documents via cache
@@ -38,7 +36,7 @@ Check cache validity:
 - Generate cache before writing story
 - Tell user: "Generated epic-{epic_num} context cache."
 
-**Collapsed epics (either branch):** a collapsed epic's summary table holds no story bodies — the spec for any row in it lives in the linked `docs/epics/{N}-{M}-*.md`. Read that story file when you need the detail (prior-story constraints, patterns); never try to mine it out of `docs/epics.md`.
+**Collapsed epics (either branch):** the spec for a summary-table row lives in the linked `docs/epics/{N}-{M}-*.md` — read that file for prior-story detail, not `docs/epics.md`.
 
 **Command:** `/create-story refresh-cache` — force-regenerate cache regardless of timestamps.
 
@@ -55,43 +53,43 @@ Extract from documents:
 - Required tests (from testing strategy)?
 
 **Story complexity (set this first — it scales the rest of this step):**
-- **Stateful / multi-step** — has a state machine, a multi-step flow, concurrent actions, an async lifecycle, or non-trivial failure handling. Gets the full Behavior Contract + edge-case enumeration below and passes through the Clarification Gate.
-- **Migration-shaped** — the story's core is one repeated mechanical change: a rename across N call sites, a type migration across N properties/entities, a dependency or API swap. Record `**Shape:** migration` as the first line of Dev Notes and order the tasks as below. (Orthogonal to the two below — a migration story is usually otherwise simple.)
-- **Simple** — CRUD, config, copy, styling, or a pure refactor/migration with one obvious path. Behavior Contract is one line or omitted; the edge-case pass is a quick sanity check, not a full enumeration; the Clarification Gate is a no-op unless a real fork surfaces. Do not manufacture ceremony for simple stories.
+- **Stateful / multi-step** — state machine, multi-step flow, concurrent actions, async lifecycle, or non-trivial failure handling. Gets the full Behavior Contract + edge-case enumeration and passes through the Clarification Gate.
+- **Migration-shaped** — one repeated mechanical change (rename across N call sites, type migration, dependency/API swap). Record `**Shape:** migration` as the first line of Dev Notes and order tasks as below. Orthogonal to the other two.
+- **Simple** — CRUD, config, copy, styling, or a refactor with one obvious path. Behavior Contract is one line or omitted; edge-case pass is a sanity check; Clarification Gate is a no-op unless a real fork surfaces. Don't manufacture ceremony.
 
-**Task ordering for migration-shaped stories:** the durable deliverable is the *invariant test*, not the N edits — written afterward it is authored against already-corrected code and can only be shown to pass. So **Task 1 is "write the invariant test; run it; confirm it fails, enumerating every violation"**, the sweep follows, and the final task re-proves the test by reverting exactly one instance and confirming a failure that names it. Give the test its own AC.
+**Task ordering for migration-shaped stories:** the durable deliverable is the *invariant test*, not the N edits (DD-11). **Task 1 is "write the invariant test; run it; confirm it fails, enumerating every violation"**, the sweep follows, and the final task re-proves the test by reverting exactly one instance and confirming a failure that names it. Give the test its own AC.
 
 **Behavior Contract & edge-case enumeration (stateful/multi-step stories):**
-Before writing any ACs, draft the `### Behavior Contract` section (template) and enumerate edge cases explicitly. Do not lean on the passive "edge cases?" bullet above — produce a real list:
+Before writing any ACs, draft the `### Behavior Contract` section (template) with a real list:
 - **Flows:** each user/system flow as a step sequence — happy path plus every alternate path.
-- **States & transitions:** the states involved, the valid transitions, and the **illegal** transitions that must be rejected.
+- **States & transitions:** states, valid transitions, and the illegal transitions to reject.
 - **Edge cases:** empty/boundary inputs; concurrent or duplicate actions; partial failure and retry/idempotency; offline/timeout; permission/auth edges; first-run vs returning.
 - **Expected outcomes:** for each flow and edge case, the observable result (state change, message, side effect).
-- **Invariants:** what must always hold regardless of path (e.g. "balance never negative", "exactly one active session").
+- **Invariants:** what holds regardless of path (e.g. "balance never negative", "exactly one active session"). Each needs evidence at dev time (DD-14).
 
-Every enumerated edge case with a non-obvious outcome must become its own Given/When/Then AC — the enumeration is worthless if it stays in prose. Dev sessions test ACs, not Behavior Contract narrative.
+Every enumerated edge case with a non-obvious outcome becomes its own Given/When/Then AC — dev sessions test ACs, not narrative.
 
-**Simplicity lens (scaled by complexity):** before finalizing, ask *does each AC and Dev Notes section need to exist?* — prune speculative ACs and boilerplate scaffolding. For a **simple** story this is a one-line sanity check: do not manufacture ceremony (no invented edge cases, no Behavior Contract padding). For any new dependency or abstraction the story would introduce, apply ladder rungs ①–⑤ (`## Simplicity & Anti-Over-Engineering`): prefer reuse of an existing helper/pattern, the standard library, or a native platform feature before writing new machinery or adding a dependency.
+**Simplicity lens (scaled by complexity):** ask *does each AC and Dev Notes section need to exist?* — prune speculative ACs and scaffolding. For any new dependency or abstraction, apply ladder rungs ①–⑤ (`## Simplicity & Anti-Over-Engineering`, DD-53): existing helper, standard library, or native platform feature before new machinery.
 
 **Manual steps (Dev Notes structure):**
-Any step the user must perform in a GUI or console — not the terminal — goes in a clearly labeled `### Manual Steps` subsection of Dev Notes as **numbered** steps, never buried in prose. This covers test-plan setup steps too. Any step naming a GUI path must be verified against the installed toolchain version before the user relies on it — vendors move menu paths between releases, and a wrong path is a hard stop for a new operator.
+Any step the user performs in a GUI or console — not the terminal — goes in a `### Manual Steps` subsection of Dev Notes as numbered steps (test-plan setup too). Verify any GUI path against the installed toolchain version — a wrong menu path is a hard stop for a new operator.
 
-**Cross-epic runtime dependency check (mandatory):**
-Before writing, explicitly answer: does this story require a runtime artifact — database table, seed data row, API endpoint, migration, or service — that lives in a *different* epic and may not be complete yet?
+**Cross-epic runtime dependency check:**
+Before writing, answer: does this story require a runtime artifact (table, seed row, endpoint, migration, service) that lives in a *different* epic and may not be complete yet?
 
 If yes:
 1. Note the dependency in Dev Notes under `### Prerequisites` with the source story ID (e.g. "Requires Story 13-1 migration `tenant_access_grants` to exist").
-2. If the prerequisite epic/story is scheduled *after* this epic in `docs/epics.md`, flag it as a sequencing risk in the story summary shown to the user — they must decide to reorder, split, or accept the incomplete-until-X gap.
+2. If the prerequisite is scheduled *after* this epic in `docs/epics.md`, flag it as a sequencing risk in the story summary — the user decides to reorder, split, or accept the gap.
 3. Never silently assume a later epic's output will be present.
 
 **Testability contract (UI stories on Apple projects — runs whether or not `docs/ux/` exists):**
-If the story adds or changes user-visible UI and `docs/setup/swift/testability.md` exists, name these in the story's `### Design Contract` **before** dev starts. This is the single highest-leverage step for automation: naming them here means dev implements a list instead of inventing names, and every downstream consumer (`/design-verify`, flows, `/e2e-tests`) can address the UI by name.
+If the story adds or changes user-visible UI and `docs/setup/swift/testability.md` exists, name these in the story's `### Design Contract` before dev starts, so dev implements a list and `/design-verify`, flows, and `/e2e-tests` can address the UI by name (DD-52):
 
-1. **Accessibility identifiers** — one per interactive element and per dynamic list row on the story's surfaces, as `{feature}-{element}-{role}` kebab-case (e.g. `invoice-save-button`, `invoice-row-\(item.id)`). Derive `{feature}` from the story's feature area so names stay collision-free across epics. Do not leave this to the dev session.
-2. **Deep-link route** — if the story adds a screen, name the route that reaches it (`{scheme}://invoices`). A screen with no route is unreachable by screenshot verification and by every future flow.
+1. **Accessibility identifiers** — one per interactive element and per dynamic list row on the story's surfaces, as `{feature}-{element}-{role}` kebab-case (e.g. `invoice-save-button`, `invoice-row-\(item.id)`). Derive `{feature}` from the story's feature area so names stay collision-free across epics.
+2. **Deep-link route** — if the story adds a screen, name the route that reaches it (`{scheme}://invoices`). A screen with no route is unreachable by screenshot verification and future flows.
 3. **Seed scenario** — which existing `SeedScenario` renders this story's states, or which one needs extending. Never "tap to set up state."
 
-If the project has no `docs/ux/`, emit a Design Contract containing **only** these — the section is not gated on `docs/ux/` existing.
+If the project has no `docs/ux/`, emit a Design Contract containing only these — the section is not gated on `docs/ux/` existing.
 
 **Design contract extraction (UI stories with `docs/ux/`):**
 If the story adds or changes user-visible UI and `docs/ux/DESIGN.md` / `docs/ux/EXPERIENCE.md` exist, add to the same section:
@@ -102,10 +100,10 @@ If the story adds or changes user-visible UI and `docs/ux/DESIGN.md` / `docs/ux/
    - The component specs involved (visual + behavioral rows for components being built or used)
    - Required states for each surface (empty / loading / error / offline, with the specced copy and placement)
    - Applicable platform checklist items (HIG items for Apple; guardrail items for web)
-3. If `docs/ux/components-built.md` exists, list the existing components this story must **reuse** — instruct the dev session to never create a near-duplicate of an inventoried component.
-4. If the UI the story needs has no coverage in EXPERIENCE.md (no surface, no states), flag it to the user before writing — that's a design gap, not a license to improvise.
+3. If `docs/ux/components-built.md` exists, list the existing components this story reuses — the dev session does not create a near-duplicate of an inventoried component.
+4. If the UI the story needs has no coverage in EXPERIENCE.md (no surface, no states), flag it to the user before writing — a design gap, not a license to improvise.
 
-This extraction is why dev sessions never read `docs/ux/` — the same economics as the epic context cache.
+Dev sessions read the Design Contract, never `docs/ux/` (DD-52).
 
 ## Generate Cache
 
@@ -118,7 +116,7 @@ When cache is missing/stale, distill content into `docs/epics/epic-{epic_num}-co
 
 This is the source of truth for subsequent stories in the epic.
 
-The cache is a **deliverable** of this run with the same standing as the story file — not an optional optimization. A run that writes the story but skips the cache leaves every later story in the epic re-reading the full PRD + architecture and severs the `## Prior Story Learnings` channel. Verify the file exists before reporting the story complete.
+The cache is a **deliverable** of this run with the same standing as the story file (DD-23). Verify the file exists before reporting the story complete.
 
 ## Update Cache After Each Story
 
@@ -134,12 +132,12 @@ After user approves, append to cache's `## Prior Story Learnings`:
 
 ## Clarification Gate (before writing)
 
-Do not write the story while any **material** flow is ambiguous — one whose resolution would change an AC or a task. This gate is the fix for thin ACs and downstream rework. From the Behavior Contract and edge-case enumeration, separate:
+Do not write the story while any **material** flow is ambiguous — one whose resolution would change an AC or a task. From the Behavior Contract and edge-case enumeration, separate:
 
 - **Stated assumptions** — ambiguities with one sensible default. Record the assumption inline (e.g. "assuming soft-delete") and proceed; the user corrects at review if wrong.
-- **Material ambiguities** — genuine forks where you cannot pick a default without guessing at product intent (which state wins on conflict? is partial success allowed? what happens on re-entry?). A **proposed new dependency** or a **single-caller abstraction** the story would introduce is a material item worth surfacing here — confirm it earns its place before writing it in.
+- **Material ambiguities** — genuine forks where you cannot pick a default without guessing at product intent (which state wins on conflict? is partial success allowed? what happens on re-entry?). A proposed new dependency or single-caller abstraction is a material item — confirm it earns its place.
 
-If any material ambiguity exists, **stop and ask the user** — list them concisely and wait for answers. Do not write speculative ACs around an unresolved fork. Trivial or simple stories with no material ambiguity skip straight to writing — do not invent questions to satisfy the gate.
+If any material ambiguity exists, **stop and ask the user** — list them concisely and wait for answers. Simple stories with no material ambiguity skip straight to writing; do not invent questions to satisfy the gate.
 
 In the autonomous flywheel this gate surfaces as a normal human-decision pause (Phase 1 blocks until create-story returns the story file).
 
@@ -151,7 +149,7 @@ Use template. Rules:
 - ACs: Given/When/Then format, independently testable; every material edge case from the Behavior Contract has its own AC
 - References: cite specific files/sections
 
-- Never reopen a `status: done` story to absorb new work — done stories are immutable; author a new story `{N}.{last+1}` instead (canonical rule: `skills/harvest-findings/SKILL.md`)
+- **Done stories are immutable** — never reopen a `status: done` story; author a new story `{N}.{last+1}` instead (per harvest-findings, DD-33)
 
 Output: `docs/epics/{epic}-{story}-{slug}.md`
 
@@ -160,13 +158,13 @@ Output: `docs/epics/{epic}-{story}-{slug}.md`
 Show story: what it implements, FRs satisfied, open questions. Request review.
 
 After feedback:
-1. Set `status: ready-for-dev` in the **YAML frontmatter** (the machine-readable source of truth — never as a `**Status:**` body line)
+1. Set `status: ready-for-dev` in the **YAML frontmatter** — the machine-readable source of truth; a body `**Status:**` line is forbidden (DD-51)
 2. Update cache with learnings
-3. **Seed eval cases.** If `docs/evals/` exists, execute **BUILD** from `skills/evals/SKILL.md` for this story: derive `type: command` regression cases from the ACs and any Behavior Contract invariants (referencing the tests dev-story will write — `enabled: false` with a pending note until they land). This makes the story's intended behavior part of the cumulative regression net. Skip if `docs/evals/` is absent.
+3. **Seed eval cases.** If `docs/evals/` exists, execute **BUILD** from `skills/evals/SKILL.md` for this story: derive `type: command` regression cases from the ACs and any Behavior Contract invariants (referencing the tests dev-story will write — `enabled: false` with a pending note until they land). Skip if `docs/evals/` is absent.
 
 ## GitHub Tracking
 
-After user approval, execute from `skills/github-tracking/skill.md`:
+After user approval, execute from `skills/github-tracking/SKILL.md`:
 
 1. **ENSURE-MILESTONE** — pass `epic_num` and epic title; store `milestone_title`
 2. Check if issue already exists (created when epics.md was written):

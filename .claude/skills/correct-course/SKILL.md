@@ -49,7 +49,7 @@ Note what changes and why for each affected artifact.
 
 ## Phase 3 — Pull Forward Deferred Items
 
-Execute **SCAN** then **RESOLVE** from `skills/deferred/skill.md`. All open deferrals must be resolved (no orphaned items).
+Execute **SCAN** then **RESOLVE** from `skills/deferred/SKILL.md`. All open deferrals must be resolved (no orphaned items).
 
 ---
 
@@ -57,7 +57,7 @@ Execute **SCAN** then **RESOLVE** from `skills/deferred/skill.md`. All open defe
 
 **Fix-in-place:** Edit doc/story; add inline `<!-- corrected {date}: {reason} -->` if non-obvious.
 
-**New stories:** Execute **SCHEDULE** from `skills/deferred/skill.md` (writes to epics.md + GitHub).
+**New stories:** Execute **SCHEDULE** from `skills/deferred/SKILL.md` (writes to epics.md + GitHub).
 
 **Explicit deferrals:** Add to `## Deferred Items` in `docs/epics.md`: `- {date} — {issue} — Deferred until: {condition}. Trigger: {event}`.
 

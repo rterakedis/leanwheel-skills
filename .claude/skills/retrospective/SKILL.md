@@ -102,7 +102,18 @@ Collect from `git log` and story files. Include in retro output:
 | Migrations added | N | |
 | Test files added | N | |
 | Story cycle time (median) | Nd | |
+| Plan defects (already-automated steps in the test plan) | N | |
 ```
+
+If `docs/metrics/flywheel-ledger.jsonl` exists, add a **by-model** row set for this epic only — read just this epic's lines, never the whole file (it rotates at CUT-RELEASE):
+
+```bash
+grep '"story":"{N}\.' docs/metrics/flywheel-ledger.jsonl | grep '"phase":"dev-story"' \
+  | sed -E 's/.*"model":"([^"]+)".*"bt_iterations":([0-9]+).*/\1 \2/' \
+  | awk '{n[$1]++; s[$1]+=$2} END {for (m in n) printf "%s: %d stories, %.1f avg build/test iterations\n", m, n[m], s[m]/n[m]}'
+```
+
+Report it as `| dev-story iterations by model | sonnet 1.2 · opus 1.0 | |`. This is the evidence for the model-routing decision (DD-20): rising iterations on one model is the signal to re-route, not prose.
 
 ## Security Sweep (mandatory — all epics)
 

@@ -44,3 +44,7 @@ See the **Upstream Sync Workflow** section in [CLAUDE.md](CLAUDE.md). In short: 
 
 - Behavioral bugs, unclear skill prompts, or feature requests: open a regular GitHub issue.
 - Security-relevant issues (unsafe shell execution, a guardrail hook that can be bypassed, a committed secret): see [SECURITY.md](SECURITY.md) instead — do not open a public issue.
+
+## Skill contracts and evals
+
+A change that alters a report field, a parsed heading/marker, or a gate outcome (the contracts listed in `.claude/skills/CLAUDE.md`) must add or update a case under `evals/` (see `evals/README.md`). Rationale for divergences goes in `guide/design-decisions.md` as a `DD-NN` entry — never a project name in a shipped file.

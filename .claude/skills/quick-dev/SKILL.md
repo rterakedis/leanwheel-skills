@@ -46,7 +46,7 @@ Stop only if: Ask-First boundary triggered, dependency missing, or requires out-
 
 Run verification commands after all tasks done.
 
-Security pass (conditional): If intent/files touch auth/data-access/api/secrets/llm/payments/file-upload, run matching categories from `skills/security-review/skill.md`. Call **LOG-AND-SCHEDULE** for critical/high findings.
+Security pass (conditional): If intent/files touch auth/data-access/api/secrets/llm/payments/file-upload, run matching categories from `skills/security-review/SKILL.md`. Call **LOG-AND-SCHEDULE** for critical/high findings.
 
 ## Phase 4 — Doc Update (mandatory)
 

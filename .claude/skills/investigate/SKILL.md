@@ -73,6 +73,6 @@ Resolution: {if not Open}
 ## After Investigation
 
 Small patch: recommend `/quick-dev`.
-New story: execute **SCHEDULE** from `skills/deferred/skill.md` (adds to earliest epic).
+New story: execute **SCHEDULE** from `skills/deferred/SKILL.md` (adds to earliest epic).
 Pre-existing: add `[ ] [Defer]` to relevant story/spec.
 Always leave case file continuable cold.

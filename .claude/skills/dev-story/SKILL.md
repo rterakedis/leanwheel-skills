@@ -24,7 +24,7 @@ description: Implement a story from its story file. Use when the user says "dev 
    - If the project uses SwiftData and the story touches models, queries, or persistence: read `docs/setup/swift/swiftdata.md`
    - Any story adding/changing a persisted model entity, adding user-facing views, or touching launch behavior: read `docs/setup/swift/testability.md` (seed scenarios, launch arguments, deep-link routes, accessibility identifiers)
    - Any story that needs the app *rendered* — screenshot verification, adding a flow, or stabilizing a screen: read `docs/setup/swift/simulator.md` (`scripts/sim.sh`, the screenshot matrix, flow conventions)
-   - Always read `docs/setup/swift/anti-patterns.md` if present — it governs what must not be written
+   - Read `docs/setup/swift/anti-patterns.md` if present
    - If `docs/setup/swift/ipados-specific.md` exists and the story touches navigation, split view, drag-and-drop, pointer, keyboard, or multi-window: read it
    - If `docs/setup/swift/macos-specific.md` exists and the story touches menus, windows, toolbar, settings, tables, or file operations: read it
 4b. **If `docs/setup/web/` exists** (web/SSG project): read the files relevant to this story's tasks before implementing:
@@ -32,7 +32,7 @@ description: Implement a story from its story file. Use when the user says "dev 
    - Any story adding pages, forms, or content templates: read `docs/setup/web/accessibility-seo.md`
    - If `docs/setup/web/astro.md` exists and the story touches `.astro` files, collections, or images: read it
    - If `docs/setup/web/hugo.md` exists and the story touches `layouts/`, `content/`, or `assets/`: read it
-   - Always read `docs/setup/web/anti-patterns.md` if present — it governs what must not be written
+   - Read `docs/setup/web/anti-patterns.md` if present
 4c. **Design contract** (UI stories): if the story has a `### Design Contract` in Dev Notes, it is the design source of truth — use its tokens, states, and reuse list; do not read `docs/ux/` again. If the story changes user-visible UI but has **no** Design Contract and `docs/ux/DESIGN.md` exists: read DESIGN.md frontmatter and the relevant EXPERIENCE.md sections before implementing (and note the gap in Completion Notes so `/create-story` improves next time).
 5. Execute **TRANSITION** with `new_label: in-progress` (skip if unavailable).
 6. Confirm: "Implementing {epic}.{story}: {title}. Starting..."
@@ -48,13 +48,13 @@ For each task in order:
 
 Don't ask for clarification (use Dev Notes; log ambiguous calls in Completion Notes).
 
-**Manual steps belong to the user, explicitly.** If Dev Notes has a `### Manual Steps` subsection (see create-story ▸ *Manual steps*), surface those steps to the user verbatim rather than attempting or silently skipping them — and if the story didn't already verify a named GUI/console path, verify it against the installed toolchain version before the user relies on it (vendors move menu paths between releases; a wrong path is a hard stop for a new operator).
+**Manual steps belong to the user.** If Dev Notes has a `### Manual Steps` subsection (see create-story ▸ *Manual steps*), surface those steps to the user verbatim rather than attempting or silently skipping them. If the story didn't already verify a named GUI/console path, check it against the installed toolchain version first.
 
-**Migration-shaped stories: the invariant test is Task 1.** If Dev Notes says `**Shape:** migration` — or the story's core is plainly a repeated mechanical change (a rename across N call sites, a type migration across N properties, a dependency swap) even when create-story didn't label it — write the invariant test **before** the edits, run it, and confirm it fails **enumerating every violation**. Then make the edits. At the end, re-prove it by reverting exactly **one** instance and confirming a failure that names that instance. A test written after the sweep is authored against already-corrected code and can only be shown to pass. If the task list is ordered otherwise, reorder it.
+**Migration-shaped stories: the invariant test is Task 1.** If Dev Notes says `**Shape:** migration` — or the story's core is plainly a repeated mechanical change (a rename across N call sites, a type migration across N properties, a dependency swap) even when create-story didn't label it — write the invariant test **before** the edits, run it, and confirm it fails enumerating every violation. Then make the edits. At the end, re-prove it by reverting exactly one instance and confirming a failure that names that instance (DD-11). If the task list is ordered otherwise, reorder it.
 
-**Keep testability current as you go** (Apple projects with `docs/setup/swift/testability.md`): a task that adds or changes a persisted model entity updates the `SeedScenario` registry (at minimum `.typical` and `.edge`) in the same task; new user-facing views get the **exact** `.accessibilityIdentifier`s the story's Design Contract names (never invented, never backfilled); a task that adds a screen adds its deep-link route in the same task.
+**Keep testability current as you go** (Apple projects with `docs/setup/swift/testability.md`): a task that adds or changes a persisted model entity updates the `SeedScenario` registry (at minimum `.typical` and `.edge`) in the same task; new user-facing views get the exact `.accessibilityIdentifier`s the story's Design Contract names; a task that adds a screen adds its deep-link route in the same task. Canonical: `docs/setup/swift/testability.md` (DD-34).
 
-**Keep files maintainable as you go.** If a file you create or touch crosses the file-size / decomposition target in the routed guidance (`docs/setup/swift/ui-composition.md` or `docs/setup/web/`), decompose it **as part of the task** — don't defer it. Split along responsibility seams (Swift: `extension TypeName {}` files for members, named `private struct` sub-views for layout), never by mechanical line-cutting, and never by giving a sub-view its own data access. A 280-line file with one cohesive job is fine; a smaller file doing three jobs is not — cohesion decides the cut.
+**Keep files maintainable as you go.** If a file you create or touch crosses the file-size / decomposition target in the routed guidance (`docs/setup/swift/ui-composition.md` or `docs/setup/web/`), decompose it as part of the task, not later. Split along responsibility seams (Swift: `extension TypeName {}` files for members, named `private struct` sub-views for layout) rather than by line count, and don't give a sub-view its own data access — cohesion decides the cut.
 
 After major task groups, suggest `/compact` if context heavy. Don't block; continue.
 
@@ -84,7 +84,7 @@ Don't modify: User Story statement, Dev Notes prose, References.
 
 Before review, verify all items in `checklist.md` pass. Fix any failures first.
 
-**Maintainer doc gate:** if the story introduced a new external dependency, a build-system change, or a new platform capability, its maintainer runbook/doc must exist or be updated **before** the story is marked done — never left as an action item for later.
+**Maintainer doc gate:** if the story introduced a new external dependency, a build-system change, or a new platform capability, its maintainer runbook/doc exists or is updated **before** the story is marked done, not left as an action item.
 
 **Never reopen a `done` story.** `status: done` stories are immutable; new work becomes a new story `{N}.{last+1}` (canonical rule: `skills/harvest-findings/SKILL.md`).
 
@@ -123,7 +123,7 @@ When tasks done, DoD passes, **and the Build & Test Gate is green** (or manual-r
 
 **Verify reachability, not presence.** A string, control, or affordance existing in source is *not* evidence it renders — dev, inline review, and automated validation can all pass while only confirming the string is in the source. Confirm by driving the app or dumping the view hierarchy. **Corollary:** when a UI element can't be addressed in a UI test, dump the tree before blaming the test framework — the element may not exist.
 
-1. **Invariant verification (stateful stories):** if the story's `### Behavior Contract` lists invariants, verify each one holds in the built code with **evidence** — a test that exercises it, or a cited assertion/guard in the source (`file:line`). Record results under `### Invariant Verification` in the story file: each invariant as `- [x] {invariant} — {test name | file:line}` or `- [ ] {invariant} — UNVERIFIED: {why}`. An invariant with no test and no enforcing code is **not** a pass — add a one-test cover if cheap, otherwise leave it `[ ]` and let it feed the inline review as a finding. Never assert an invariant holds without citing the evidence. Skip entirely for simple stories or stories with no invariants.
+1. **Invariant verification (stateful stories):** if the story's `### Behavior Contract` lists invariants, verify each one holds in the built code with **evidence** — a test that exercises it, or a cited assertion/guard in the source (`file:line`). Record results under `### Invariant Verification` in the story file: each invariant as `- [x] {invariant} — {test name | file:line}` or `- [ ] {invariant} — UNVERIFIED: {why}`. An invariant with no test and no enforcing code is **not** a pass (DD-14) — add a one-test cover if cheap, otherwise leave it `[ ]` and let it feed the inline review as a finding. Skip entirely for simple stories or stories with no invariants.
 2. **Design verification (UI stories):** if the story changed user-visible UI, execute **VERIFY** from `skills/design-verify/SKILL.md` — render the changed surfaces (simulator or dev server + screenshots), compare against the Design Contract, and write results to `### Design Verification` in the story file. Mismatches feed into the inline review triage below as findings. If no rendering tooling is available, record the manual checklist and continue. Skip entirely for stories with no user-visible surface.
 3. Run code-review inline (don't stop). Continue directly to Code Review below.
 
@@ -141,26 +141,20 @@ The diff is uncommitted changes. Story file is loaded. Go straight to the passes
 
 **Pass C — Acceptance Audit:** Unimplemented/partial ACs, AC contradictions, ignored constraints, files touched/not touched. Include any `[ ]` UNVERIFIED invariants from `### Invariant Verification` as findings.
 
-**Pass D — Security (conditional):** If Dev Notes has `Security Sensitivity:`, run matching categories from `skills/security-review/skill.md`. Skip if blank.
+**Pass D — Security (conditional):** If Dev Notes has `Security Sensitivity:`, run matching categories from `skills/security-review/SKILL.md`. Skip if blank.
 
 **Pass E — Design Compliance (conditional):** If the diff touches user-visible UI and a `### Design Contract` (or `docs/ux/DESIGN.md`) exists: hardcoded values where a token exists, missing required states (empty/loading/error), missing dark-mode pair, platform checklist violations (tap targets, Dynamic Type, semantic HTML, focus visibility), near-duplicate of an inventoried component. **Missing or renamed accessibility identifiers**: an interactive element or dynamic row with none, or one that differs from the name the Design Contract assigned (HIGH — a renamed identifier silently breaks every flow and screenshot that addresses it), or one not matching `{feature}-{element}-{role}` kebab-case (MEDIUM). A new screen with no deep-link route is MEDIUM — it is unreachable by `/design-verify` and by future flows. Include any unresolved `### Design Verification` findings. Skip for non-UI diffs.
 
-**Pass F — Over-Engineering:** Hunt complexity only (correctness/security are Passes A–D — don't duplicate). One tagged line per finding: `delete:` (dead/speculative code), `stdlib:` (hand-rolled thing the stdlib ships), `native:` (dependency/code the platform already covers), `yagni:` (one-implementation abstraction, config nobody sets, one-caller layer), `shrink:` (same logic, fewer lines). Never flag a single smoke test / validation / security / accessibility for removal. Route findings as `patch`/`defer` cleanups, never a blocking bug. End with `net: −N lines possible` or `Lean already.`
+**Pass F — Over-Engineering:** Hunt complexity only (correctness/security are Passes A–D — don't duplicate). One tagged line per finding: `delete:` (dead/speculative code), `stdlib:` (hand-rolled thing the stdlib ships), `native:` (dependency/code the platform already covers), `yagni:` (one-implementation abstraction, config nobody sets, one-caller layer), `shrink:` (same logic, fewer lines). Don't flag a lone smoke test / validation / security / accessibility check for removal. Route findings as `patch`/`defer` cleanups, not blocking bugs. End with `net: −N lines possible` or `Lean already.`
 
 ### Triage
 
 Tag each finding:
 - `decision-needed` — ambiguous; fix needs user input
 - `patch` — clear bug; unambiguous fix
-- `fix-now` — outside the ACs but trivially and safely fixable now (see ceiling)
+- `fix-now` — outside the ACs but trivially and safely fixable now; apply the fix-now ceiling from `skills/code-review/SKILL.md` → Triage (canonical — not restated here)
 - `defer` — pre-existing, not from this diff
 - `dismiss` — noise or false positive
-
-**`fix-now` ceiling — all four must hold**, or it is `defer`:
-1. Small (≤ ~10 lines, one file) and adjacent to the diff already under review.
-2. Provably safe — covered by an existing test, or by one written in the same pass.
-3. No new dependency, schema change, public API change, or user-visible copy change.
-4. Describable in one line in the commit message.
 
 Merge duplicates. Drop `dismiss`.
 
@@ -172,7 +166,7 @@ Write non-dismissed findings to `### Review Findings` subsection:
 - `- [x] [Fix-Now] {title} [{file}:{line}] — out of scope, applied under the fix-now ceiling`
 - `- [ ] [Defer] {title} — pre-existing`
 
-`[Fix-Now]` items are recorded, never invisible — a fix applied without an AC still gets reviewed.
+`[Fix-Now]` items are written down so an out-of-AC fix still gets reviewed (DD-12).
 
 ### Resolve and Patch
 
@@ -184,18 +178,18 @@ Write non-dismissed findings to `### Review Findings` subsection:
 
 ### Pull Deferred Items Forward
 
-After patches, check for `[ ] [Defer]` items in story file. If found, execute **RESOLVE** from `skills/deferred/skill.md`. Surfaces immediately with fresh context.
+After patches, check for `[ ] [Defer]` items in story file. If found, execute **RESOLVE** from `skills/deferred/SKILL.md`. Surfaces immediately with fresh context.
 
 ### Re-verify Green
 
-After patches and deferred-item resolution touch the code, **re-run the Build & Test Gate** (build + tests). A static "this fix looks right" is not acceptance — a patch is only resolved once the toolchain confirms it compiles and tests stay green. If the re-run is red, the patch is not done: fix and re-run, or leave the finding `[ ]` and keep Status `in-progress`. Skip only if no code changed during review (clean review) or the gate was `manual-required`.
+After patches and deferred-item resolution touch the code, **re-run the Build & Test Gate** (build + tests) — a patch is resolved only once the toolchain confirms green. If the re-run is red, the patch is not done: fix and re-run, or leave the finding `[ ]` and keep Status `in-progress`. Skip only if no code changed during review (clean review) or the gate was `manual-required`.
 
 ### Wrap Up
 
 **All resolved (and Build & Test Gate green):**
 1. Set `status: done` in the YAML frontmatter
 2. **CLOSE-ISSUE** (skip if unavailable)
-3. **Operational doc sync (routed to a cheap model — do not do this inline under the flywheel):** doc maintenance is mechanical Haiku-class work and must not run on the dev model (Opus on Swift). If you are running as the `lw-story-developer` subagent, **do not** run docs-sync yourself — just set `INFRA TOUCHED: yes` in your report when this story's File List includes an infra-shaped file (dependency manifest, `.env`/config, migration/schema, script, Dockerfile/CI/deploy, or a new service entrypoint); the orchestrator spawns `lw-docs-sync` (Haiku) to do it. If you are running **standalone** (not under a flywheel), call the Agent tool yourself — `subagent_type: "lw-docs-sync"`, prompt naming op **OPERATIONAL** and this story's path — or, if subagents are unavailable, execute **OPERATIONAL** from `skills/docs-sync/SKILL.md` inline as a fallback. Record any `DOCS UPDATED` in the Debug Log.
+3. **Operational doc sync** (routed to a cheap model, DD-20/DD-24): if you are running as the `lw-story-developer` subagent, do not run docs-sync yourself — set `INFRA TOUCHED: yes` in your report when this story's File List includes an infra-shaped file (dependency manifest, `.env`/config, migration/schema, script, Dockerfile/CI/deploy, or a new service entrypoint); the orchestrator spawns `lw-docs-sync` (Haiku) to do it. If you are running **standalone** (not under a flywheel), call the Agent tool yourself — `subagent_type: "lw-docs-sync"`, prompt naming op **OPERATIONAL** and this story's path — or, if subagents are unavailable, execute **OPERATIONAL** from `skills/docs-sync/SKILL.md` inline as a fallback. Record any `DOCS UPDATED` in the Debug Log.
 4. **Ledger:** if `docs/metrics/` exists, append one `dev-story` line to `docs/metrics/flywheel-ledger.jsonl` (single shell redirect — do not read the file into context): `{ts, story, phase:"dev-story", model, build_test, bt_iterations, evals:"P/T", findings:{patched,decisions,deferred}, invariants:"V/T", docs_updated:[…], duration_min}`.
 5. Report: "{epic}.{story} complete. {P} patches, {D} decisions, {W} deferred.{ Docs: {list} if any}" followed by the **TESTING PLAN** block below.
 
