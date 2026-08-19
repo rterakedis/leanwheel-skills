@@ -197,7 +197,24 @@ After patches and deferred-item resolution touch the code, **re-run the Build & 
 2. **CLOSE-ISSUE** (skip if unavailable)
 3. **Operational doc sync (routed to a cheap model — do not do this inline under the flywheel):** doc maintenance is mechanical Haiku-class work and must not run on the dev model (Opus on Swift). If you are running as the `lw-story-developer` subagent, **do not** run docs-sync yourself — just set `INFRA TOUCHED: yes` in your report when this story's File List includes an infra-shaped file (dependency manifest, `.env`/config, migration/schema, script, Dockerfile/CI/deploy, or a new service entrypoint); the orchestrator spawns `lw-docs-sync` (Haiku) to do it. If you are running **standalone** (not under a flywheel), call the Agent tool yourself — `subagent_type: "lw-docs-sync"`, prompt naming op **OPERATIONAL** and this story's path — or, if subagents are unavailable, execute **OPERATIONAL** from `skills/docs-sync/SKILL.md` inline as a fallback. Record any `DOCS UPDATED` in the Debug Log.
 4. **Ledger:** if `docs/metrics/` exists, append one `dev-story` line to `docs/metrics/flywheel-ledger.jsonl` (single shell redirect — do not read the file into context): `{ts, story, phase:"dev-story", model, build_test, bt_iterations, evals:"P/T", findings:{patched,decisions,deferred}, invariants:"V/T", docs_updated:[…], duration_min}`.
-5. Report: "{epic}.{story} complete. {P} patches, {D} decisions, {W} deferred.{ Docs: {list} if any}"
+5. Report: "{epic}.{story} complete. {P} patches, {D} decisions, {W} deferred.{ Docs: {list} if any}" followed by the **TESTING PLAN** block below.
+
+### Testing Plan (required report field)
+
+Every dev-story report ends with a `TESTING PLAN` split into two named sub-fields. **Both are mandatory** — a `TESTING PLAN` missing either sub-field is an incomplete report (under a flywheel, a non-return: the orchestrator resumes you rather than advancing). The split exists so the epic-boundary test plan can subtract what automation already proves instead of asking a human to re-walk it.
+
+```
+TESTING PLAN
+AUTOMATED: {flow/suite/eval names that now pin this story's behavior — names only, e.g. `UpgradeSheetFlow`, `CustomerLimitServiceTests`, `docs/evals/epic-12.md#E12-03`. Not assertions, not prose. "none" if nothing automated.}
+MANUAL: {only what no test can exercise. One line per item, each tagged with WHY it is manual:
+  - {step} → {expected} [visual-judgment | device-only | sandbox-only | setup-unreachable]
+  Include the exact setup command when a step needs one (e.g. `scripts/sim.sh launch --uitest --seed heavy --route settings`, an `xcrun simctl` call) — carry every flag the app needs to honour it. "none — fully automated" or "none — no user-visible surface changed" when empty.}
+```
+
+Rules:
+- An item belongs in `MANUAL` only if you can name the reason a test can't see it. If you can't, it belongs in a test — write the test and list it under `AUTOMATED`.
+- `AUTOMATED` is the set of names the boundary greps for; cite the identifier as it appears in the test target / eval file so the grep hits.
+- Unknown-reachability ("I'm not sure a test could reach this") is **setup-unreachable**, and says so — it is still a gap worth closing, not a free pass.
 
 **Unresolved patches remain:**
 1. Set `status: in-progress` in the YAML frontmatter

@@ -66,3 +66,8 @@ Your final message IS this report — including after a long build/test run. Nar
 - `INVARIANTS: <verified>/<total> | n/a`
 - `INFRA TOUCHED: yes(<which: dependency|env|migration|script|deploy/CI|service>) | no` — whether the File List includes an infra-shaped file. **You do not run docs-sync** — the orchestrator spawns `lw-docs-sync` (Haiku) when this is `yes`. (If you were run standalone, you handle it per dev-story step 3 and report it here instead.)
 - `UNRESOLVED:` bulleted items needing human attention, or `none`
+- `TESTING PLAN:` with **both** sub-fields, exactly as dev-story's *Testing Plan (required report field)* defines them:
+  - `AUTOMATED:` flow/suite/eval names that now pin this story's behavior (names only, or `none`)
+  - `MANUAL:` only what no test can exercise, each line tagged `[visual-judgment | device-only | sandbox-only | setup-unreachable]`, with the exact setup command (all flags) when one is needed (or `none — …`)
+
+  A report whose `TESTING PLAN` lacks either sub-field is **not a return** — the orchestrator resumes you. If you can't name why an item is manual, it isn't: write the test and list it under `AUTOMATED`.

@@ -5,7 +5,7 @@ description: Composable operation that harvests inline manual-test findings from
 
 # Harvest Findings (Composable)
 
-After an epic's **manual test pass**, the tester records findings as inline bulleted sub-lists directly under the scenarios/steps in `docs/epics/epic-{N}-test-plan.md` (the file `/epic-flywheel` generates at its boundary). This skill harvests those inline findings, captures them durably in the backlog, and triages each by **kind** (bug / tweak / enhancement / question) and **disposition** (in-scope / defer). A finding is **not** assumed to be a bug — it may be a small tweak, an enhancement idea, or a question. The corrective (bug/tweak) in-scope findings become a new remediation story that flows through the normal flywheel; enhancements are scheduled as backlog candidates (never remediation ACs); questions are surfaced for a decision.
+After an epic's **manual test pass**, the tester records findings as inline bulleted sub-lists directly under the scenarios/steps in `docs/epics/epic-{N}-test-plan.md` (the file `/epic-flywheel` generates at its boundary). This skill harvests those inline findings, captures them durably in the backlog, and triages each by **kind** (bug / tweak / enhancement / question / plan-defect) and **disposition** (in-scope / defer). A finding is **not** assumed to be a bug — it may be a small tweak, an enhancement idea, a question, or a note that the step was already automated (a defect of the *plan*, not the product). The corrective (bug/tweak) in-scope findings become a new remediation story that flows through the normal flywheel; enhancements are scheduled as backlog candidates (never remediation ACs); questions are surfaced for a decision.
 
 **Iron rule — done stories are immutable.** This skill **never** reopens or edits a `status: done` story. Fixes for findings always land in a *new* story `{N}.{last+1}`, never by amending completed work.
 
@@ -63,12 +63,15 @@ Collect a normalized list, one entry per finding:
 - **tweak** — delivered behavior is basically right but needs a small adjustment (copy, spacing, wording, minor UX). A correction *within* the epic's existing scope.
 - **enhancement** — a genuinely new capability or scope beyond what this epic delivered. Not a fix — a new idea surfaced during testing.
 - **question** — an ambiguity or product decision the tester couldn't resolve; needs a human answer before it can be actioned.
+- **plan-defect** — the step was **already automated and passing** (the tester notes e.g. `already automated: UpgradeSheetFlow`, or you confirm by grep that a flow/suite/eval asserts exactly this). This is a defect of the *test plan* (its subtract pass missed it), not of the product. Log it so the retro can count how much human time the plan wasted; **never** create a story or AC for it, and fix the plan in Step 4 by moving the step onto the flow's `Automated — do not re-test:` line.
 
 **Disposition:**
 - **[in-scope]** — address in *this* epic (before it's considered done).
 - **[defer]** — later work.
 
-> Guidance: `bug` and `tweak` are *corrective* — they fix/adjust what the epic shipped, so an in-scope one belongs in the remediation story. `enhancement` is *additive* — never force it into a remediation story as an AC (that's scope creep mislabeled as a fix); it's routed as a backlog candidate / product decision regardless of disposition. `question` is never auto-storied — it's surfaced for the user to answer. (See Step 3 routing.)
+> Guidance: `bug` and `tweak` are *corrective* — they fix/adjust what the epic shipped, so an in-scope one belongs in the remediation story. `enhancement` is *additive* — never force it into a remediation story as an AC (that's scope creep mislabeled as a fix); it's routed as a backlog candidate / product decision regardless of disposition. `question` is never auto-storied — it's surfaced for the user to answer. `plan-defect` is a finding about the *plan*, not the product — counted, then corrected in the plan itself. (See Step 3 routing.)
+>
+> **Before tagging anything `bug`, check it isn't a `plan-defect`:** if the step restates an assertion a passing UI-test flow, unit suite, or `docs/evals/` case already makes, and the tester saw the expected behavior, the finding is that the plan asked for it at all.
 
 Append a checklisted block under the Epic {N} heading (idempotent — see below):
 
@@ -78,7 +81,10 @@ Append a checklisted block under the Epic {N} heading (idempotent — see below)
 - [ ] {finding-text} — _{scenario-title}_ — **tweak** · **[in-scope]**
 - [ ] {finding-text} — _{scenario-title}_ — **enhancement** · **[defer]**
 - [ ] {finding-text} — _{scenario-title}_ — **question** · needs decision
+- [x] {finding-text} — _{scenario-title}_ — **plan-defect** · already automated ({flow/suite/eval})
 ```
+
+`plan-defect` rows are written pre-checked (`[x]`): nothing further is owed on the product side, and the row exists only so `/retrospective` can count them (Q: how much of the human pass was wasted on already-pinned assertions).
 
 **Keep this shape stable — it is machine-foldable.** The heading `### Epic {N} — Post-Test Findings (harvested {date})` and the per-finding row (a `- [ ]` checkbox carrying **kind** · **disposition**, or `needs decision`) are exactly what `skills/epic-archive/SKILL.md`'s **CONDENSE** op reads to decide whether the block is fully resolved and can fold to one line. Don't drift the heading or drop the kind/disposition tag.
 
@@ -97,6 +103,7 @@ Routing is driven by *kind* first, then *disposition*:
 | **bug** / **tweak** (corrective) | → AC in the remediation story (below) | → `deferred`/LOG-AND-SCHEDULE (item 5) |
 | **enhancement** (additive) | → **not** a remediation AC — treat as a backlog candidate: `deferred`/LOG-AND-SCHEDULE, and if it's material scope, flag it for a product decision (`/correct-course` or `/spec` prd update) in the output | → `deferred`/LOG-AND-SCHEDULE |
 | **question** | → surface to the user for an answer; do **not** auto-create a story. Leave its epics.md row `needs decision` until answered, then re-triage | (same) |
+| **plan-defect** | → no story, no AC, no deferred item. Fix the plan in Step 4 (move the step to the flow's `Automated — do not re-test:` line) and report the count | (same) |
 
 So the **remediation story holds only corrective (bug/tweak) `[in-scope]` findings.** Everything else is scheduled or surfaced, never silently converted into remediation ACs.
 
@@ -133,6 +140,8 @@ If there is **no corrective (bug/tweak) `[in-scope]`** finding, skip story autho
 
 Remove the **harvested inline finding bullets** from `docs/epics/epic-{N}-test-plan.md` — leave the scenarios, flows, steps, each flow's **Starting state** prerequisites block (see `epic-flywheel` → Rolled-up Test Plan), and the physical-device section fully intact. The plan must be clean and re-runnable for the next test pass; only the tester's finding annotations come out (they now live durably in `docs/epics.md` and the story).
 
+**Remove plan-defect steps for good.** For each `plan-defect` finding, delete its `- [ ]` step from section A and append the covering flow/suite/eval name to that flow's `**Automated — do not re-test:**` line (add the line if the flow lacks one). The plan must not ask for it again.
+
 **Fold the remediation story's ACs back in.** Stripping findings makes the plan re-runnable but not provable — a re-test would otherwise only re-exercise the original surfaces and never confirm a fix landed. For each AC of the remediation story authored in Step 3, add one verification step under the flow/scenario its source finding was harvested from (each AC already cites `_(source: Flow: ... → step '...')_`) — phrase it to prove the AC's asserted behavior, not just repeat the original step. If an AC changed a surface the plan describes (a flow's Starting state, a setup note), update that text too, so the plan's premises match what actually shipped.
 
 This reset — strip **and** fold-back — is also listed in the remediation story's DoD (Step 3.2) — running it here keeps the plan current immediately; the DoD item is the backstop ensuring it happened before the story closes.
@@ -145,8 +154,9 @@ Report one line, broken out by kind:
 
 ```
 Epic {N}: {n} findings harvested — {c} corrective in-scope → story {N}.{last+1} (issue #{issue});
-{s} scheduled ({D-ids}, incl. {e} enhancements); {q} questions need a decision. Test plan reset
-and folded back with {c} verification steps.
+{s} scheduled ({D-ids}, incl. {e} enhancements); {q} questions need a decision; {p} plan-defects
+(already automated — removed from the plan, no story). Test plan reset and folded back with {c}
+verification steps.
 ```
 
 If any enhancement is material new scope, add: `Recommend /correct-course for: {short list}.`

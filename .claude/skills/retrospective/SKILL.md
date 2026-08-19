@@ -41,6 +41,8 @@ not habits.
 
 If `docs/epics/epic-{epic_num}-test-plan.md` exists and the manual test pass has run, invoke `/harvest-findings {epic_num}` (`skills/harvest-findings/SKILL.md`) first — it captures the tester's inline findings into `docs/epics.md`, opens a remediation story `{N}.{last+1}` for the in-scope ones, routes the rest through `deferred`, and resets the plan. Running it here means the deferred sweep below sees those findings already logged. Skip silently if there's no test plan or no findings to harvest.
 
+Carry the harvest's `{p} plan-defects` count into the retro: each one is a human step the epic test plan asked for that automation had already proven. A non-zero count is a finding about the boundary's subtract pass (epic-flywheel → step 5), not about the product — note it under the process questions so the next plan is tighter.
+
 ## Deferred Item Status Check
 
 ### Pass 1 — Catch unlogged deferred items

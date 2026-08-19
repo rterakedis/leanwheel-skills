@@ -7,7 +7,7 @@ description: Drive an entire epic to completion semi-autonomously — runs the p
 
 **Goal:** Take a whole epic from "stories not started" to "all stories implemented, reviewed, and verified together" with minimal steering. The per-story automated gates (Build & Test, evals RUN, invariant verification) still stop the loop on a *real* (compounding) bug, but the **manual / integration test pass is deferred to the epic boundary** — the point at which every story's pieces are in place, so tapping through a flow no longer trips over "feature X isn't built yet" (which is just a later story, not a bug).
 
-**Relationship to `/story-flywheel`:** epic-flywheel is the autonomous, epic-scoped layer *above* story-flywheel. It reuses the same three subagents and the same per-phase model routing (see story-flywheel's **Subagent Delegation & Model Routing** — do not duplicate that table here; read it). What epic-flywheel adds: (1) granular commit-per-step so a bad story can be unraveled, (2) within-epic auto-advance on clean stories, (3) a real **Epic Boundary Gate** that runs build+test+evals+invariants across the whole epic and **HALTs for help** on any failure, (4) continuous deferred-item re-homing, and (5) a deduplicated, LLM-verified **rolled-up test plan** split into simulator-runnable vs physical-device-required.
+**Relationship to `/story-flywheel`:** epic-flywheel is the autonomous, epic-scoped layer *above* story-flywheel. It reuses the same three subagents and the same per-phase model routing (see story-flywheel's **Subagent Delegation & Model Routing** — do not duplicate that table here; read it). What epic-flywheel adds: (1) granular commit-per-step so a bad story can be unraveled, (2) within-epic auto-advance on clean stories, (3) a real **Epic Boundary Gate** that runs build+test+evals+invariants across the whole epic and **HALTs for help** on any failure, (4) continuous deferred-item re-homing, and (5) a deduplicated, LLM-verified **rolled-up test plan** that first **subtracts what automation already proves**, then splits the remainder into simulator-runnable vs physical-device-required.
 
 ---
 
@@ -77,7 +77,14 @@ Spawn `lw-story-creator` with `{epic}.{story}`. Capture `STORY FILE`, `EPIC CONT
 - **Operational doc sync (cheap, orchestrator-owned):** the developer does **not** run docs-sync (it would land on the dev model — Opus on Swift). If `INFRA TOUCHED: yes`, spawn **`lw-docs-sync`** (Haiku) with the story path and op `OPERATIONAL`; capture `DOCS UPDATED`. Skip the spawn when `INFRA TOUCHED: no`. The doc edits land in the dev commit below.
 - **Track:** on green, `gh-track.sh transition {issue#} review`.
 - **Commit (only if gate green):** `story {epic}.{story}: dev` (includes any docs-sync edits).
-- **Stash the TESTING PLAN** for the boundary roll-up (keep just the text — append it to a scratch list `docs/epics/.epic-{N}-test-plans.md`, one block per story, so the orchestrator never has to hold all plans in context at once).
+- **Testing-plan shape gate (zero-token):** the report's `TESTING PLAN` must carry **both** sub-fields, `AUTOMATED:` and `MANUAL:` (dev-story → *Testing Plan (required report field)*). Missing either → non-return: resume the subagent via SendMessage for the complete field; do not stash a half plan.
+- **Stash the TESTING PLAN** for the boundary roll-up — **both sub-fields**, text only. Append one block per story to a scratch list `docs/epics/.epic-{N}-test-plans.md`:
+  ```
+  ## {epic}.{story} — {title}
+  AUTOMATED: {names}
+  MANUAL: {tagged lines}
+  ```
+  so the orchestrator never has to hold all plans in context at once. The `AUTOMATED` names are the subtract list the boundary greps against.
 
 ### Step 3 — Code Review + patch → commit
 Per story-flywheel's Phase 3 economy and its **blast-radius trigger set** (do not duplicate it here — read it): the developer subagent already ran the inline review.
@@ -130,26 +137,40 @@ A clean diff (`0 to-change`) is the proof every issue landed in the right state.
 ### 4c. Architecture promotion (canonical-doc sync, cheap)
 Call the Agent tool with `subagent_type: "lw-docs-sync"` (Haiku) and a prompt naming op `PROMOTE` and Epic {N} (fallback: execute the docs-sync **PROMOTE** op inline if subagents are unavailable). It harvests project-canonical learnings (schema realities, new/changed services & integrations, cross-cutting invariants, architectural decisions) from `docs/epics/epic-{N}-context.md` and appends the durable ones to `docs/architecture.md` (idempotent; also `docs/sql/` / `docs/maintainer/` when present) — so the next epic plans against live docs, not a stale architecture. Zero-token when the context file has nothing canonical (pure-refactor epics often don't); never touches `docs/setup/*` guidance. Report the count promoted in the boundary report.
 
-### 5. Rolled-up, deduplicated Test Plan (the manual pass)
-This is the payoff of deferring manual testing to here. Read the accumulated `docs/epics/.epic-{N}-test-plans.md` scratch list (collected plan text only — no source). Then, in a **single LLM pass**:
+### 5. Rolled-up, deduplicated, **subtracted** Test Plan (the manual pass)
+This is the payoff of deferring manual testing to here. Read the accumulated `docs/epics/.epic-{N}-test-plans.md` scratch list (collected plan text only — no source). Then:
+
 0. **Every flow opens with a "Starting state" prerequisites block** before step 1 — the required data and settings state the tester must have in place. Steps then follow **real usage order, not story order**. Never assume the tester knows the setup; a flow that jumps between features because that's how the stories were sequenced is unrunnable.
-1. **Deduplicate & merge** overlapping steps across stories into end-to-end flows (e.g. five stories each touching the cart → one "complete a purchase" flow plus the per-story edge cases that aren't covered by the flow).
+   - **Setup commands are part of the starting state.** When reaching the state needs a terminal command (`scripts/sim.sh launch …`, `xcrun simctl …`, a dev-server or seed script), print the exact command in the block. **Carry every flag the app needs to honour it** — a launch argument the app only reads in combination with another (e.g. an entitlement override that is only applied under `--uitest`/`--seed`) must appear with its companions; a bare flag that the app silently ignores produces a false finding, not a test. When unsure which flags are required, grep the launch-argument handler (testability foundation) rather than guessing.
+1. **Deduplicate & merge** the `MANUAL` items across stories into end-to-end flows (e.g. five stories each touching the cart → one "complete a purchase" flow plus the per-story edge cases that aren't covered by the flow).
 2. **Enumerate edge cases** the individual story plans listed, deduped against the flows.
-3. **Classify every test** by where it can run:
+3. **Subtract what is already automated (mandatory, zero-token grep + one judgment pass).** Dedup across stories is not enough — a human step that restates an existing automated assertion is waste. For each candidate human step:
+   - Collect the union of the stashed `AUTOMATED` names, then grep the project's **UI-test flows**, **unit test target**, and **`docs/evals/epic-*.md`** (cumulative, every epic) for the step's surface or assertion — identifiers, flow/suite/case names, the string asserted on.
+   - **Covered** → remove it from the checkbox list. It is listed by name in the flow's `Automated — do not re-test:` line instead.
+   - **Not covered** → it stays, unless a test could clearly pin it — then say so in `## Notes` as an automation gap (`/e2e-tests` candidate), and keep it as a human step for this pass only.
+   - Record `{s}` = the number of candidate steps subtracted and `{g}` = the number of automation gaps flagged; both go in the boundary report.
+
+   > **Rule: a test plan step that restates an existing automated assertion is a defect of this step, not a convenience for the tester.** Section A may contain only (a) assertions with no flow/eval coverage and (b) visual/layout-judgment passes — design-eye, Dynamic Type, dark mode, copy tone, "does this read right". Everything else is either already pinned (subtract it) or should be (flag it).
+4. **Classify every remaining test** by where it can run:
    - **Simulator / local-runnable** — anything exercisable in the iOS/iPadOS/macOS simulator (or, for web, a local dev server / headless browser). UI flows, navigation, state, layout, Dynamic Type, light/dark, most logic.
-   - **Physical-device-required** — needs real hardware or a paid/org capability: camera & photo capture, real push notifications (APNs on device), Face ID / Touch ID, background location, Bluetooth / NFC / HealthKit sensors, real network conditions, thermal/perf, StoreKit on-device purchase, anything gated behind an **org-based developer account / provisioning** the user doesn't yet have.
+   - **Physical-device-required** — needs real hardware or a paid/org capability: camera & photo capture, real push notifications (APNs on device), Face ID / Touch ID, background location, Bluetooth / NFC / HealthKit sensors, real network conditions, thermal/perf, StoreKit on-device purchase, anything gated behind an **org-based developer account / provisioning** the user doesn't yet have. The stashed `MANUAL` tags (`device-only`, `sandbox-only`) route here directly.
 
 Write the result to `docs/epics/epic-{N}-test-plan.md`:
 
-```markdown
+````markdown
 # Epic {N} — {title}: Test Plan
-_Rolled up and deduplicated from {X} story plans on {date}._
+_Rolled up from {X} story plans on {date}: {a} human steps after subtracting {s} already-automated, {b} physical-device._
 _To log a finding: add an **indented** plain bullet (`-` or `*`, no checkbox) directly under the relevant step — e.g. `  - shows wrong total`. Leave the `- [ ]` step lines as checkboxes (check them off as you pass them). Then run `/harvest-findings {N}` to capture and schedule the findings._
+_If a step turns out to be already covered by a passing test, note it as a finding too (`  - already automated: {flow}`) — it is a plan defect the retro counts._
 
 ## A. Simulator / local-runnable (do now)
 ### Flow: {name}
+**Automated — do not re-test:** {flow/suite/eval names that already prove this flow, e.g. `UpgradeSheetFlow`, `CustomerLimitServiceTests`, `E12-03`}
 **Starting state:** {required data, settings state — everything that must be true before step 1}
-- [ ] {step} → {expected}
+```bash
+scripts/sim.sh launch --uitest --seed heavy --route {route}   # every flag the app needs; bare flags are ignored
+```
+- [ ] {step the automation cannot see} → {expected} [visual-judgment | setup-unreachable]
 ### Edge cases
 - [ ] {case} → {expected}
 
@@ -160,7 +181,10 @@ _To log a finding: add an **indented** plain bullet (`-` or `*`, no checkbox) di
 
 ## Notes
 - {anything ambiguous the tester should confirm}
-```
+- Automation gaps (should be pinned, `/e2e-tests` candidates): {list or "none"}
+````
+
+The `Automated — do not re-test:` line is mandatory on every section-A flow (write `none` only when the flow genuinely has no coverage — and then expect the flow to be an automation gap).
 
 Also **append section B's items to a persistent cross-epic backlog** `docs/testing/physical-device-backlog.md` (create if absent), tagged with the epic — so when the org account lands the user has one consolidated physical-test checklist instead of hunting through per-epic plans. Delete the `.epic-{N}-test-plans.md` scratch file after writing.
 
@@ -188,8 +212,10 @@ Invariants: {v}/{t} verified
 Deferred re-homed this epic: {n} (0 orphans)
 Architecture learnings promoted: {n} → docs/architecture.md
 Test plan: docs/epics/epic-{N}-test-plan.md
-  • Simulator/local tests: {a}  ← run these now
-  • Physical-device tests: {b}  ← deferred to org-account pass
+  {a} human steps (after subtracting {s} already-automated), {b} physical-device
+  • Simulator/local (section A): {a}  ← run these now; each flow lists what NOT to re-test
+  • Physical-device (section B): {b}  ← deferred to org-account pass
+  • Automation gaps flagged: {g}  ← /e2e-tests candidates
 Commits this epic: {count} (granular: create/dev/review per story)
 ─────────────────────────────────────────────
 RECOMMENDED FLOW:
@@ -234,6 +260,7 @@ Append the epic-level ledger roll-up. Wait for the user — the boundary is alwa
 
 ## Notes
 
-- **Token posture (Pro plan):** every per-epic gate is zero-token (build/test/evals are shell commands; the invariant and deferred sweeps read short recorded blocks). The only model-heavy step is the once-per-epic test-plan dedup — bounded, over plan text only, and it replaces the far more expensive habit of re-testing manually after every story. Context isolation via subagents keeps the orchestrator thread small across a whole epic.
+- **Token posture (Pro plan):** every per-epic gate is zero-token (build/test/evals are shell commands; the invariant and deferred sweeps read short recorded blocks). The only model-heavy step is the once-per-epic test-plan dedup + subtract — bounded, over plan text plus grep hits, and it replaces the far more expensive habit of re-testing manually after every story.
+- **Why subtract before writing the plan:** the human pass is the scarcest resource in the loop. On a real epic (YardPath 12) nearly every section-A step the owner tapped through was already asserted by UI-test flows, unit suites, or evals; the only genuine findings were things automation structurally cannot see (a layout wrap, a missing feature, a harness footgun). A plan that re-lists pinned assertions spends that attention on nothing — so the plan names what is proven and asks the human only for judgment. Context isolation via subagents keeps the orchestrator thread small across a whole epic.
 - **Why commit-per-step:** the user's stated goal — "see where things go wrong if we have to unravel it." Three commits per story turn an epic into a precise, bisectable history instead of one giant squash.
 - **Why defer manual testing to the boundary:** within an epic, stories are interdependent; tapping through after story 2 of 6 surfaces "bugs" that are just stories 3–6 not built yet (false positives). The automated per-story gates still catch *real* compounding bugs immediately; only the human integration pass waits for the full picture.

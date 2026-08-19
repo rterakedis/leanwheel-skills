@@ -95,9 +95,13 @@ to `docs/evals/e2e-{area}.md` (same case format as `epic-{n}.md`; use
 regression net that `/dev-story`, `/code-review`, and the epic boundary gate
 already run.
 
-For every case converted from a test-plan scenario (mode 2), mark that
-scenario in `docs/epics/epic-{N}-test-plan.md` with `[automated → EVAL {id}]`
-so future manual passes skip it.
+For every case converted from a test-plan scenario (mode 2), **remove** that
+step from section A of `docs/epics/epic-{N}-test-plan.md` and append the
+flow/eval name to its flow's `**Automated — do not re-test:**` line (add the
+line if absent) — the same subtract rule `epic-flywheel` step 5 applies at the
+boundary. Do not leave the step as a checkbox with an `[automated → EVAL {id}]`
+suffix: a tester still reads and re-runs a tagged checkbox, which is exactly
+the waste the plan is meant to prevent.
 
 ## Step 7 — Summary
 
