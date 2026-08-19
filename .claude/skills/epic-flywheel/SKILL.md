@@ -5,17 +5,17 @@ description: Drive an entire epic to completion semi-autonomously — runs the p
 
 # Epic Flywheel Skill
 
-**Goal:** Take a whole epic from "stories not started" to "all stories implemented, reviewed, and verified together" with minimal steering. The per-story automated gates (Build & Test, evals RUN, invariant verification) still stop the loop on a *real* (compounding) bug, but the **manual / integration test pass is deferred to the epic boundary** — the point at which every story's pieces are in place, so tapping through a flow no longer trips over "feature X isn't built yet" (which is just a later story, not a bug).
+**Goal:** Take a whole epic from "stories not started" to "all stories implemented, reviewed, and verified together" with minimal steering. The per-story automated gates (Build & Test, evals RUN, invariant verification) still stop the loop on a real compounding bug; the **manual / integration test pass is deferred to the epic boundary** (DD-30).
 
-**Relationship to `/story-flywheel`:** epic-flywheel is the autonomous, epic-scoped layer *above* story-flywheel. It reuses the same three subagents and the same per-phase model routing (see story-flywheel's **Subagent Delegation & Model Routing** — do not duplicate that table here; read it). What epic-flywheel adds: (1) granular commit-per-step so a bad story can be unraveled, (2) within-epic auto-advance on clean stories, (3) a real **Epic Boundary Gate** that runs build+test+evals+invariants across the whole epic and **HALTs for help** on any failure, (4) continuous deferred-item re-homing, and (5) a deduplicated, LLM-verified **rolled-up test plan** that first **subtracts what automation already proves**, then splits the remainder into simulator-runnable vs physical-device-required.
+**Relationship to `/story-flywheel`:** epic-flywheel is the autonomous, epic-scoped layer above story-flywheel. It reuses the same three subagents and per-phase model routing (story-flywheel → **Subagent Delegation & Model Routing**; not duplicated here). What epic-flywheel adds: (1) commit-per-step so a bad story can be unraveled, (2) within-epic auto-advance on clean stories, (3) an **Epic Boundary Gate** that runs build+test+evals+invariants across the whole epic and **HALTs for help** on any failure, (4) continuous deferred-item re-homing, and (5) a deduplicated **rolled-up test plan** that first subtracts what automation already proves, then splits the remainder into simulator-runnable vs physical-device-required.
 
 ---
 
 ## Iron rules
 
-1. **HALT, don't push forward.** A red Build & Test Gate, a failing eval, an unverifiable invariant, or a dev-story HALT stops the loop and asks the user for help. Never carry a broken story into the next one — that is the exact failure mode (bugs compounding across stories) this skill exists to prevent.
-2. **Commit every step.** create → commit → dev → commit → review+patch → commit. The granular trail is what lets you `git bisect`/revert to the precise step where something went wrong instead of unwinding a whole epic.
-3. **Don't accumulate context.** The orchestrating thread holds only short structured reports from subagents — never full story files or source. Heavy reading happens inside throwaway subagent windows that exit and free their context. The only LLM-heavy work this thread does itself is the one-time test-plan dedup at the epic boundary, over collected plan *text only*.
+1. **HALT, don't push forward.** A red Build & Test Gate, a failing eval, an unverifiable invariant, or a dev-story HALT stops the loop and asks the user for help. Never carry a broken story into the next one.
+2. **Commit every step.** create → commit → dev → commit → review+patch → commit. The granular trail is what lets you `git bisect`/revert to the precise step that went wrong.
+3. **Don't accumulate context.** The orchestrating thread holds only short structured reports from subagents — never full story files or source. The only LLM-heavy work this thread does itself is the one-time test-plan dedup at the epic boundary, over collected plan text only.
 4. **Deferred means re-homed, not forgotten.** Every `[Defer]` finding gets a home (slotted as an AC or a remediation story) via the `deferred` skill, and the Epic Boundary Gate sweeps for any orphan.
 
 ---
@@ -24,16 +24,16 @@ description: Drive an entire epic to completion semi-autonomously — runs the p
 
 1. **Pick the epic.** Same discovery as story-flywheel (sort by epic number embedded in milestone *title*, not GitHub milestone ID; fall back to `docs/epics.md`). Accept `/epic-flywheel {N}` to force one. Announce: "Epic-flywheel for Epic {N}: {title}. {X} stories. I'll run them with per-story gates, commit each step, then do one verification + test-planning pass at the end."
 
-2. **Delegation mode + model routing.** Identical to story-flywheel: set `swift_project = true` if `docs/setup/swift/` exists OR an `.xcodeproj`/`.xcworkspace`/`Package.swift` is present. Prefer subagent-delegation mode (spawn `lw-story-creator` / `lw-story-developer` / `lw-story-reviewer`); pass `model: opus` only for Phase 2 (dev-story) on Swift. Fall back to inline + manual MODEL SWITCH GATE only when subagents are unavailable.
+2. **Delegation mode + model routing.** Identical to story-flywheel (→ **Subagent Delegation & Model Routing**): detect `swift_project`, prefer subagent-delegation mode (`lw-story-creator` / `lw-story-developer` / `lw-story-reviewer`), `model: opus` only for Phase 2 on Swift, inline + MODEL SWITCH GATE only when subagents are unavailable.
 
 3. **Detect the Apple platform set.** Set `apple_project = true` if `swift_project`. Read `docs/setup/manifest` / `docs/setup/swift/` and `docs/ux/EXPERIENCE.md` only enough to learn which platforms ship (iOS/iPadOS/macOS). This governs the simulator-vs-physical split at the boundary. Non-Apple projects get a generic "automated/local-runnable vs manual" split instead.
 
-4. **Commit authorization (required for autonomy).** epic-flywheel commits at every step, so it must be pre-authorized. Ask once:
+4. **Commit authorization (required for autonomy).** Ask once:
    > Epic-flywheel commits after each step (create / dev / review) so the trail is granular and unravel-able. Authorize automatic commits for this run? (yes / no — if no, I'll pause for you to commit at each step.)
 
    Detect the commit command: prefer `scripts/commit-push.sh "<msg>"` if it exists in the project, else plain `git add -A && git commit`. Push only if the project's script pushes (don't introduce pushing where the project doesn't).
 
-5. **Autonomy level.** Default for epic-flywheel is **auto-advance within the epic**: any story whose per-story gates are fully green (no `UNRESOLVED`, PASS rubric, green Build & Test, evals pass, invariants verified) advances without a checkpoint. The loop **always** stops on red/HALT. Offer the stricter alternative:
+5. **Autonomy level.** Default is **auto-advance within the epic**: any story whose per-story gates are fully green (no `UNRESOLVED`, PASS rubric, green Build & Test, evals pass, invariants verified) advances without a checkpoint. The loop still stops on red/HALT. Offer the stricter alternative:
    > Default: I auto-advance on clean stories and only stop for problems or the epic boundary. Prefer a checkpoint after *every* story instead? (auto / every-story)
 
 ---
@@ -42,19 +42,17 @@ description: Drive an entire epic to completion semi-autonomously — runs the p
 
 For each story in the epic, in story order. Spawn each phase as its subagent (cold start; it owns the heavy reading). The orchestrator captures only the structured report fields.
 
-**"Spawn" = a literal Agent tool call**, exactly as defined in story-flywheel's **Spawning a phase**: invoke the Agent tool with `subagent_type` set to the named agent (`lw-story-creator` / `lw-story-developer` / `lw-story-reviewer` / `lw-docs-sync`), `model: "opus"` only where a step says so, and a prompt carrying the story identifier/path plus any context the cold subagent needs. Never narrate the delegation and never do the phase's work in this orchestrating thread — if a step ends with no Agent call in the transcript, the step did not run. Inline execution is legal only in the documented fallback when subagents are unavailable.
-
-The same paragraph's **non-return rule** applies here without modification: a report missing its required fields (or standing in with narration like "I'll wait for it to finish") means the phase hasn't returned — resume the subagent via SendMessage, don't advance. Same for wait loops — key on a PID or artifact, never "no matching process anywhere."
+**"Spawn" = a literal Agent tool call** (`subagent_type` = `lw-story-creator` / `lw-story-developer` / `lw-story-reviewer` / `lw-docs-sync`), per story-flywheel → **Spawning a phase** — if a step ends with no Agent call in the transcript, the step did not run. Its **non-return rule** and PID/artifact wait loops apply here unchanged (DD-21): a report missing its required fields means the phase hasn't returned — resume the subagent via SendMessage, don't advance.
 
 ### GitHub tracking is orchestrator-owned (do not delegate-and-hope)
 
-A cold subagent does **not** reliably run the issue transitions, and nothing verifies it did — that is how issues drift (stuck on `ready-for-dev`, a stale `backlog` left beside a new label, dev'd stories never closed). epic-flywheel already gates every commit, so it knows the exact moment each phase ends and **drives the transition itself** using the deterministic script:
+The orchestrator drives every issue transition itself with the deterministic script (DD-22); subagents are not relied on for this:
 
 ```
 backlog → ready-for-dev → in-progress → review → done (+ closed)
 ```
 
-At each transition point in the steps below, run one line — it adds the target label, **strips every stale status label**, and self-verifies:
+At each transition point in the steps below, run one line — it adds the target label, strips every stale status label, and self-verifies:
 
 ```bash
 bash scripts/gh-track.sh transition {issue#} {label}    # ready-for-dev|in-progress|review
@@ -65,37 +63,37 @@ Get `{issue#}` from the create-story report or `grep '^github_issue:' {story_fil
 
 ### Step 1 — Create Story → commit
 Spawn `lw-story-creator` with `{epic}.{story}`. Capture `STORY FILE`, `EPIC CONTEXT`, `COMPLEXITY`, `CLARIFICATIONS NEEDED`, `PREREQUISITES`, `DESIGN GAP`.
-- **Epic context gate (zero-token, orchestrator-owned):** run `[ -f docs/epics/epic-{N}-context.md ]`. The creator must have generated or reused it (report field `EPIC CONTEXT`). If the file is absent the subagent dropped a deliverable — re-spawn `lw-story-creator` with an explicit prompt to run create-story's **Generate Cache** section for Epic {N}, then re-check. Never advance to Step 2 or commit while the file is missing: without this gate every story in the epic independently hits the missing-cache branch (full prd+architecture re-reads, no `## Prior Story Learnings` accumulation) and nothing ever notices.
-- **Clarification Gate (the one mandatory human pause inside a story):** if the report lists *material* clarifications, surface them now and wait for answers; record them into the story file. One-default ambiguities are recorded as stated assumptions and do **not** pause.
-- **Cross-story prerequisite check:** if `PREREQUISITES` names a runtime artifact owned by a *later* story in this or another epic, flag a sequencing risk — this is the legitimate "not built yet" case and must be handled at story-design time, not discovered as a fake bug later.
+- **Epic context gate (zero-token, orchestrator-owned):** run `[ -f docs/epics/epic-{N}-context.md ]`. The creator must have generated or reused it (report field `EPIC CONTEXT`). If the file is absent, re-spawn `lw-story-creator` with an explicit prompt to run create-story's **Generate Cache** section for Epic {N}, then re-check. Never advance to Step 2 or commit while the file is missing (DD-23).
+- **Clarification Gate (the one mandatory human pause inside a story):** if the report lists *material* clarifications, surface them now and wait for answers; record them into the story file. One-default ambiguities are recorded as stated assumptions and do not pause.
+- **Cross-story prerequisite check:** if `PREREQUISITES` names a runtime artifact owned by a *later* story in this or another epic, flag a sequencing risk now — the legitimate "not built yet" case belongs at story-design time, not as a fake bug later.
 - **Track:** `gh-track.sh transition {issue#} ready-for-dev`.
 - **Commit:** `story {epic}.{story}: create` (stages the story file + the epic context cache if generated/updated this step + any tracking/epics edits).
 
 ### Step 2 — Dev Story → commit
 **Track first:** `gh-track.sh transition {issue#} in-progress` before spawning, so a long dev pass shows the right state. Then spawn `lw-story-developer` (model `opus` only if `swift_project`) with the story file path. It runs the full dev-story workflow: implementation, **Build & Test Gate** (verify by running), **evals RUN** (if `docs/evals/`), invariant + design verification, and the inline review. Capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `FINDINGS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`, `TESTING PLAN`.
 - **On HALT or red gate:** stop the loop. Report which story and why; do **not** commit a red story. Resume with `/epic-flywheel {N}` after the blocker is fixed.
-- **Operational doc sync (cheap, orchestrator-owned):** the developer does **not** run docs-sync (it would land on the dev model — Opus on Swift). If `INFRA TOUCHED: yes`, spawn **`lw-docs-sync`** (Haiku) with the story path and op `OPERATIONAL`; capture `DOCS UPDATED`. Skip the spawn when `INFRA TOUCHED: no`. The doc edits land in the dev commit below.
+- **Operational doc sync (cheap, orchestrator-owned):** the developer does not run docs-sync (DD-24). If `INFRA TOUCHED: yes`, spawn **`lw-docs-sync`** (Haiku) with the story path and op `OPERATIONAL`; capture `DOCS UPDATED`. Skip the spawn when `INFRA TOUCHED: no`. The doc edits land in the dev commit below.
 - **Track:** on green, `gh-track.sh transition {issue#} review`.
 - **Commit (only if gate green):** `story {epic}.{story}: dev` (includes any docs-sync edits).
-- **Testing-plan shape gate (zero-token):** the report's `TESTING PLAN` must carry **both** sub-fields, `AUTOMATED:` and `MANUAL:` (dev-story → *Testing Plan (required report field)*). Missing either → non-return: resume the subagent via SendMessage for the complete field; do not stash a half plan.
-- **Stash the TESTING PLAN** for the boundary roll-up — **both sub-fields**, text only. Append one block per story to a scratch list `docs/epics/.epic-{N}-test-plans.md`:
+- **Testing-plan shape gate (zero-token):** the report's `TESTING PLAN` must carry both sub-fields, `AUTOMATED:` and `MANUAL:` (dev-story → *Testing Plan (required report field)*). Missing either → non-return: resume the subagent via SendMessage for the complete field; do not stash a half plan.
+- **Stash the TESTING PLAN** for the boundary roll-up — both sub-fields, text only. Append one block per story to a scratch list `docs/epics/.epic-{N}-test-plans.md`:
   ```
   ## {epic}.{story} — {title}
   AUTOMATED: {names}
   MANUAL: {tagged lines}
   ```
-  so the orchestrator never has to hold all plans in context at once. The `AUTOMATED` names are the subtract list the boundary greps against.
+  The `AUTOMATED` names are the subtract list the boundary greps against.
 
 ### Step 3 — Code Review + patch → commit
-Per story-flywheel's Phase 3 economy and its **blast-radius trigger set** (do not duplicate it here — read it): the developer subagent already ran the inline review.
-- **Clean report (no `UNRESOLVED`, PASS gate, not security-sensitive) and no blast-radius trigger:** skip a separate reviewer — carry Phase 2 findings forward. Saves a full review's tokens.
-- **Otherwise:** spawn `lw-story-reviewer` for an independent adversarial pass. It emits the SCORE rubric line, auto-patches `patch` findings, applies `fix-now` findings within the ceiling (recorded in Review Findings, never logged as deferred), logs `defer` via the `deferred` skill (re-homing each — slot as AC or remediation story), and **re-verifies green**. `decision-needed` findings surface to the user.
+Per story-flywheel's Phase 3 economy and its **blast-radius trigger set** (not duplicated here): the developer subagent already ran the inline review.
+- **Clean report (no `UNRESOLVED`, PASS gate, not security-sensitive) and no blast-radius trigger:** skip a separate reviewer — carry Phase 2 findings forward.
+- **Otherwise:** spawn `lw-story-reviewer` for an independent adversarial pass. It emits the SCORE rubric line, auto-patches `patch` findings, applies `fix-now` findings within code-review's Triage ceiling (recorded in Review Findings, not logged as deferred), logs `defer` via the `deferred` skill (re-homing each — slot as AC or remediation story), and **re-verifies green**. `decision-needed` findings surface to the user.
 - **Deferred re-homing check:** confirm every `[Defer]` from this story landed in `docs/deferred-items.md` with a `Scheduled As` target. An orphan is a loop bug — fix before advancing.
 - **Track:** on green, `gh-track.sh close {issue#} "Story {epic}.{story} complete"` (applies `done` + closes — milestone progress ticks up here).
 - **Commit (only if green after patches):** `story {epic}.{story}: review+patch`. If patches couldn't resolve, leave status `in-progress`, don't commit, HALT.
 
 ### Step 4 — Advance or checkpoint
-- **auto mode (default):** if the story is fully green, append the per-story ledger line (`docs/metrics/flywheel-ledger.jsonl` if present) and advance silently to the next story. If anything is non-green, stop (never auto-advance over red).
+- **auto mode (default):** if the story is fully green, append the per-story ledger line (`docs/metrics/flywheel-ledger.jsonl` if present) and advance silently to the next story. If anything is non-green, stop.
 - **every-story mode:** present the standard story-flywheel Phase-4 checkpoint and wait.
 - When the last story in the epic finishes → **Epic Boundary Gate**.
 
@@ -110,47 +108,47 @@ Run a full, unfiltered build + test — not story-scoped:
 - Apple: `xcodebuild … build test` (and `swift build && swift test` for SPM targets).
 - Web: `npm run build && npm test`.
 - Else: the documented project command.
-Red build / any failing test → **HALT**: report the failing target/test output and ask the user how to proceed. This catches integration breakage that per-story filtered runs can miss.
+Red build / any failing test → **HALT**: report the failing target/test output and ask the user how to proceed.
 
 ### 2. Evals RUN — full cumulative set
-Invoke the `evals` RUN op over the **entire** `docs/evals/` (every epic, not just this one) — the cumulative `command` regression net. A failing case means a later story silently reverted earlier behavior. Treat exactly like a red build → **HALT** with the failing case listed.
+Invoke the `evals` RUN op over the entire `docs/evals/` (every epic, not just this one) — the cumulative `command` regression net. A failing case → **HALT** with the failing case listed.
 
 ### 3. Invariant verification sweep
-Collect the `### Invariant Verification` blocks recorded by dev-story across this epic's stories (read the short blocks, not full files). Any invariant left `[ ] UNVERIFIED` (no test, no cited enforcing `file:line`) → **HALT**: an unverified invariant at epic close is a known gap, surface it for the user rather than asserting "it holds."
+Collect the `### Invariant Verification` blocks recorded by dev-story across this epic's stories (read the short blocks, not full files). Any invariant left `[ ] UNVERIFIED` (no test, no cited enforcing `file:line`) → **HALT** and surface it for the user (DD-14).
 
 ### 4. Deferred sweep
 Two-pass, mirroring `/retrospective`:
 - **Pass 1:** scan this epic's story files for `[Defer]` entries not present in `docs/deferred-items.md`; LOG-AND-SCHEDULE any orphan so it gets a home.
-- **Pass 2:** verify every logged deferred item has a non-empty `Scheduled As` pointing at open work. Report the count re-homed; nothing is left to rot.
+- **Pass 2:** verify every logged deferred item has a non-empty `Scheduled As` pointing at open work. Report the count re-homed.
 
 ### 4a. CLAUDE.md budget check (zero-token, non-blocking)
-`wc -l CLAUDE.md` > 300 → report as a finding in the boundary report: root CLAUDE.md is over the 300-line budget; something must be demoted (T2→T1) or moved to a nested CLAUDE.md, **not** appended — see `setup/claude-template.md` tiers and `/retrospective`'s CLAUDE.md tier-audit step.
+`wc -l CLAUDE.md` > 300 → report as a finding in the boundary report: root CLAUDE.md is over the 300-line budget; demote (T2→T1) or move to a nested CLAUDE.md rather than append (DD-54; `/retrospective`'s CLAUDE.md tier-audit step).
 
 ### 4b. Tracking reconcile (safety net)
-Even with orchestrator-owned transitions, reconcile the whole epic's issues against story frontmatter so nothing is left drifted:
+Reconcile the whole epic's issues against story frontmatter:
 ```bash
 bash scripts/gh-track.sh sync "<story-glob>"            # dry-run diff
 bash scripts/gh-track.sh sync "<story-glob>" --apply    # if the diff is non-empty
 ```
-A clean diff (`0 to-change`) is the proof every issue landed in the right state. Report the count fixed in the boundary report. (If the project predates the script, call the github-tracking SYNC op instead.)
+A clean diff (`0 to-change`) is the proof every issue landed in the right state. Report the count fixed in the boundary report. If the project predates the script, call the github-tracking SYNC op instead.
 
 ### 4c. Architecture promotion (canonical-doc sync, cheap)
-Call the Agent tool with `subagent_type: "lw-docs-sync"` (Haiku) and a prompt naming op `PROMOTE` and Epic {N} (fallback: execute the docs-sync **PROMOTE** op inline if subagents are unavailable). It harvests project-canonical learnings (schema realities, new/changed services & integrations, cross-cutting invariants, architectural decisions) from `docs/epics/epic-{N}-context.md` and appends the durable ones to `docs/architecture.md` (idempotent; also `docs/sql/` / `docs/maintainer/` when present) — so the next epic plans against live docs, not a stale architecture. Zero-token when the context file has nothing canonical (pure-refactor epics often don't); never touches `docs/setup/*` guidance. Report the count promoted in the boundary report.
+Call the Agent tool with `subagent_type: "lw-docs-sync"` (Haiku) and a prompt naming op `PROMOTE` and Epic {N} (fallback: execute the docs-sync **PROMOTE** op inline if subagents are unavailable). It harvests project-canonical learnings from `docs/epics/epic-{N}-context.md` and appends the durable ones to `docs/architecture.md` (idempotent; also `docs/sql/` / `docs/maintainer/` when present) — see DD-58. Zero-token when the context file has nothing canonical; never touches `docs/setup/*` guidance. Report the count promoted in the boundary report.
 
 ### 5. Rolled-up, deduplicated, **subtracted** Test Plan (the manual pass)
-This is the payoff of deferring manual testing to here. Read the accumulated `docs/epics/.epic-{N}-test-plans.md` scratch list (collected plan text only — no source). Then:
+Read the accumulated `docs/epics/.epic-{N}-test-plans.md` scratch list (collected plan text only — no source). Then:
 
-0. **Every flow opens with a "Starting state" prerequisites block** before step 1 — the required data and settings state the tester must have in place. Steps then follow **real usage order, not story order**. Never assume the tester knows the setup; a flow that jumps between features because that's how the stories were sequenced is unrunnable.
-   - **Setup commands are part of the starting state.** When reaching the state needs a terminal command (`scripts/sim.sh launch …`, `xcrun simctl …`, a dev-server or seed script), print the exact command in the block. **Carry every flag the app needs to honour it** — a launch argument the app only reads in combination with another (e.g. an entitlement override that is only applied under `--uitest`/`--seed`) must appear with its companions; a bare flag that the app silently ignores produces a false finding, not a test. When unsure which flags are required, grep the launch-argument handler (testability foundation) rather than guessing.
+0. **Every flow opens with a "Starting state" prerequisites block** before step 1 — the required data and settings state the tester must have in place. Steps then follow real usage order, not story order.
+   - **Setup commands are part of the starting state.** When reaching the state needs a terminal command (`scripts/sim.sh launch …`, `xcrun simctl …`, a dev-server or seed script), print the exact command in the block, carrying every flag the app needs to honour it — a launch argument the app only reads in combination with another (e.g. an entitlement override applied only under `--uitest`/`--seed`) must appear with its companions; a bare flag the app silently ignores produces a false finding. When unsure, grep the launch-argument handler (testability foundation) rather than guessing.
 1. **Deduplicate & merge** the `MANUAL` items across stories into end-to-end flows (e.g. five stories each touching the cart → one "complete a purchase" flow plus the per-story edge cases that aren't covered by the flow).
 2. **Enumerate edge cases** the individual story plans listed, deduped against the flows.
-3. **Subtract what is already automated (mandatory, zero-token grep + one judgment pass).** Dedup across stories is not enough — a human step that restates an existing automated assertion is waste. For each candidate human step:
+3. **Subtract what is already automated (mandatory, zero-token grep + one judgment pass; DD-31).** For each candidate human step:
    - Collect the union of the stashed `AUTOMATED` names, then grep the project's **UI-test flows**, **unit test target**, and **`docs/evals/epic-*.md`** (cumulative, every epic) for the step's surface or assertion — identifiers, flow/suite/case names, the string asserted on.
    - **Covered** → remove it from the checkbox list. It is listed by name in the flow's `Automated — do not re-test:` line instead.
    - **Not covered** → it stays, unless a test could clearly pin it — then say so in `## Notes` as an automation gap (`/e2e-tests` candidate), and keep it as a human step for this pass only.
    - Record `{s}` = the number of candidate steps subtracted and `{g}` = the number of automation gaps flagged; both go in the boundary report.
 
-   > **Rule: a test plan step that restates an existing automated assertion is a defect of this step, not a convenience for the tester.** Section A may contain only (a) assertions with no flow/eval coverage and (b) visual/layout-judgment passes — design-eye, Dynamic Type, dark mode, copy tone, "does this read right". Everything else is either already pinned (subtract it) or should be (flag it).
+   > **Rule: a test plan step that restates an existing automated assertion is a defect of this step.** Section A may contain only (a) assertions with no flow/eval coverage and (b) visual/layout-judgment passes — design-eye, Dynamic Type, dark mode, copy tone. Everything else is either already pinned (subtract it) or should be (flag it).
 4. **Classify every remaining test** by where it can run:
    - **Simulator / local-runnable** — anything exercisable in the iOS/iPadOS/macOS simulator (or, for web, a local dev server / headless browser). UI flows, navigation, state, layout, Dynamic Type, light/dark, most logic.
    - **Physical-device-required** — needs real hardware or a paid/org capability: camera & photo capture, real push notifications (APNs on device), Face ID / Touch ID, background location, Bluetooth / NFC / HealthKit sensors, real network conditions, thermal/perf, StoreKit on-device purchase, anything gated behind an **org-based developer account / provisioning** the user doesn't yet have. The stashed `MANUAL` tags (`device-only`, `sandbox-only`) route here directly.
@@ -186,20 +184,20 @@ scripts/sim.sh launch --uitest --seed heavy --route {route}   # every flag the a
 
 The `Automated — do not re-test:` line is mandatory on every section-A flow (write `none` only when the flow genuinely has no coverage — and then expect the flow to be an automation gap).
 
-Also **append section B's items to a persistent cross-epic backlog** `docs/testing/physical-device-backlog.md` (create if absent), tagged with the epic — so when the org account lands the user has one consolidated physical-test checklist instead of hunting through per-epic plans. Delete the `.epic-{N}-test-plans.md` scratch file after writing.
+Also **append section B's items to a persistent cross-epic backlog** `docs/testing/physical-device-backlog.md` (create if absent), tagged with the epic. Delete the `.epic-{N}-test-plans.md` scratch file after writing.
 
 ### 5b. Squash-merge to main — Apple / manual-test epics (conditional)
 
 **Only when the manual test pass needs a build the user drives** (`apple_project = true`, or any epic whose test plan must be built/run outside the agent — e.g. Xcode/TestFlight, a native desktop app). Skip for web/library epics where the agent runs the tests itself.
 
-If the project's `CLAUDE.md` prescribes merge-at-boundary (look for an "Epic-boundary merge" rule), **do it now**, after gates 1–4c are green and the test plan (step 5) is written: squash-merge the epic branch to `main`, then remove the worktree. Rationale — manual-test findings become a **new remediation story** (`{N}.{last+1}`) via `/harvest-findings`, so nothing rides the epic PR regardless of when the user tests; merging first puts the full app **and** `docs/epics/epic-{N}-test-plan.md` on `main`, where the user builds it directly and the editor/file-browser can open the test plan for inline findings.
+If the project's `CLAUDE.md` prescribes merge-at-boundary (look for an "Epic-boundary merge" rule), **do it now**, after gates 1–4c are green and the test plan (step 5) is written: squash-merge the epic branch to `main`, then remove the worktree (rationale: DD-25).
 
 ```bash
 gh pr create --fill --base main --head feature/<epic-slug>
 gh pr merge --squash --delete-branch                       # run from the PRIMARY tree, not the worktree
 git -C <primary> worktree remove <worktree-path>; git -C <primary> pull --ff-only origin main
 ```
-Note: `gh pr merge` may fail its local checkout step if run from inside the worktree (main is checked out in the primary tree) — the remote merge still lands; finish the worktree-remove + `pull` from the primary tree. If the project's `CLAUDE.md` has **no** merge-at-boundary rule, do NOT merge — leave the branch open and only **offer** the PR in the boundary report (legacy behavior).
+Note: `gh pr merge` may fail its local checkout step if run from inside the worktree — the remote merge still lands; finish the worktree-remove + `pull` from the primary tree. If the project's `CLAUDE.md` has no merge-at-boundary rule, do NOT merge — leave the branch open and only offer the PR in the boundary report.
 
 ### 6. Boundary report
 ```
@@ -236,11 +234,11 @@ Next:
   • "stop"      — end here
 ─────────────────────────────────────────────
 ```
-Append the epic-level ledger roll-up. Wait for the user — the boundary is always a human gate (it's where *they* do the manual testing).
+Append the epic-level ledger roll-up. Wait for the user — the boundary is always a human gate.
 
-**Retrospective reminder is mandatory.** The Epic Boundary Gate must always surface the retrospective prompt — never close an epic silently.
+**Retrospective reminder is mandatory.** The Epic Boundary Gate always surfaces the retrospective prompt — never close an epic silently.
 
-**`/retrospective` is human-in-the-loop even here.** It asks retrospective's `## Seven Questions` one at a time and waits for answers; autonomously generating the retro from git history is forbidden — the flywheel boundary is exactly where the pressure to skip comes from, and the questions exist to capture the user's perspective, not to confirm what the code already shows. If the user picks `"continue"` (skip retro), confirm once: "Starting Epic {N+1} without a retrospective for Epic {N} — the learnings/conventions from this epic won't be captured. Proceed?" Honor their choice, but make the skip explicit. If the user runs `"test"` first, then returns, re-surface the retrospective reminder before advancing to the next epic.
+**`/retrospective` is human-in-the-loop even here.** It asks retrospective's `## Seven Questions` one at a time and waits for answers; autonomously generating the retro from git history is forbidden. If the user picks `"continue"` (skip retro), confirm once: "Starting Epic {N+1} without a retrospective for Epic {N} — the learnings/conventions from this epic won't be captured. Proceed?" Honor their choice, but make the skip explicit. If the user runs `"test"` first, then returns, re-surface the retrospective reminder before advancing to the next epic.
 
 **Last epic of the phase.** If no later epic remains in `docs/epics.md`, add one more line to the recommended flow after step 3: `4. → Optionally /epic-archive cut-release {version} to archive this phase's epics.md and seed a fresh one for the next phase.` An offer only — never cut a release automatically.
 
@@ -260,7 +258,5 @@ Append the epic-level ledger roll-up. Wait for the user — the boundary is alwa
 
 ## Notes
 
-- **Token posture (Pro plan):** every per-epic gate is zero-token (build/test/evals are shell commands; the invariant and deferred sweeps read short recorded blocks). The only model-heavy step is the once-per-epic test-plan dedup + subtract — bounded, over plan text plus grep hits, and it replaces the far more expensive habit of re-testing manually after every story.
-- **Why subtract before writing the plan (DD-31):** the human pass is the scarcest resource in the loop. On a real epic nearly every section-A step the owner walked was already asserted by UI flows, unit suites, or evals; the only genuine findings were things automation structurally cannot see (a layout wrap, a missing feature, a harness footgun). So the plan names what is proven and asks the human only for judgment.
-- **Why commit-per-step:** the user's stated goal — "see where things go wrong if we have to unravel it." Three commits per story turn an epic into a precise, bisectable history instead of one giant squash.
-- **Why defer manual testing to the boundary:** within an epic, stories are interdependent; tapping through after story 2 of 6 surfaces "bugs" that are just stories 3–6 not built yet (false positives). The automated per-story gates still catch *real* compounding bugs immediately; only the human integration pass waits for the full picture.
+- **Token posture:** every per-epic gate is zero-token (build/test/evals are shell commands; the invariant and deferred sweeps read short recorded blocks). The only model-heavy step is the once-per-epic test-plan dedup + subtract, bounded over plan text plus grep hits.
+- **Why subtract before writing the plan:** DD-31. **Why defer manual testing to the boundary:** DD-30. **Why commit-per-step:** a bisectable, unravel-able history instead of one giant squash.

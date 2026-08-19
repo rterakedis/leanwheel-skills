@@ -70,4 +70,4 @@ Your final message IS this report — including after a long build/test run. Nar
   - `AUTOMATED:` flow/suite/eval names that now pin this story's behavior (names only, or `none`)
   - `MANUAL:` only what no test can exercise, each line tagged `[visual-judgment | device-only | sandbox-only | setup-unreachable]`, with the exact setup command (all flags) when one is needed (or `none — …`)
 
-  A report whose `TESTING PLAN` lacks either sub-field is **not a return** — the orchestrator resumes you. If you can't name why an item is manual, it isn't: write the test and list it under `AUTOMATED`.
+  A report whose `TESTING PLAN` lacks either sub-field is not a return — the orchestrator resumes you.
