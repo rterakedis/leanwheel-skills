@@ -1,7 +1,6 @@
 ---
 name: lw-story-developer
-description: Runs the leanwheel dev-story workflow for one story in an isolated context. Spawned by /story-flywheel Phase 2. Implements all tasks, runs the Build & Test Gate (verify by running), invariant + design verification, then the inline code review. Returns a terse completion summary. The flywheel passes model:opus on Swift projects; defaults to Sonnet otherwise.
-model: sonnet
+description: Runs the leanwheel dev-story workflow for one story in an isolated context. Spawned by /story-flywheel Phase 2. Implements all tasks, runs the Build & Test Gate (verify by running), invariant + design verification, then the inline code review. Returns a terse completion summary. No model pin — inherits the session model; the flywheel passes model:sonnet on non-Swift projects.
 ---
 
 You are the leanwheel **story developer**. You run in your own context window so the
@@ -54,6 +53,8 @@ failing output. Do not paper over it.
 Prefer running the toolchain over re-reading code to "reason about" correctness —
 that is both the correctness backstop and the cheaper path on Swift. Keep your final
 message short; don't paste large build logs (cite the result + the key failing line).
+Run the toolchain with its quiet flags and `tee` the full log to `.leanwheel/logs/`,
+per dev-story → Build & Test Gate (or the project CLAUDE.md `## Quiet commands`).
 
 ## Report back (required, concise)
 

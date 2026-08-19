@@ -16,7 +16,7 @@ Not to be confused with a user project's `docs/project/decisions.md` (owned by t
 - Testing & test plans: DD-30 manual pass at the epic boundary · DD-31 TESTING PLAN split + subtract · DD-32 plan-defect kind · DD-33 done stories immutable · DD-34 testability foundation · DD-35 flow tiering · DD-36 e2e backfill
 - Simulator automation: DD-40 sim.sh + route navigation · DD-41 silent-failure guards · DD-42 orientation · DD-43 store preset · DD-44 sim.json committed
 - Planning & docs: DD-50 planning consolidation · DD-51 pinned story frontmatter · DD-52 design contract decoupled from docs/ux · DD-53 simplicity doctrine placement · DD-54 CLAUDE.md tiers & budget · DD-55 epic archive · DD-56 dark patterns · DD-57 doc-free lane · DD-58 architecture promotion
-- Packaging: DD-60 hooks for hard rules · DD-61 no project names
+- Packaging: DD-60 hooks for hard rules · DD-61 no project names · DD-62 ledger via ledger.sh · DD-63 quiet toolchain output
 
 ---
 
@@ -86,16 +86,19 @@ prose "it holds."
 ## Orchestration
 
 ### DD-20 — Subagent model routing (re-verify on each model generation)
-**Decision.** Create/review phases default to Sonnet; dev-story runs Opus **only on Swift
-projects**; docs-sync runs Haiku at low effort. Routing is a per-spawn `model` override
-from the orchestrator, never a `/model` switch.
+**Decision.** Create/review phases are pinned to Sonnet in their agent defs. dev-story has
+**no pin**: on Swift projects it inherits whatever model the user chose for the session
+(Opus, Fable, …); on Python/web the orchestrator passes `model: sonnet`. docs-sync runs
+Haiku at low effort. Routing is always a per-spawn override from the orchestrator — never a
+`/model` switch mid-session, which busts the prompt cache.
 **Rationale (dated to the Claude 4 generation).** A Sonnet Swift dev pass tended to fail
 the Build & Test Gate and loop, and each failed `xcodebuild` retry cost more than one
-accurate Opus pass; on Python/web Sonnet passed first-try often enough that Opus was
-overspend.
+accurate pass on the larger model; on Python/web Sonnet passed first-try often enough that
+a larger model was overspend. The inherit-the-session rule replaced a hard-coded Opus
+override so that a stronger session model is never silently downgraded for the hard phase.
 **Re-verify.** This is an empirical claim about a model generation. The evidence is
 `docs/metrics/flywheel-ledger.jsonl` — `bt_iterations` by model, which `/retrospective`
-now reports per epic. Change the routing when the numbers say so, not the prose.
+reports per epic. Change the routing when the numbers say so, not the prose.
 
 ### DD-21 — Non-return rule and wait loops
 **Context.** A subagent ended a long build with "I'll wait for the suite to notify me" and
@@ -314,3 +317,10 @@ essays, and roll-up lines emitted for only a fifth of flywheel stories. The READ
 drift indicators and DD-20's bt_iterations-by-model evidence base were unqueryable
 exactly when they fired. Same move as DD-22 (`gh-track.sh`) and DD-11 (`sabotage.sh`):
 mechanics in a zero-token script, policy in the skill.
+
+### DD-63 — Quiet toolchain output
+**Decision.** Build/test gates run with quiet flags, `tee` the full log to the self-ignoring
+`.leanwheel/logs/`, and keep only the tail in context. Scaffolded CLAUDE.md carries a
+`## Quiet commands` section with the project's exact invocations. Tool output persists in
+the conversation for the rest of the session and is re-sent every turn; on Swift a single
+verbose `xcodebuild` run can outweigh the whole story.
