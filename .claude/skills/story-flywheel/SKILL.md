@@ -60,12 +60,12 @@ Per-phase routing (Conserve-Opus baseline, dynamic Swift exception):
 | Phase | subagent_type | Python / Web | Swift / SwiftUI | Why |
 |---|---|---|---|---|
 | 1 — Create Story | `lw-story-creator` | Sonnet | Sonnet | Story authoring doesn't need Opus. |
-| 2 — Dev Story | `lw-story-developer` | **Sonnet** | **Opus** | On Swift, a Sonnet pass tends to fail the Build & Test Gate and loop — each failed `xcodebuild` retry costs more than one accurate Opus pass, so Opus is the *token-conserving* choice. On Python/web, Sonnet passes first-try often enough that Opus is overspend. |
+| 2 — Dev Story | `lw-story-developer` | **Sonnet** | **Opus** | Empirical, dated to an earlier model generation — see DD-20 in `guide/design-decisions.md`. The ledger's `bt_iterations` by model (reported by `/retrospective`) is the evidence for changing this. |
 | 3 — Code Review | `lw-story-reviewer` | Sonnet | Sonnet | Adversarial reading; the Build & Test Gate is the correctness backstop, not the model. (Dev-story already runs an inline review — see Phase 3.) |
 
 **How to set the model:** the subagent defs default to Sonnet. Pass a per-spawn `model` override on the Agent call **only** for Phase 2 when `swift_project = true` (`model: opus`). All other spawns use the default. If the user opts out for the run ("conserve everything", "stay on Sonnet"), drop the Opus override too and note it.
 
-**Effort routing (second axis, static):** reasoning effort is set only via `effort:` frontmatter in the agent defs — the Agent tool has no per-spawn effort override, so the dynamic-Swift-exception trick above cannot be replicated for effort. Current pins: `lw-docs-sync` = `low` (mechanical doc writing — the Haiku argument, one level deeper). The three phase-runners deliberately carry **no** `effort:` and inherit the session default: dev-story must not be pinned down (the Swift accuracy-first rationale above) nor pinned up (overspend on Python/web).
+**Effort routing (second axis, static):** reasoning effort is set only via `effort:` frontmatter in the agent defs — the Agent tool has no per-spawn effort override, so the dynamic-Swift-exception trick above cannot be replicated for effort. Current pins: `lw-docs-sync` = `low` (mechanical doc writing — the Haiku argument, one level deeper). The three phase-runners deliberately carry **no** `effort:` and inherit the session default (DD-20).
 
 **Spawning a phase = one literal Agent tool call.** Everywhere this skill says "spawn", make an actual Agent tool invocation — never a prose description of delegation, and never doing the phase's work inline in this thread:
 
@@ -118,7 +118,7 @@ Repeat until the epic is complete (see **Exit Conditions**):
 ### Phase 1 — Create Story
 
 **Subagent mode:** spawn `lw-story-creator` (default model: Sonnet) via the Agent tool. Prompt it with the story identifier (`{epic}.{story}`) so create-story skips identification.
-**Fallback mode:** if `swift_project`, issue a MODEL SWITCH GATE for **Sonnet**, then execute `skills/create-story/skill.md` inline.
+**Fallback mode:** if `swift_project`, issue a MODEL SWITCH GATE for **Sonnet**, then execute `skills/create-story/SKILL.md` inline.
 
 - Wait for the story file to be written and GitHub issue updated.
 - From the subagent report, capture `STORY FILE`, `EPIC CONTEXT`, `COMPLEXITY`, `CLARIFICATIONS NEEDED`, `PREREQUISITES`, `DESIGN GAP`.
@@ -129,7 +129,7 @@ Repeat until the epic is complete (see **Exit Conditions**):
 ### Phase 2 — Dev Story
 
 **Subagent mode:** spawn `lw-story-developer` via the Agent tool with the story file path. Pass `model: opus` **only if `swift_project`** (otherwise the default Sonnet). Instruct it to run the full dev-story workflow including the Build & Test Gate, the evals RUN (if `docs/evals/` exists), invariant/design verification, and the inline review.
-**Fallback mode:** if `swift_project`, MODEL SWITCH GATE for **Opus**; then execute `skills/dev-story/skill.md` inline.
+**Fallback mode:** if `swift_project`, MODEL SWITCH GATE for **Opus**; then execute `skills/dev-story/SKILL.md` inline.
 
 - Note: in subagent mode the developer subagent already runs dev-story's **inline** code review (Pass A–E). Phase 3 below becomes a *light confirmation* of its report rather than a second full review — only spawn a separate reviewer if the developer reported `UNRESOLVED` items or you want an independent adversarial pass.
 - From the report capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `FINDINGS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`.
@@ -143,7 +143,7 @@ Repeat until the epic is complete (see **Exit Conditions**):
 The developer subagent already ran the inline review in Phase 2. **Independent review is gated on blast radius, not just a clean inline pass** — the inline review shares the dev's mental model and can miss a lost side-effect. Decide:
 - **Blast-radius trigger — spawn the reviewer even when the inline pass is clean** if the change touches a shared side-effect pipeline every feature routes through, money/billing, auth, or a service with many callers.
 - **Clean report (no `UNRESOLVED`, gate PASS) and no blast-radius trigger:** skip a separate review pass — carry the Phase 2 findings/rubric straight into the checkpoint. (Saves a full extra review's tokens.)
-- **`UNRESOLVED` items, FAIL gate, security-sensitive story, or a blast-radius trigger:** spawn `lw-story-reviewer` (default model: Sonnet) for an independent adversarial pass. **Fallback mode:** MODEL SWITCH GATE for **Sonnet**, then execute `skills/code-review/skill.md` inline.
+- **`UNRESOLVED` items, FAIL gate, security-sensitive story, or a blast-radius trigger:** spawn `lw-story-reviewer` (default model: Sonnet) for an independent adversarial pass. **Fallback mode:** MODEL SWITCH GATE for **Sonnet**, then execute `skills/code-review/SKILL.md` inline.
 
 When a separate review runs:
 - Pass the story file path so it skips auto-detection.
@@ -199,7 +199,7 @@ Review the changes above, then:
 
 - **"continue"** (or equivalent like "next", "go", "lgtm"): advance to next story
 - **"stop"** (or equivalent like "done", "pause", "exit"): exit flywheel gracefully (see Exit)
-- **"retry"**: re-run `skills/code-review/skill.md` on the current story, then show checkpoint again
+- **"retry"**: re-run `skills/code-review/SKILL.md` on the current story, then show checkpoint again
 
 If unresolved items exist, note them prominently in the checkpoint and wait — do not auto-advance even if user says "continue" without acknowledging them. Ask: "There are {N} unresolved items above. Confirm you want to continue anyway, or address them first?"
 
@@ -237,7 +237,7 @@ What would you like to do next?
 
 **Wait for user response.**
 
-- **"retro"**: Execute `skills/retrospective/skill.md` for the completed epic. After it finishes, prompt again:
+- **"retro"**: Execute `skills/retrospective/SKILL.md` for the completed epic. After it finishes, prompt again:
   ```
   Retrospective complete. Ready to start Epic {N+1}: {title}.
     • "continue" — start the flywheel on Epic {N+1}

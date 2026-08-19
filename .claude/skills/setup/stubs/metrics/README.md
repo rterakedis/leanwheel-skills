@@ -31,7 +31,9 @@ lightweight version of that: plain append-only files, no model calls.
 ```
 
 Append a line with a single shell redirect — never read the whole file into the
-model to update it.
+model to update it. Readers (`/retrospective`) grep only the current epic's lines.
+The file is rotated to `docs/metrics/releases/{version}-ledger.jsonl` by
+`/epic-archive cut-release`, so it stays bounded per release.
 
 ## Reading the signal — drift indicators
 
