@@ -75,4 +75,5 @@ This matters because the macOS app does **not** auto-load skills from a project'
 - No `settings.json` in `.claude/` — this repo is a plugin, not a project config.
 - Do not add project-level docs (`docs/`, story files, etc.) — this repo ships skills only.
 - When adding a new skill or agent, also re-run the symlink sync (see **Local Development**) so it loads on the maintainer's machine.
+- **No project names** in skills, stubs, agents, or scripts. Lessons learned on a real project are recorded generically ("a SwiftUI + Core Data project") in [guide/design-decisions.md](guide/design-decisions.md) as `DD-NN` entries, and skills cite the ID.
 - **Trademark rule:** "BMAD"/"BMad" appears only in *references to the upstream project* (credit, comparison, migration, upstream-sync workflow) — never in the name of anything this repo ships (skills, agents, plugin, dirs, scripts, hooks). BMad™, BMad Method™, and BMad Core™ are trademarks of BMad Code, LLC; see LICENSE third-party notices and `license-fix.md`.

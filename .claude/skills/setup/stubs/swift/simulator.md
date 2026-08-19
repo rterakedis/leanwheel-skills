@@ -94,12 +94,12 @@ to reach**. Add a route when you add a screen — same discipline as identifiers
 .task { router.applyLaunchRoute() }        // DEBUG: --route, dispatched to the same table
 ```
 
-Keep routes flat and stable: `yardpath://invoices`, `yardpath://job/new`,
-`yardpath://settings`. They're referenced by name from flows, story Design Contracts,
+Keep routes flat and stable: `myapp://invoices`, `myapp://job/new`,
+`myapp://settings` (substitute your app's URL scheme). They're referenced by name from flows, story Design Contracts,
 and `sim.sh` invocations — treat them as a contract, like seed-scenario names.
 
 Both halves live in `testability.md`; what matters host-side is that `--route invoices`
-and `yardpath://invoices` mean the same thing and run the same code, so an unattended
+and `myapp://invoices` mean the same thing and run the same code, so an unattended
 run and a real deep link cannot drift apart.
 
 ❌ Adding a DEBUG-only parallel *route table*. `--route` is a delivery mechanism for
@@ -115,7 +115,7 @@ it is the one place the alert must be dismissed rather than avoided:
 ```swift
 func test_externalDeepLink_opensInvoices() {
     let app = launch()                                    // no --route: exercise the real path
-    app.open(URL(string: "yardpath://invoices")!)          // `open(_:)` — was `openURL(_:)`
+    app.open(URL(string: "myapp://invoices")!)          // `open(_:)` — was `openURL(_:)`
     let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
     let confirm = springboard.buttons["Open"]              // iOS 26 confirmation
     if confirm.waitForExistence(timeout: 3) { confirm.tap() }
