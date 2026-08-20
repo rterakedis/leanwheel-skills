@@ -62,16 +62,25 @@ at all.
 
 ## Setting it up
 
-Clone the repo, then create one symlink per skill directory and one per agent file.
-`-sfn` replaces an existing link in place, so re-running is always safe (idempotent):
+Clone the repo wherever you keep your git checkouts, set `LEANWHEEL` to that path,
+then create one symlink per skill directory and one per agent file. `-sfn` replaces
+an existing link in place, so re-running is always safe (idempotent):
 
 ```bash
-for d in ~/Git-Repos/leanwheel-skills/.claude/skills/*/; do ln -sfn "$d" ~/.claude/skills/"$(basename "$d")"; done
+LEANWHEEL="$HOME/path/to/leanwheel-skills"   # ← wherever you cloned it
 ```
 
 ```bash
-for a in ~/Git-Repos/leanwheel-skills/agents/*.md; do ln -sfn "$a" ~/.claude/agents/"$(basename "$a")"; done
+for d in "$LEANWHEEL"/.claude/skills/*/; do ln -sfn "$d" ~/.claude/skills/"$(basename "$d")"; done
 ```
+
+```bash
+for a in "$LEANWHEEL"/agents/*.md; do ln -sfn "$a" ~/.claude/agents/"$(basename "$a")"; done
+```
+
+(The location doesn't matter — symlinks store an absolute path, so any directory
+works as long as the clone stays put. If you later move the clone, just re-run the
+loops with the new path.)
 
 Afterwards, the personal directory holds no real files — just pointers. The `l` in
 the mode column is how you tell:
