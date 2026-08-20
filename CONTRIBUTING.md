@@ -4,7 +4,7 @@ This repo ships as a Claude Code plugin (`leanwheel`). Skills live in `.claude/s
 
 ## Ground rules
 
-- **Skill files are always `SKILL.md` (uppercase).** Upstream Leanwheel uses lowercase `skill.md` — this is an intentional, permanent divergence. Don't "fix" the casing.
+- **Skill files are always `SKILL.md` (uppercase).** (Upstream BMAD also converged on uppercase as of v6.1; historically it used lowercase `skill.md`.)
 - **Agents live in `agents/` at the repo root**, not `.claude/agents/`. The plugin manifest only registers agents from the root-level directory.
 - This repo ships skills only — don't add project-level docs (`docs/`, story files, `.claude/settings.json`, etc.) to the repo itself. Those belong in projects that *consume* this plugin.
 - **One rule, one home.** A rule lives in exactly one skill file or agent definition. Cross-reference it by name; never copy-paste the text into a second file — duplicated rules drift and every copy is re-paid on load.

@@ -299,3 +299,18 @@ bash/grep, zero tokens.
 ### DD-61 — No project names in shipped files
 **Decision.** Skills, stubs, agents, and scripts never name the project a lesson came from.
 Provenance is recorded here, generically ("a brownfield SwiftUI + Core Data project").
+
+### DD-62 — Ledger appends go through `scripts/ledger.sh`; no qualified PASS
+**Decision.** Skills never hand-write flywheel-ledger JSON. `scripts/ledger.sh` owns the
+schema: UTC timestamp stamped by the script, model names normalized (lowercase, no
+`claude-` prefix, dots→dashes), `build_test` and `rubric_gate` are strict enums with
+qualifiers routed to `build_detail`/`notes` (notes capped at 300 chars), and the
+verify-green gate rule is enforced mechanically — `rubric_gate: PASS` with a red or
+blocked `build_test` is refused; a blocked verify caps a review at `in-progress`.
+**Why.** Eight epics of real ledger data from a SwiftUI + Core Data project showed
+model-written lines drift immediately: 10 model-name variants, 6 phase-key shapes,
+free-text statuses ("green (233/233)", "PASS(pending verify-green)"), 300-word notes
+essays, and roll-up lines emitted for only a fifth of flywheel stories. The README's
+drift indicators and DD-20's bt_iterations-by-model evidence base were unqueryable
+exactly when they fired. Same move as DD-22 (`gh-track.sh`) and DD-11 (`sabotage.sh`):
+mechanics in a zero-token script, policy in the skill.

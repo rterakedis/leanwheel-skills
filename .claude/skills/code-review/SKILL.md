@@ -133,7 +133,7 @@ Every `fix-now` is recorded here even though it's already applied — the line i
 
 **Auto-patch:** Apply immediately, mark `[x]`. If can't auto-apply, leave `[ ]`. Apply `fix-now` items the same way — but if one turns out to need more than the ceiling allows, revert it and re-triage as `defer`.
 
-**Verify green:** If any patch or fix-now changed code and a toolchain is present, **run a real build + test** before marking the review done (`xcodebuild … build test` / `swift build && swift test` / `npm run build && npm test` / documented command). A patch is only resolved once the toolchain confirms it compiles and tests stay green — never close a review on a fix verified by reading alone. If red, fix and re-run, or leave the finding `[ ]` and set Status `in-progress`. Skip only on a clean review or when no toolchain exists (state which). If `docs/evals/` exists, also execute **RUN** from `skills/evals/SKILL.md` for the story's epic — a failing eval is a regression and blocks closing just like a red build.
+**Verify green:** If any patch or fix-now changed code and a toolchain is present, **run a real build + test** before marking the review done (`xcodebuild … build test` / `swift build && swift test` / `npm run build && npm test` / documented command). A patch is only resolved once the toolchain confirms it compiles and tests stay green — never close a review on a fix verified by reading alone. If red, fix and re-run, or leave the finding `[ ]` and set Status `in-progress`. If the re-run is **blocked** (toolchain busy, simulator held by another session, environment failure), the review is not done: set Status `in-progress` and report the blocker — a blocked verify is treated exactly like a red one. Skip only on a clean review or when no toolchain exists (state which). If `docs/evals/` exists, also execute **RUN** from `skills/evals/SKILL.md` for the story's epic — a failing eval is a regression and blocks closing just like a red build.
 
 **A new gate is not done until it has been shown to fail** — scoped to tests, evals, and assertions written during this review's patches. Apply dev-story → Build & Test Gate's fail-first rule (`scripts/sabotage.sh --name {TestName} -- {filtered gate cmd}` preferred; record the discriminating check in Completion Notes). A gate only ever observed green is unverified (DD-11).
 
@@ -144,6 +144,8 @@ RUBRIC: correctness PASS · edge-cases PASS · ac-coverage PASS · design PASS �
 ```
 
 The `simplicity` dimension scores Pass F (it's just reporting a pass already run — no extra model calls). A dimension is FAIL if any unresolved `[ ]` finding maps to it; GATE is PASS only when every applicable dimension is PASS. The gate feeds the flywheel checkpoint and the ledger.
+
+**Verify-green gate rule:** GATE PASS additionally requires that Verify green actually ran green this session (or was legitimately skipped: no code changed, or no toolchain — state which). A red or blocked verify caps the outcome at Status `in-progress` — there is no qualified PASS ("PASS pending verify") in any report field or ledger line; `scripts/ledger.sh` refuses one mechanically.
 
 **Pull deferred forward:** If any `[ ] [Defer]`, execute **LOG-AND-SCHEDULE** from `skills/deferred/SKILL.md` for each deferred item (title = finding title, detail = finding detail, source = file:line). `[Fix-Now]` items never go to the log — they're already fixed, and that intake rejects them.
 
@@ -171,7 +173,9 @@ If the context file does **not** exist, do not create it — a stub newer than `
 
 One-off layout subviews don't qualify; only components future stories should reuse. Skip silently if no new reusable component shipped.
 
-**Ledger:** If `docs/metrics/` exists, append one `code-review` line to `docs/metrics/flywheel-ledger.jsonl` (single shell redirect — do not read the file into context): `{ts, story, phase:"code-review", model, build_test, evals:"P/T", findings:{patched,decisions,deferred}, rubric_gate}`.
+**Ledger:** Append one `code-review` line via `scripts/ledger.sh` (never hand-write the JSON — the script owns the schema, normalizes the model name, stamps the timestamp, and no-ops if `docs/metrics/` is absent):
+`bash scripts/ledger.sh code-review --story {id} --model {model} --build-test green|red|blocked|n/a --rubric-gate PASS|FAIL|n/a --evals P/T --patched {n} --decisions {n} --deferred {n} [--standalone] [--notes "≤300 chars"]`
+Pass `--standalone` for an independent review pass (vs the dev-story inline review). Notes are a one-line pointer — review detail lives in `### Review Findings`, not the ledger. The script enforces the verify-green gate rule below and refuses a qualified PASS.
 
 **Update status** (in the YAML frontmatter — the source of truth; never as a `**Status:**` body line):
 - All resolved: `status: done` → **CLOSE-ISSUE**

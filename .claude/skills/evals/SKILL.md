@@ -116,7 +116,7 @@ Code-review already runs its adversarial passes; SCORE just turns that into a
 **structured pass/fail line per dimension** — no extra model calls. Dimensions:
 `correctness`, `edge-cases`, `ac-coverage`, `design` (n/a if non-UI), `security`
 (n/a if not flagged). GATE = PASS only if every applicable dimension is PASS.
-Append the line to the story's `### Review Findings` and to the metrics ledger.
+Append the line to the story's `### Review Findings`; the GATE value goes to the ledger via `scripts/ledger.sh … --rubric-gate` (per code-review → Ledger).
 
 ---
 

@@ -136,6 +136,7 @@ Copy these from `{skills_path}/scripts/` into the project's `scripts/` (create `
 - `commit-push.sh` — one-call stage/commit/push with the Co-Authored-By trailer.
 - `gh-track.sh` — deterministic GitHub issue status transitions (used by github-tracking + the flywheels; keeps label moves byte-identical and zero-token).
 - `sabotage.sh` — deterministic "prove the new gate can fail" check (revert-the-fix → red naming the item → restore → green). Used by `/dev-story`'s Build & Test Gate and `/code-review`'s Verify-green for every new test/eval; zero model tokens.
+- `ledger.sh` — normalized append to `docs/metrics/flywheel-ledger.jsonl` (used by dev-story, code-review, and the flywheels; owns the schema, normalizes model names, stamps timestamps, and enforces the verify-green gate rule — keeps the ledger jq-queryable).
 - `sim.sh` — **Apple projects only** ({is_apple_platform} true): the deterministic simulator harness (boot / install / deep-link navigation / screenshot matrix / hierarchy dump / flows). Used by `/design-verify` and for any supervised click-through. See `docs/setup/swift/simulator.md`.
 
 Then append the git workflow instruction block to CLAUDE.md: check whether `## Git Workflow` already exists in CLAUDE.md. If it does, skip (never duplicate). Otherwise, append a `---` separator followed by the full contents of `{skills_path}/.claude/skills/setup/stubs/commit-workflow.md`.

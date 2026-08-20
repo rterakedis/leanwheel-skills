@@ -193,7 +193,9 @@ Review the changes above, then:
 ─────────────────────────────────────────────
 ```
 
-**Observability:** before presenting the checkpoint, append a `story-flywheel` summary line to `docs/metrics/flywheel-ledger.jsonl` (if `docs/metrics/` exists) capturing this story's verification fields and per-phase models used. One shell-redirect append — never read the ledger into context. The per-phase `dev-story` / `code-review` lines are written by those skills/subagents; this is the story-level roll-up.
+**Observability:** before presenting the checkpoint, append the story-level roll-up via `scripts/ledger.sh` (never hand-write the JSON; the script no-ops if `docs/metrics/` is absent and never reads the ledger into context):
+`bash scripts/ledger.sh story-flywheel --story {id} --models create={m},dev={m},review={m|inline|skipped},docs-sync={m|skipped} --build-test green|red --evals P/T [--rubric-gate PASS|FAIL] [--deferred n] [--unresolved n] [--tests "1139/85 suites"]`
+The per-phase `dev-story` / `code-review` lines are written by those skills/subagents; this roll-up is written every story, in both checkpoint and auto-pilot flows — a story without one is a loop bug.
 
 **Wait for user response.** Do not proceed until user explicitly types one of the above commands or equivalent.
 

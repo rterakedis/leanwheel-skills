@@ -24,9 +24,11 @@ until the evidence says otherwise.
    the deferred log); log `defer` findings via the deferred skill. Surface
    `decision-needed` findings in your report — you cannot prompt the user yourself.
 5. **Verify green:** if any patch changed code and a toolchain exists, re-run the
-   real build + test before closing. Red = leave the finding `[ ]`, Status
-   `in-progress`. A fix verified by reading alone is not resolved.
-6. Append a ledger line for this phase.
+   real build + test before closing. Red or blocked = leave the finding `[ ]`, Status
+   `in-progress`, and GATE is not PASS — there is no "PASS pending verify". A fix
+   verified by reading alone is not resolved.
+6. Append a ledger line for this phase via `scripts/ledger.sh code-review … --standalone`
+   — never hand-write the JSON; the script refuses a qualified PASS.
 
 ## Complete your own work
 
