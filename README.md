@@ -136,6 +136,7 @@ Zero footprint: no `docs/` tree is created, nothing is tracked on GitHub, and th
 | [guide/spec-driven-development.md](guide/spec-driven-development.md) | ELI5: what Spec-Driven Development is, and how the artifact chain feeds the loops (with diagram) |
 | [guide/features.md](guide/features.md) | Full list of what was removed, kept, and added vs original BMAD |
 | [guide/installation.md](guide/installation.md) | Workspace-directory install option, keeping skills up to date |
+| [guide/symlinking.md](guide/symlinking.md) | How the maintainer's machine loads skills live via `~/.claude` symlinks (with diagram) |
 | [guide/workflows.md](guide/workflows.md) | Greenfield and brownfield process flowcharts |
 | [guide/migration.md](guide/migration.md) | Migrating an existing full-BMAD project to Leanwheel |
 | [guide/appstore-connect.md](guide/appstore-connect.md) | `/appstore-connect` usage, artifact contract, decision tree, and scripts — the App Store Connect authoring lane |
