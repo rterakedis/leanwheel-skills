@@ -70,6 +70,21 @@ Full explanation with diagram: [guide/symlinking.md](guide/symlinking.md).
 
 ---
 
+## Anthropic best-practice references
+
+When authoring or reviewing skills, agents, or harness behavior in this repo, **fetch
+the relevant page live and follow the current guidance** — recommendations change over
+time, so never rely on a memorized or summarized version. Pointers only, by design:
+
+- Skills: https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices
+- Prompt caching: https://platform.claude.com/docs/en/build-with-claude/prompt-caching
+- Context editing: https://platform.claude.com/docs/en/build-with-claude/context-editing
+- Compaction: https://platform.claude.com/docs/en/build-with-claude/compaction
+- Tool-using agents: https://platform.claude.com/docs/en/agents-and-tools/tool-use/build-a-tool-using-agent
+- Structured outputs: https://platform.claude.com/docs/en/build-with-claude/structured-outputs
+
+---
+
 ## Conventions
 
 - Skill files are always named `SKILL.md` (uppercase). Upstream uses `skill.md`.
