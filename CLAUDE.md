@@ -56,6 +56,7 @@ with no commit/update/restart:
 
 This matters because the macOS app does **not** auto-load skills from a project's
 `additionalDirectories`; the personal-dir symlinks are what make them load everywhere.
+Full explanation with diagram: [guide/symlinking.md](guide/symlinking.md).
 
 > ⚠️ **REMINDER — after adding a NEW skill or agent, re-run the symlink sync.** Editing
 > existing files needs nothing (symlinks are live), but a newly-*added* skill/agent has no
