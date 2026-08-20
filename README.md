@@ -133,6 +133,7 @@ Zero footprint: no `docs/` tree is created, nothing is tracked on GitHub, and th
 
 | Doc | What's in it |
 |---|---|
+| [guide/spec-driven-development.md](guide/spec-driven-development.md) | ELI5: what Spec-Driven Development is, and how the artifact chain feeds the loops (with diagram) |
 | [guide/features.md](guide/features.md) | Full list of what was removed, kept, and added vs original BMAD |
 | [guide/installation.md](guide/installation.md) | Workspace-directory install option, keeping skills up to date |
 | [guide/workflows.md](guide/workflows.md) | Greenfield and brownfield process flowcharts |

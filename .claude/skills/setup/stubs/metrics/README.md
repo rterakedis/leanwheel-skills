@@ -18,19 +18,25 @@ lightweight version of that: plain append-only files, no model calls.
 {
   "ts": "2026-06-15T18:30:00Z",
   "story": "3.2",
-  "phase": "dev-story",          // create-story | dev-story | code-review
-  "model": "opus",               // model the phase ran on
-  "build_test": "green",         // green | manual-required | red
+  "phase": "dev-story",          // create-story | dev-story | code-review | story-flywheel | epic-flywheel
+  "model": "opus",               // normalized (lowercase, no claude- prefix, dots→dashes)
+  "build_test": "green",         // green | manual-required | red | blocked | n/a — enum only
+  "build_detail": "233/233",     // optional qualifier; never part of build_test
   "bt_iterations": 2,            // times the Build & Test Gate re-ran before green
   "evals": "12/12",              // command evals passed / total (or n/a)
   "findings": {"patched": 3, "decisions": 1, "deferred": 0},
-  "rubric_gate": "PASS",         // code-review SCORE gate (or n/a)
+  "rubric_gate": "PASS",         // PASS | FAIL | n/a — never qualified
   "invariants": "4/4",           // verified / total (or n/a)
   "duration_min": 14
 }
 ```
 
-Append a line with a single shell redirect — never read the whole file into the
+**Always append via `scripts/ledger.sh` — never hand-write a line.** The script owns
+this schema: it stamps the UTC timestamp, normalizes model names so `jq` grouping
+works, rejects free-text statuses, caps `notes` at 300 chars, and enforces the
+verify-green gate rule (`rubric_gate: PASS` with a red/blocked `build_test` is
+refused). Field drift from hand-written lines is what makes a ledger unqueryable.
+Run `scripts/ledger.sh` with no args for usage. Never read the whole file into the
 model to update it. Readers (`/retrospective`) grep only the current epic's lines.
 The file is rotated to `docs/metrics/releases/{version}-ledger.jsonl` by
 `/epic-archive cut-release`, so it stays bounded per release.

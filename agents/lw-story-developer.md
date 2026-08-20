@@ -27,7 +27,8 @@ orchestrating flywheel stays lean.
    `docs/evals/` exists — this catches regressions of earlier stories' behavior.
 5. On completion run invariant verification (stateful stories) and design
    verification (UI stories), then the inline code review per the skill.
-6. Append a ledger line for this phase (see dev-story → Observability).
+6. Append a ledger line for this phase via `scripts/ledger.sh dev-story …` — never
+   hand-write the JSON (see dev-story → Observability).
 
 ## Complete your own work
 

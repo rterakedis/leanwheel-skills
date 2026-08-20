@@ -93,7 +93,7 @@ Per story-flywheel's Phase 3 economy and its **blast-radius trigger set** (not d
 - **Commit (only if green after patches):** `story {epic}.{story}: review+patch`. If patches couldn't resolve, leave status `in-progress`, don't commit, HALT.
 
 ### Step 4 — Advance or checkpoint
-- **auto mode (default):** if the story is fully green, append the per-story ledger line (`docs/metrics/flywheel-ledger.jsonl` if present) and advance silently to the next story. If anything is non-green, stop.
+- **auto mode (default):** if the story is fully green, append the per-story roll-up via `scripts/ledger.sh story-flywheel …` (per story-flywheel → Observability — written every story, silent advance included) and advance silently to the next story. If anything is non-green, stop.
 - **every-story mode:** present the standard story-flywheel Phase-4 checkpoint and wait.
 - When the last story in the epic finishes → **Epic Boundary Gate**.
 
@@ -234,7 +234,7 @@ Next:
   • "stop"      — end here
 ─────────────────────────────────────────────
 ```
-Append the epic-level ledger roll-up. Wait for the user — the boundary is always a human gate.
+Append the epic-level roll-up via `scripts/ledger.sh epic-flywheel --story epic-{N} --models … --build-test … --evals …`. Wait for the user — the boundary is always a human gate.
 
 **Retrospective reminder is mandatory.** The Epic Boundary Gate always surfaces the retrospective prompt — never close an epic silently.
 

@@ -190,7 +190,9 @@ After patches and deferred-item resolution touch the code, **re-run the Build & 
 1. Set `status: done` in the YAML frontmatter
 2. **CLOSE-ISSUE** (skip if unavailable)
 3. **Operational doc sync** (routed to a cheap model, DD-20/DD-24): if you are running as the `lw-story-developer` subagent, do not run docs-sync yourself — set `INFRA TOUCHED: yes` in your report when this story's File List includes an infra-shaped file (dependency manifest, `.env`/config, migration/schema, script, Dockerfile/CI/deploy, or a new service entrypoint); the orchestrator spawns `lw-docs-sync` (Haiku) to do it. If you are running **standalone** (not under a flywheel), call the Agent tool yourself — `subagent_type: "lw-docs-sync"`, prompt naming op **OPERATIONAL** and this story's path — or, if subagents are unavailable, execute **OPERATIONAL** from `skills/docs-sync/SKILL.md` inline as a fallback. Record any `DOCS UPDATED` in the Debug Log.
-4. **Ledger:** if `docs/metrics/` exists, append one `dev-story` line to `docs/metrics/flywheel-ledger.jsonl` (single shell redirect — do not read the file into context): `{ts, story, phase:"dev-story", model, build_test, bt_iterations, evals:"P/T", findings:{patched,decisions,deferred}, invariants:"V/T", docs_updated:[…], duration_min}`.
+4. **Ledger:** append one `dev-story` line via `scripts/ledger.sh` (never hand-write the JSON — the script owns the schema, normalizes the model name, stamps the timestamp, and no-ops if `docs/metrics/` is absent):
+   `bash scripts/ledger.sh dev-story --story {id} --model {model} --build-test green|red|manual-required --bt-iterations {n} --evals P/T --patched {n} --decisions {n} --deferred {n} --invariants V/T [--docs-updated a,b] [--duration-min n]`
+   Status qualifiers ("233/233", "doc-only") go in `--build-detail`, never in `--build-test`.
 5. Report: "{epic}.{story} complete. {P} patches, {D} decisions, {W} deferred.{ Docs: {list} if any}" followed by the **TESTING PLAN** block below.
 
 ### Testing Plan (required report field)
