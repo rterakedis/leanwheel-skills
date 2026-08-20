@@ -2,6 +2,11 @@
 
 ## What Was Cut vs Original BMAD
 
+> **Historical note.** The two tables below record the port decisions against the upstream
+> BMAD that existed when this repo was created (the v4/v5 YAML/XML-workflow era). Upstream
+> has since been rebuilt — see [Upstream state as of August 2026](#upstream-state-as-of-august-2026)
+> for what's true now, including items upstream has independently cut or converged on.
+
 | Cut | Why |
 |-----|-----|
 | Activation ceremony (config.yaml, resolve_customization.py, 6-step boot) | Ran on every skill invocation even with zero customizations — pure overhead |
@@ -44,9 +49,77 @@
 
 ---
 
+## Upstream state as of August 2026
+
+Upstream shipped **v6.0.0 stable (~March 2026)** and replaced its entire legacy
+architecture with a skills-based one, then kept moving fast (v6.11 by August 2026).
+Several claims elsewhere in this doc's history — and several rows in the tables above —
+describe an upstream that no longer exists. Current facts, verified against the upstream
+repo and changelog (August 2026):
+
+### What upstream cut too (convergence on lean)
+
+- **Activation ceremony and agent personas are gone upstream as well.** Personas were
+  consolidated into a single developer agent (v6.0); the persona directories that remain
+  are skills, not per-invocation persona loads.
+- **The SM → new chat → DEV → new chat → QA cycle is gone.** There is no upstream
+  create-story or dev-story anymore. v6.11 renamed Quick Dev to `bmad-build` — "the one
+  official way BMad implements code" — with `bmad-build-auto` as its unattended variant.
+- **Uppercase `SKILL.md` is now the upstream convention** (since v6.1). The old
+  lowercase-`skill.md` distinction this repo's docs cited is obsolete.
+- **Test Architect (TEA) moved out** to an external enterprise module (v6.9);
+  `bmad-qa-generate-e2e-tests` remains in the shipped set.
+
+### What upstream added that parallels leanwheel
+
+- **`bmad-loop` (v6.10, July 2026, separate repo)** is upstream's epic flywheel: an
+  unattended pick-story → implement → verify → gated adversarial review → re-verify →
+  commit loop with deferred-work sweeps at epic boundaries. Its architecture is the
+  *inverse* of `/epic-flywheel`: a deterministic pure-Python orchestrator (no LLM in the
+  control loop) that spawns a fresh coding-agent CLI session per step in tmux, driven by
+  a `policy.toml` (retry budgets, oscillation detection), with resumable journaled run
+  state and git-worktree isolation. Leanwheel's orchestrator is an in-session LLM thread
+  holding short structured subagent reports, which lets it make cheap mid-loop judgment
+  calls (review-skip on clean stories, blast-radius triggers, the boundary test-plan
+  subtract) that a Python loop cannot.
+- **Real programmatic subagents.** Since v6.2–6.4, upstream's code review spawns parallel
+  review-layer subagents (Blind Hunter / Edge Case Hunter / Acceptance Auditor) with a
+  deliberate asymmetry — subagents report, the orchestrating session traces consequences
+  and triages (`intent_gap`/`bad_spec`/`patch`/`defer`). Party-mode integrated Claude
+  Code Agent Teams by v6.9. No evidence upstream ships `.claude/agents/*.md` agent
+  definition files; leanwheel's four pinned `lw-*` agents with report contracts and
+  model/effort frontmatter remain a structural difference.
+- **Shared concepts, direction of influence unknown.** forge-idea, a DESIGN.md +
+  EXPERIENCE.md dual UX spine, a deferred-work ledger, correct-course, and retrospective
+  all now exist upstream under the same or similar names. Treat these as shared concepts,
+  not leanwheel-only divergences.
+
+### What genuinely still differs
+
+- **Per-invocation weight.** Upstream retained JIT step files, per-skill
+  `customize.toml` (~7KB), and added a content-addressed `render_skill.py` snapshot
+  renderer — `bmad-build` alone spans ~55–60KB of step/config files. The leanwheel
+  equivalent is a single ~200-line `SKILL.md` plus a ~70-line agent file; the entire
+  agent layer is 219 lines.
+- **Verifiable artifacts over guardrails (DD-01)** — named report fields checked by
+  zero-token orchestrator shell gates — has no upstream analogue.
+- **Sprint state:** upstream's `sprint-status.yaml` is alive and is `bmad-loop`'s story
+  source; leanwheel still uses GitHub issue labels instead.
+- **Leanwheel-only:** the subtracted/deduplicated epic-boundary manual test plan with
+  physical-device routing (DD-31), the sabotage fail-first gate proof (DD-11), per-phase
+  model routing (Opus only for Swift dev, Haiku for docs prose), and the observability
+  ledger. **Upstream-only:** the zero-token deterministic control loop, declarative
+  retry/oscillation policy, and multi-CLI support (Codex, Gemini, Copilot, etc.).
+- **Worth porting as an idea (DD-01 style):** moving more of the epic loop's mechanical
+  bookkeeping — retry budgets, oscillation detection, journaled resumable run state —
+  into a script the orchestrator calls, the way `gh-track.sh` and `sabotage.sh` already
+  moved tracking and gate-proof off the model.
+
+---
+
 ## Relationship to BMAD
 
-This repo has no maintained fork of upstream. It's a standalone, deliberately leaner port: the upstream [BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD) framework ships an activation ceremony, three-tier TOML customization, agent personas, and JIT step-file loading — all of which add real per-invocation token cost and are absent here by design (see "What Was Cut" above). Upstream files are never copied directly into this repo for that reason; a `skill.md` from upstream brings that infrastructure along with it.
+This repo has no maintained fork of upstream. It's a standalone, deliberately leaner port. The upstream [BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD) has itself shed the activation ceremony and persona overhead since v6 (see the section above), but it still ships JIT step files, per-skill TOML customization, and a script-rendering indirection — all of which add real per-invocation weight and are absent here by design. Upstream files are never copied directly into this repo for that reason; an upstream `SKILL.md` brings that infrastructure (step files, `customize.toml`, `render_skill.py`) along with it.
 
 ### Checking for upstream improvements
 
@@ -56,14 +129,17 @@ Periodically clone the upstream repo and compare it against `.claude/skills/` to
 git clone https://github.com/bmad-code-org/BMAD-METHOD /tmp/BMAD-METHOD
 ```
 
-Because the file structures don't match (different filenames, ceremony-wrapped skill files vs. this repo's single-pass `SKILL.md`), a mechanical `diff` isn't useful. The practical approach is to hand the comparison to an AI assistant — but lead it with this repo's token-minimization philosophy first, or it will surface upstream's ceremony and customization layers as "missing features" rather than recognizing them as the overhead this project intentionally cut. Example prompt to build from:
+Because the file structures don't match (upstream's SKILL.md + step files + customize.toml + renderer vs. this repo's single-pass `SKILL.md`), a mechanical `diff` isn't useful. The practical approach is to hand the comparison to an AI assistant — but lead it with this repo's token-minimization philosophy first, or it will surface upstream's ceremony and customization layers as "missing features" rather than recognizing them as the overhead this project intentionally cut. Example prompt to build from:
 
 ```
 I maintain leanwheel-skills, a token-efficient port of the BMAD Method for Claude Code.
-It deliberately strips: the per-invocation activation ceremony, three-tier TOML
-customization, agent persona overhead, and JIT step-file loading — replacing them with
-plain-English rules in CLAUDE.md and single-pass inline skill files. Full rationale is
-in guide/comparison.md and guide/features.md of this repo.
+It deliberately strips upstream's per-invocation infrastructure — JIT step files,
+per-skill customize.toml, and the render_skill.py indirection (and, historically, the
+pre-v6 activation ceremony and agent personas, which upstream has since dropped too) —
+replacing them with plain-English rules in CLAUDE.md and single-pass inline skill files.
+Both repos now use uppercase SKILL.md, but the file structures still don't correspond.
+Full rationale is in guide/comparison.md, including an "Upstream state as of August
+2026" section recording the last verified upstream snapshot — start there and update it.
 
 Compare /tmp/BMAD-METHOD (upstream) against .claude/skills/ in this repo. For each
 upstream skill, tell me:

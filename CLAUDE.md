@@ -1,6 +1,6 @@
 # CLAUDE.md — leanwheel-skills
 
-This repo is a lean, token-efficient port and simplification of the [BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD) for Claude Code. It ships as a Claude Code plugin (`leanwheel`) via `.claude-plugin/plugin.json`. Skills live in `.claude/skills/` and are registered as `SKILL.md` (uppercase) — the upstream uses `skill.md` (lowercase) and an entirely different file structure (activation ceremony, TOML customization tiers, JIT step files) that this repo deliberately does not carry over.
+This repo is a lean, token-efficient port and simplification of the [BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD) for Claude Code. It ships as a Claude Code plugin (`leanwheel`) via `.claude-plugin/plugin.json`. Skills live in `.claude/skills/` and are registered as `SKILL.md` — upstream (v6+) also uses uppercase `SKILL.md` now, but an entirely different file structure (JIT step files, per-skill `customize.toml`, `render_skill.py` indirection) that this repo deliberately does not carry over. See [guide/comparison.md](guide/comparison.md) → "Upstream state as of August 2026".
 
 ## Purpose
 
