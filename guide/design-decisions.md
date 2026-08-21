@@ -85,20 +85,24 @@ prose "it holds."
 
 ## Orchestration
 
-### DD-20 — Subagent model routing (re-verify on each model generation)
-**Decision.** Create/review phases are pinned to Sonnet in their agent defs. dev-story has
-**no pin**: on Swift projects it inherits whatever model the user chose for the session
-(Opus, Fable, …); on Python/web the orchestrator passes `model: sonnet`. docs-sync runs
-Haiku at low effort. Routing is always a per-spawn override from the orchestrator — never a
-`/model` switch mid-session, which busts the prompt cache.
+### DD-20 — Subagent model routing (re-verify on each model generation; Opus is the cost ceiling)
+**Decision.** All three phase-runner agents pin `model: sonnet`. dev-story gets a per-spawn
+`model: opus` override on Swift projects only. docs-sync runs Haiku at low effort. Routing
+is always a per-spawn override from the orchestrator — never a `/model` switch mid-session,
+which busts the prompt cache. **The flywheel never inherits the session model:** an epic is
+dozens of heavy phase turns, and run on a Mythos-tier session model (Fable) it consumed half
+a week's usage budget in one epic versus ~25% for multiple epics on the pinned routing. The
+pin is the cost ceiling; a stronger session model is for the *orchestrating* conversation,
+not the phase spawns.
 **Rationale (dated to the Claude 4 generation).** A Sonnet Swift dev pass tended to fail
 the Build & Test Gate and loop, and each failed `xcodebuild` retry cost more than one
-accurate pass on the larger model; on Python/web Sonnet passed first-try often enough that
-a larger model was overspend. The inherit-the-session rule replaced a hard-coded Opus
-override so that a stronger session model is never silently downgraded for the hard phase.
-**Re-verify.** This is an empirical claim about a model generation. The evidence is
-`docs/metrics/flywheel-ledger.jsonl` — `bt_iterations` by model, which `/retrospective`
-reports per epic. Change the routing when the numbers say so, not the prose.
+accurate Opus pass; on Python/web Sonnet passed first-try often enough that Opus was
+overspend.
+**Re-verify.** The Sonnet-vs-Opus split is an empirical claim about a model generation. The
+evidence is `docs/metrics/flywheel-ledger.jsonl` — `bt_iterations` by model, which
+`/retrospective` reports per epic. Change the routing when the numbers say so, not the
+prose. (An inherit-the-session variant was tried in 2026-08 and reverted for the usage-burn
+reason above.)
 
 ### DD-21 — Non-return rule and wait loops
 **Context.** A subagent ended a long build with "I'll wait for the suite to notify me" and
