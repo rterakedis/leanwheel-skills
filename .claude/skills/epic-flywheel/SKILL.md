@@ -24,7 +24,7 @@ description: Drive an entire epic to completion semi-autonomously — runs the p
 
 1. **Pick the epic.** Same discovery as story-flywheel (sort by epic number embedded in milestone *title*, not GitHub milestone ID; fall back to `docs/epics.md`). Accept `/epic-flywheel {N}` to force one. Announce: "Epic-flywheel for Epic {N}: {title}. {X} stories. I'll run them with per-story gates, commit each step, then do one verification + test-planning pass at the end."
 
-2. **Delegation mode + model routing.** Identical to story-flywheel (→ **Subagent Delegation & Model Routing**): detect `swift_project`, prefer subagent-delegation mode (`lw-story-creator` / `lw-story-developer` / `lw-story-reviewer`), `model: opus` only for Phase 2 on Swift, inline + MODEL SWITCH GATE only when subagents are unavailable.
+2. **Delegation mode + model routing.** Identical to story-flywheel (→ **Subagent Delegation & Model Routing**): detect `swift_project`, prefer subagent-delegation mode (`lw-story-creator` / `lw-story-developer` / `lw-story-reviewer`), `model: opus` override only for Phase 2 on Swift (never `fable` — the flywheel's cost ceiling is Opus); inline on the session model only when subagents are unavailable.
 
 3. **Detect the Apple platform set.** Set `apple_project = true` if `swift_project`. Read `docs/setup/manifest` / `docs/setup/swift/` and `docs/ux/EXPERIENCE.md` only enough to learn which platforms ship (iOS/iPadOS/macOS). This governs the simulator-vs-physical split at the boundary. Non-Apple projects get a generic "automated/local-runnable vs manual" split instead.
 
@@ -70,7 +70,7 @@ Spawn `lw-story-creator` with `{epic}.{story}`. Capture `STORY FILE`, `EPIC CONT
 - **Commit:** `story {epic}.{story}: create` (stages the story file + the epic context cache if generated/updated this step + any tracking/epics edits).
 
 ### Step 2 — Dev Story → commit
-**Track first:** `gh-track.sh transition {issue#} in-progress` before spawning, so a long dev pass shows the right state. Then spawn `lw-story-developer` (model `opus` only if `swift_project`) with the story file path. It runs the full dev-story workflow: implementation, **Build & Test Gate** (verify by running), **evals RUN** (if `docs/evals/`), invariant + design verification, and the inline review. Capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `FINDINGS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`, `TESTING PLAN`.
+**Track first:** `gh-track.sh transition {issue#} in-progress` before spawning, so a long dev pass shows the right state. Then spawn `lw-story-developer` (`model: opus` only if `swift_project`) with the story file path. It runs the full dev-story workflow: implementation, **Build & Test Gate** (verify by running), **evals RUN** (if `docs/evals/`), invariant + design verification, and the inline review. Capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `FINDINGS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`, `TESTING PLAN`.
 - **On HALT or red gate:** stop the loop. Report which story and why; do **not** commit a red story. Resume with `/epic-flywheel {N}` after the blocker is fixed.
 - **Operational doc sync (cheap, orchestrator-owned):** the developer does not run docs-sync (DD-24). If `INFRA TOUCHED: yes`, spawn **`lw-docs-sync`** (Haiku) with the story path and op `OPERATIONAL`; capture `DOCS UPDATED`. Skip the spawn when `INFRA TOUCHED: no`. The doc edits land in the dev commit below.
 - **Track:** on green, `gh-track.sh transition {issue#} review`.
@@ -105,8 +105,9 @@ All stories implemented, reviewed, and individually green. Now verify the epic *
 
 ### 1. Epic Build & Test Gate (whole project)
 Run a full, unfiltered build + test — not story-scoped:
-- Apple: `xcodebuild … build test` (and `swift build && swift test` for SPM targets).
-- Web: `npm run build && npm test`.
+- Apple: `xcodebuild -quiet … build test` (and `swift build -q && swift test -q` for SPM targets).
+- Web: the project's quiet build + test scripts.
+Use the project CLAUDE.md `## Quiet commands` invocations when present; always `tee` the full log to `.leanwheel/logs/` and keep only the tail in context (dev-story → Build & Test Gate).
 - Else: the documented project command.
 Red build / any failing test → **HALT**: report the failing target/test output and ask the user how to proceed.
 

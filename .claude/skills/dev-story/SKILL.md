@@ -95,13 +95,17 @@ Before review, verify all items in `checklist.md` pass. Fix any failures first.
 1. Detect the toolchain and run a real build + test:
    - **Apple / Swift** (`docs/setup/swift/` exists, or an `.xcodeproj`/`Package.swift` is present): mandatory.
      ```bash
-     # Xcode project/workspace
-     xcodebuild -scheme {scheme} -destination 'platform=iOS Simulator,name=iPhone 16' build test
+     # Xcode project/workspace — quiet, full log on disk, last 40 lines in context
+     mkdir -p .leanwheel/logs && [ -f .leanwheel/logs/.gitignore ] || echo '*' > .leanwheel/logs/.gitignore   # self-ignoring, like .leanwheel/sim/
+     xcodebuild -quiet -scheme {scheme} -destination 'platform=iOS Simulator,name={device}' build test \
+       2>&1 | tee .leanwheel/logs/build-test.log | tail -n 40
      # or SwiftPM
-     swift build && swift test
+     swift build -q && swift test -q 2>&1 | tee .leanwheel/logs/build-test.log | tail -n 40
      ```
-   - **Web / SSG** (`package.json` present): run the project's build + test scripts (e.g. `npm run build && npm test`, or the lint/typecheck script if no tests).
-   - **Other toolchains:** run the project's documented build + test command.
+     (`{device}` = a simulator the installed Xcode ships — `scripts/sim.sh doctor` lists them; never hard-code an old model name.)
+   - **Web / SSG** (`package.json` present): run the project's build + test scripts with their quiet reporter (e.g. `npm run build --silent && npx vitest run --reporter=dot`, or the lint/typecheck script if no tests), same `tee … | tail -n 40` pattern.
+   - **Other toolchains:** run the project's documented build + test command — quiet flag if it has one, `tee` to `.leanwheel/logs/`, tail into context.
+   - **Quiet output is the rule, not a preference:** toolchain output stays in the conversation for the rest of the session and is re-sent on every turn. Keep the full log on disk for the failing-line cite; only the tail enters context. If `CLAUDE.md` has a `## Quiet commands` section, use those invocations verbatim.
    - **No toolchain detected:** record a `Build & Test Gate: manual-required` note in the Debug Log with the exact command a human should run, and continue. Never fake a green result.
 2. **Red build or failing test = not done.** Read the compiler/test output, fix the cause, and re-run. Loop until green. Do not patch the story file to `review` over a failure.
    **Escalation limit:** after **3 consecutive red runs** with no new fix succeeding, stop, report the failing output, and ask the user — do not keep retrying. Retry thrash burns tokens and, on GUI toolchains, ties up the device/UI. This is the HALT condition below.

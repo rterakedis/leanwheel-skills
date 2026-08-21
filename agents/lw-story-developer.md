@@ -54,6 +54,8 @@ failing output. Do not paper over it.
 Prefer running the toolchain over re-reading code to "reason about" correctness —
 that is both the correctness backstop and the cheaper path on Swift. Keep your final
 message short; don't paste large build logs (cite the result + the key failing line).
+Run the toolchain with its quiet flags and `tee` the full log to `.leanwheel/logs/`,
+per dev-story → Build & Test Gate (or the project CLAUDE.md `## Quiet commands`).
 
 ## Report back (required, concise)
 

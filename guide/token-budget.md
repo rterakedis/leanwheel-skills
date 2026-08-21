@@ -99,6 +99,21 @@ Several layers added since the original estimate were designed to be **zero-toke
 
 ### What session hygiene adds on top
 
+Per-session habits that compound with the design choices below (from Anthropic's
+[session-value guidance](https://claude.com/blog/maximizing-the-value-of-your-claude-code-sessions)):
+
+- Run `/context` at the start of a session and prune what isn't needed — disable unused MCP
+  servers with `/mcp`; they cost tokens on every turn whether or not they're called.
+- Set `/model` and `/effort` once, before the first turn. Changing either mid-session busts the
+  prompt cache — this is why the flywheels route models per *subagent* and never ask you to
+  switch. Start a fresh session if you want a different model for the next epic.
+- `/clear` between unrelated tasks; `/compact` before a break longer than an hour (the cache
+  expires, and compacting while cached is much cheaper). `/rewind` to drop only the last turns.
+- Prefer quiet toolchain flags and `tee` logs to disk — dev-story's Build & Test Gate and the
+  scaffolded `## Quiet commands` CLAUDE.md section do this for you.
+- One long session costs more than the same work across several short ones: turn 40 re-sends
+  turns 1–39. The flywheels keep the orchestrator thread to short reports for exactly this reason.
+
 Original BMAD typically runs multi-phase sessions, so the PRD and architecture sit in context during `create-story` and `dev-story` even though they're not needed. Leanwheel's one-session-per-phase rule eliminates this accumulated context tax — conservatively another **10–20%** reduction on top of the numbers above.
 
 ### What subagent isolation adds on top

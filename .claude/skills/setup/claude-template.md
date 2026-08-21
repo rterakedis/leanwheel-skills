@@ -75,6 +75,17 @@ Story files and specs use `[ ]`/`[x]` checkboxes (GitHub renders these interacti
 
 ---
 
+## Quiet commands
+
+<!-- The exact build/test invocations to run, with quiet flags, so tool output doesn't sit in
+     the conversation for the rest of the session. dev-story / code-review use these verbatim.
+     Example:
+     - Build + test: `xcodebuild -quiet -scheme App -destination 'platform=iOS Simulator,name=iPhone 17' build test 2>&1 | tee .leanwheel/logs/build-test.log | tail -n 40`
+     - One test file: `npx vitest run <file> --reporter=dot`
+-->
+
+---
+
 ## Known Footguns
 
 <!-- Things that look right but break something.

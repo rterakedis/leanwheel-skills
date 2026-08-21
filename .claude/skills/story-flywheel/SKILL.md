@@ -46,8 +46,8 @@ description: Run the full story development loop (create → dev → review) rep
 
    Check whether the leanwheel subagents are available (the plugin ships `lw-story-creator`, `lw-story-developer`, `lw-story-reviewer` as agent types).
    - **Subagents available (default, preferred):** run in **subagent-delegation mode** — each phase is spawned as its subagent via the Agent tool, with the model selected automatically (see Subagent Delegation & Model Routing). No manual model switching. Announce once:
-     > Running the flywheel with subagent delegation — each phase runs in its own context with its model chosen automatically (Conserve-Opus baseline{, Opus for dev-story since this is a Swift project if swift_project}). You'll only be asked to weigh in at clarifications, the per-story checkpoint, and epic boundaries.
-   - **Subagents unavailable (fallback):** run inline and fall back to **manual model switching** (see Fallback: Manual Model Switching). Only Swift projects get switch gates; non-Swift runs fully automated on the current model.
+     > Running the flywheel with subagent delegation — each phase runs in its own context with its model chosen automatically (Sonnet for create/review{; Opus for dev-story since this is a Swift project | ; Sonnet for dev-story too, per swift_project}). You'll only be asked to weigh in at clarifications, the per-story checkpoint, and epic boundaries.
+   - **Subagents unavailable (fallback):** run every phase inline on the current session model — no mid-session model switching (see Fallback below).
 
 ---
 
@@ -55,15 +55,15 @@ description: Run the full story development loop (create → dev → review) rep
 
 Default mode. Each phase is delegated to its subagent via the Agent tool. Two wins on the Pro plan: **model routing is automatic** (no `/model` dance), and **context is isolated** — each phase's heavy doc/code reading happens in a throwaway subagent window, so this orchestrating thread only accumulates each subagent's short structured report, not three phases of file reads.
 
-Per-phase routing (Conserve-Opus baseline, dynamic Swift exception):
+Per-phase routing (Conserve-Opus baseline, dynamic Swift exception; Opus is also the **cost ceiling** — a Fable session is never inherited by a phase spawn):
 
 | Phase | subagent_type | Python / Web | Swift / SwiftUI | Why |
 |---|---|---|---|---|
-| 1 — Create Story | `lw-story-creator` | Sonnet | Sonnet | Story authoring doesn't need Opus. |
-| 2 — Dev Story | `lw-story-developer` | **Sonnet** | **Opus** | Empirical, dated to an earlier model generation — see DD-20 in `guide/design-decisions.md`. The ledger's `bt_iterations` by model (reported by `/retrospective`) is the evidence for changing this. |
-| 3 — Code Review | `lw-story-reviewer` | Sonnet | Sonnet | Adversarial reading; the Build & Test Gate is the correctness backstop, not the model. (Dev-story already runs an inline review — see Phase 3.) |
+| 1 — Create Story | `lw-story-creator` | Sonnet (pinned) | Sonnet (pinned) | Story authoring is routine. |
+| 2 — Dev Story | `lw-story-developer` | **Sonnet** (pinned) | **Opus** (override) | The hard phase gets the expert, not the specialist: Opus caps per-story cost while still clearing the Build & Test Gate first-try. Empirical — DD-20; the ledger's `bt_iterations` by model (reported by `/retrospective`) is the evidence for changing this. |
+| 3 — Code Review | `lw-story-reviewer` | Sonnet (pinned) | Sonnet (pinned) | Adversarial reading; the Build & Test Gate is the correctness backstop, not the model. (Dev-story already runs an inline review — see Phase 3.) |
 
-**How to set the model:** the subagent defs default to Sonnet. Pass a per-spawn `model` override on the Agent call **only** for Phase 2 when `swift_project = true` (`model: opus`). All other spawns use the default. If the user opts out for the run ("conserve everything", "stay on Sonnet"), drop the Opus override too and note it.
+**How to set the model:** the subagent defs pin `model: sonnet`. Pass a per-spawn `model` override on the Agent call **only** for Phase 2 when `swift_project = true` (`model: opus`) — never `fable` (usage-tier ceiling: flywheel throughput on Fable burns a week's budget in one epic). If the user opts out for the run ("conserve everything", "stay on Sonnet"), drop the Opus override too and note it. Never ask the user to `/model`-switch mid-run — it busts the prompt cache (DD-20).
 
 **Effort routing (second axis, static):** reasoning effort is set only via `effort:` frontmatter in the agent defs — the Agent tool has no per-spawn effort override, so the dynamic-Swift-exception trick above cannot be replicated for effort. Current pins: `lw-docs-sync` = `low` (mechanical doc writing — the Haiku argument, one level deeper). The three phase-runners deliberately carry **no** `effort:` and inherit the session default (DD-20).
 
@@ -72,7 +72,7 @@ Per-phase routing (Conserve-Opus baseline, dynamic Swift exception):
 ```
 Agent tool call:
   subagent_type: "lw-story-creator" | "lw-story-developer" | "lw-story-reviewer" | "lw-docs-sync"
-  model: "opus"        # ONLY Phase 2 when swift_project = true — omit on every other spawn
+  model: "opus"        # ONLY Phase 2 when swift_project = true — omit on every other spawn (defs pin Sonnet); never "fable"
   prompt: the story identifier/path + any context the subagent needs (it starts cold)
 ```
 
@@ -86,28 +86,9 @@ Wait for the subagent's report, then act on its structured fields. Do **not** re
 
 ---
 
-## Fallback: Manual Model Switching (only when subagents unavailable)
+## Fallback: subagents unavailable
 
-Used only when the leanwheel subagents can't be spawned. Active only when `swift_project = true`; non-Swift runs fully automated on the current model. The model can't change its own model — these are **hard stops** that wait for the user to switch it in the UI (`/model`), then confirm.
-
-| Phase | Model | Why |
-|---|---|---|
-| 1 — Create Story | **Sonnet** | Cost-efficient for authoring. |
-| 2 — Dev Story | **Opus** (high for concurrency / complex SwiftUI state) | Fewest build-gate iterations. |
-| 3 — Code Review | **Sonnet** | Build & Test Gate is the backstop. |
-
-A **MODEL SWITCH GATE** looks like:
-
-```
-─────────────────────────────────────────────
-MODEL SWITCH — before {phase}
-Set your model to: {model}
-  • Run /model and select it
-  • Type "ready" when switched
-─────────────────────────────────────────────
-```
-
-Wait for "ready". If the user opts out ("just keep going"), honor it for the rest of the run. Skip a gate when the target already matches the last model set.
+Run every phase inline on the **current session model**. Do not issue model-switch prompts: changing `/model` (or `/effort`) mid-conversation busts the prompt cache, so a per-phase Sonnet→Opus→Sonnet dance costs more than it saves. If the user wants the Swift dev phase on a stronger model than the session is running, tell them once at activation — "start the flywheel in a fresh session on {model} for this epic" — and proceed on the current model if they decline. Inline phases execute `skills/create-story/SKILL.md`, `skills/dev-story/SKILL.md`, and `skills/code-review/SKILL.md` directly; the checkpoint, gates, and report fields are unchanged.
 
 ---
 
@@ -118,7 +99,7 @@ Repeat until the epic is complete (see **Exit Conditions**):
 ### Phase 1 — Create Story
 
 **Subagent mode:** spawn `lw-story-creator` (default model: Sonnet) via the Agent tool. Prompt it with the story identifier (`{epic}.{story}`) so create-story skips identification.
-**Fallback mode:** if `swift_project`, issue a MODEL SWITCH GATE for **Sonnet**, then execute `skills/create-story/SKILL.md` inline.
+**Fallback mode:** execute `skills/create-story/SKILL.md` inline on the session model.
 
 - Wait for the story file to be written and GitHub issue updated.
 - From the subagent report, capture `STORY FILE`, `EPIC CONTEXT`, `COMPLEXITY`, `CLARIFICATIONS NEEDED`, `PREREQUISITES`, `DESIGN GAP`.
@@ -128,12 +109,12 @@ Repeat until the epic is complete (see **Exit Conditions**):
 
 ### Phase 2 — Dev Story
 
-**Subagent mode:** spawn `lw-story-developer` via the Agent tool with the story file path. Pass `model: opus` **only if `swift_project`** (otherwise the default Sonnet). Instruct it to run the full dev-story workflow including the Build & Test Gate, the evals RUN (if `docs/evals/` exists), invariant/design verification, and the inline review.
-**Fallback mode:** if `swift_project`, MODEL SWITCH GATE for **Opus**; then execute `skills/dev-story/SKILL.md` inline.
+**Subagent mode:** spawn `lw-story-developer` via the Agent tool with the story file path. Pass `model: opus` **only if `swift_project`** (otherwise the pinned Sonnet). Instruct it to run the full dev-story workflow including the Build & Test Gate, the evals RUN (if `docs/evals/` exists), invariant/design verification, and the inline review.
+**Fallback mode:** execute `skills/dev-story/SKILL.md` inline on the session model.
 
 - Note: in subagent mode the developer subagent already runs dev-story's **inline** code review (Pass A–E). Phase 3 below becomes a *light confirmation* of its report rather than a second full review — only spawn a separate reviewer if the developer reported `UNRESOLVED` items or you want an independent adversarial pass.
 - From the report capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `FINDINGS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`.
-- **Operational doc sync (cheap, orchestrator-owned):** the developer does **not** run docs-sync (it would land on the dev model — Opus on Swift). If the report's `INFRA TOUCHED` is `yes`, spawn **`lw-docs-sync`** (Haiku) via the Agent tool with the story file path and op `OPERATIONAL`; capture its `DOCS UPDATED` return for the checkpoint/ledger. Skip the spawn entirely when `INFRA TOUCHED: no` (zero cost). Fallback if subagents are unavailable: execute the docs-sync OPERATIONAL op inline.
+- **Operational doc sync (cheap, orchestrator-owned):** the developer does **not** run docs-sync (it would land on the dev model). If the report's `INFRA TOUCHED` is `yes`, spawn **`lw-docs-sync`** (Haiku) via the Agent tool with the story file path and op `OPERATIONAL`; capture its `DOCS UPDATED` return for the checkpoint/ledger. Skip the spawn entirely when `INFRA TOUCHED: no` (zero cost). Fallback if subagents are unavailable: execute the docs-sync OPERATIONAL op inline.
 - Do not proceed until `STATUS` is `review`/`done` (or HALT).
 
 **On HALT:** Stop the flywheel. Report: "Flywheel paused — dev-story halted on {epic}.{story}: {reason}. Resolve the blocker and resume with `/story-flywheel {epic}.{story}`."
@@ -143,7 +124,7 @@ Repeat until the epic is complete (see **Exit Conditions**):
 The developer subagent already ran the inline review in Phase 2. **Independent review is gated on blast radius, not just a clean inline pass** — the inline review shares the dev's mental model and can miss a lost side-effect. Decide:
 - **Blast-radius trigger — spawn the reviewer even when the inline pass is clean** if the change touches a shared side-effect pipeline every feature routes through, money/billing, auth, or a service with many callers.
 - **Clean report (no `UNRESOLVED`, gate PASS) and no blast-radius trigger:** skip a separate review pass — carry the Phase 2 findings/rubric straight into the checkpoint. (Saves a full extra review's tokens.)
-- **`UNRESOLVED` items, FAIL gate, security-sensitive story, or a blast-radius trigger:** spawn `lw-story-reviewer` (default model: Sonnet) for an independent adversarial pass. **Fallback mode:** MODEL SWITCH GATE for **Sonnet**, then execute `skills/code-review/SKILL.md` inline.
+- **`UNRESOLVED` items, FAIL gate, security-sensitive story, or a blast-radius trigger:** spawn `lw-story-reviewer` (default model: Sonnet) for an independent adversarial pass. **Fallback mode:** execute `skills/code-review/SKILL.md` inline on the session model.
 
 When a separate review runs:
 - Pass the story file path so it skips auto-detection.
