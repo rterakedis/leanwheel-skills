@@ -328,3 +328,27 @@ mechanics in a zero-token script, policy in the skill.
 `## Quiet commands` section with the project's exact invocations. Tool output persists in
 the conversation for the rest of the session and is re-sent every turn; on Swift a single
 verbose `xcodebuild` run can outweigh the whole story.
+
+### DD-64 — CloudKit schema is a release artifact, not a model property
+**Decision.** The Swift stubs and `/appstore-preflight` treat "the CloudKit Development
+schema is complete and deployed" as a checked release item. `testability.md` carries the
+Core Data pattern — a `#if DEBUG`, `--init-cloudkit-schema`-gated `initializeCloudKitSchema`
+call with its device/slowness/throwaway-record caveats; `swiftdata.md` carries the SwiftData
+variant (temporary `NSPersistentCloudKitContainer` over
+`NSManagedObjectModel.makeManagedObjectModel(for:)`) and cross-references rather than
+duplicating. Preflight greps for a CloudKit container with no `initializeCloudKitSchema`
+call and raises **HIGH**, plus a TestFlight checklist line for the Console deploy.
+**Why.** `NSPersistentCloudKitContainer` ships no schema file: it infers record types from
+the managed object model and creates them *lazily in Development*, on first save of that
+type. So the Development schema is whatever manual testing happened to touch, *Deploy Schema
+Changes* only copies what Development already has, and an entity, attribute, or relationship
+never exercised on a dev-signed device is simply absent in Production. It fails for the first
+real user who creates one and never for the developer. Nothing in the existing coverage
+caught it: `swiftdata.md`'s CloudKit rules govern model *shape* (no `.unique`, optional
+relationships), `testability.md` and `swift-audit` govern *detaching* CloudKit from seeded
+runs, and preflight's entitlements row checks the container is *provisioned* — three
+CloudKit checks, none of which look at whether the schema was ever populated. The launch-
+argument gating puts it in `testability.md` alongside the rest of the launch-argument
+contract rather than in a new stub. Placement of the failure in the release checklist follows
+DD-60's split: it cannot be a hook (needs a device and a Console) and cannot be a test, so it
+is prose plus a preflight grep.

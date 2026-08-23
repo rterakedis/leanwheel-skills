@@ -82,6 +82,27 @@ If the SwiftData store syncs via CloudKit, these are hard requirements — viola
 - Every relationship is **optional**.
 - Design for eventual consistency: another device's changes arrive late and out of order — no logic may assume the local store is complete.
 
+**Deploy the full schema before shipping.** SwiftData creates CloudKit record types *lazily*
+in the Development environment — a model type or property never saved on a dev-signed device
+never reaches Development, so **Deploy Schema Changes** never carries it to Production, and
+the first real user to create one fails to sync. Force the whole model in with a DEBUG-only,
+launch-argument-gated pass built on a temporary Core Data container over the same model:
+
+```swift
+#if DEBUG
+// --init-cloudkit-schema: debug build, physical device signed into iCloud, run once.
+let model = try NSManagedObjectModel.makeManagedObjectModel(for: [Trip.self, Expense.self])
+let container = NSPersistentCloudKitContainer(name: "Model", managedObjectModel: model)
+container.persistentStoreDescriptions.first?.cloudKitContainerOptions =
+    NSPersistentCloudKitContainerOptions(containerIdentifier: "iCloud.com.example.app")
+container.loadPersistentStores { _, error in if let error { fatalError("\(error)") } }
+try container.initializeCloudKitSchema(options: [])
+#endif
+```
+
+Re-run after every model change, then Deploy in the Console. Full caveats (why it must be a
+device, what it writes, `.dryRun`): testability.md.
+
 ---
 
 ## Performance & Newer Features

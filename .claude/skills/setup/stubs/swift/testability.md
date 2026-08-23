@@ -180,6 +180,53 @@ Three things that bite on Core Data specifically:
 - **`/dev/null` beats `NSInMemoryStoreType`** — it keeps real SQLite semantics (constraints, batch requests, `NSFetchedResultsController` behavior), so tests fail the way production would.
 - **Sample data takes a `context`**, unlike SwiftData's context-free `static let samples`. Keep them as `static func samples(in:)` on the entity so a model change still breaks seeds at compile time.
 
+### `--init-cloudkit-schema` — the launch argument that prevents a production sync failure
+
+`NSPersistentCloudKitContainer` ships no schema file. It infers CloudKit record types from
+the managed object model and creates them **lazily in the Development environment** — the
+first time a debug build actually saves an object of that type. The Console's **Deploy
+Schema Changes** button then copies Development → Production.
+
+The trap is the word *lazily*. An entity you have never instantiated on a dev-signed device
+has no record type in Development, so Deploy never carries it to Production, so the day a
+real user creates one their sync fails and yours does not. Same for an attribute or
+relationship added to the model but never exercised. "I think I've used every entity" is not
+a check — the schema is whatever manual testing happened to touch.
+
+`initializeCloudKitSchema` closes the gap: it walks the entire model and creates every record
+type, field, and index in Development, including the entities you have never touched. Gate it
+behind a launch argument so it never fires on a normal launch:
+
+```swift
+// PersistenceController.init, after loadPersistentStores succeeds:
+#if DEBUG
+if ProcessInfo.processInfo.arguments.contains("--init-cloudkit-schema"),
+   let cloudContainer = container as? NSPersistentCloudKitContainer {
+    do {
+        try cloudContainer.initializeCloudKitSchema(options: [])   // [.dryRun] to validate only
+        print("CloudKit Development schema initialized")
+    } catch {
+        fatalError("CloudKit schema init failed: \(error)")
+    }
+}
+#endif
+```
+
+Constraints that make this a deliberate manual run, never a CI step:
+- **Debug build on a physical device signed into iCloud.** The Simulator is not a reliable
+  host for it.
+- **Slow** — a minute or more on a model of any size; it is doing round trips per record type.
+- **It writes throwaway records** into your own Development database as part of inferring the
+  schema. Expected, and Development-only.
+- **Re-run after every model change**, then Deploy in the CloudKit Console. Adding one
+  attribute is a schema change.
+- `options: [.dryRun]` validates the model against CloudKit's rules without creating anything
+  — useful behind a debug menu, but it does not populate the schema.
+
+This is not covered by any test you can run in CI, and the failure is silent until it lands on
+a user. Treat "schema initialized and deployed" as a release-checklist item
+(`/appstore-preflight` flags a missing call).
+
 - **Manual testing:** duplicate the Run scheme per scenario, or add a DEBUG-only developer menu (shake gesture / hidden settings row) that applies a scenario at runtime.
 - **Previews:** reuse the registry via `PreviewModifier` (iOS 18+) — seeded, in-memory, shared across previews:
 

@@ -30,6 +30,11 @@ grep -o "INFOPLIST_KEY_[A-Za-z]*" */project.pbxproj **/project.pbxproj 2>/dev/nu
 # Device family + versioning + deployment target
 grep -h "TARGETED_DEVICE_FAMILY\|MARKETING_VERSION\|CURRENT_PROJECT_VERSION\|IPHONEOS_DEPLOYMENT_TARGET" \
   */project.pbxproj **/project.pbxproj 2>/dev/null | sort -u
+
+# CloudKit sync in use? (schema-deployment check, Step 4)
+grep -rn "NSPersistentCloudKitContainer\|cloudKitContainerOptions\|\.modelContainer(\|CKContainer" \
+  --include="*.swift" . 2>/dev/null | grep -v "/DerivedData/\|/.build/\|/Pods/"
+grep -rn "initializeCloudKitSchema" --include="*.swift" . 2>/dev/null | grep -v "/DerivedData/"
 ```
 
 **Critical:** most SwiftUI projects use the generated Info.plist — every plist check below must look in **both** the Info.plist file(s) **and** `INFOPLIST_KEY_*` build settings in `project.pbxproj`. A key present in neither is missing.
@@ -108,6 +113,7 @@ Check each; both plist and `INFOPLIST_KEY_*` locations.
 | iPad orientations | `TARGETED_DEVICE_FAMILY` includes 2 → all four orientations in `~ipad` set unless `UIRequiresFullScreen=YES` (ITMS-90474). ⚠️VOLATILE: `UIRequiresFullScreen` deprecated on iPadOS 26 (will be ignored) — flag its presence; durable answer is all-four + resizable scenes | **BLOCKER** / MEDIUM for the deprecated key |
 | `UIRequiredDeviceCapabilities` | Only truly-required values; adding one in an update can never narrow device support (ITMS-90109). Safest: absent or `[arm64]` | **MEDIUM** |
 | Entitlements ↔ capabilities | Parse `.entitlements`: `aps-environment`, iCloud containers, app groups, HealthKit, `applesignin`, associated domains each need the capability on the App ID / in the distribution profile (ITMS-90164). `get-task-allow=true` in a distribution archive → upload fail. Push registered in code (or Firebase present) without `aps-environment` → ITMS-90078 warning | **HIGH** (verify-by-hand item — profile state isn't in the repo) |
+| CloudKit schema deployed | iCloud entitlement + `NSPersistentCloudKitContainer` (or a CloudKit-backed `ModelContainer`) present, but **no `initializeCloudKitSchema` call anywhere** → the Development schema is whatever manual testing happened to save. Record types are created lazily on first save, so an entity, attribute, or relationship never exercised on a dev-signed device is absent from Development, is not carried to Production by *Deploy Schema Changes*, and fails to sync for the first real user who creates one. Fix: a DEBUG-only, launch-argument-gated `initializeCloudKitSchema` run on a device (see `testability.md`), then Deploy in the Console | **HIGH** (silent post-release failure; Console state isn't in the repo) |
 | ATS | `NSAllowsArbitraryLoads=true` without per-domain exceptions draws review questions and is a security smell | **MEDIUM** |
 | Xcode/SDK floor | ⚠️VOLATILE: uploads must be built with iOS 26 SDK / Xcode 26+ (since Apr 28, 2026; re-check annually). Verify local + CI toolchain | **BLOCKER** if toolchain is older |
 
@@ -232,6 +238,7 @@ Write `docs/maintainer/appstore-submission-checklist.md` (overwrite on re-runs �
 - [ ] First external build passes Beta App Review (subset of full review — approval here ≠ App Store approval)
 - [ ] Build cadence plan: TestFlight builds expire after 90 days
 - [ ] Export compliance: {status — auto-answered via ITSAppUsesNonExemptEncryption, or answer per build}
+- [ ] CloudKit schema {omit if no CloudKit}: `--init-cloudkit-schema` run on a debug build on a **physical device signed into iCloud** since the last model change, then **Deploy Schema Changes** (Development → Production) in the CloudKit Console — spot-check that Production lists every record type in the model
 
 ## In-App Purchases {omit if no StoreKit}
 - [ ] First IAP/subscription products ATTACHED to the version submission (creating them isn't submitting them — #1 IAP rejection)
