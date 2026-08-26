@@ -558,6 +558,51 @@ func compose(job: Job, frame: CGImage, screenRect: CGRect, capture: CGImage) thr
     print("wrote \(job.outputPath) (\(Int(W))x\(Int(H)))")
 }
 
+// MARK: - Stale-output pruning
+//
+// The output path is fully deterministic ({order}_{class}_{id}.png), so re-composing an
+// UNCHANGED plan is a clean in-place overwrite. But any plan edit that changes a FILENAME
+// — reordering a row, renaming an id, deleting a row, narrowing `devices` — used to leave
+// the old file behind forever. Since docs/store/screenshots/ is committed, an orphan is a
+// tracked, unmodified file: invisible in `git status` and in PR diffs, so nothing ever
+// surfaces it, and whoever uploads to App Store Connect has to guess which files are current.
+//
+// Three constraints make this safe rather than destructive:
+//   * Runs strictly AFTER validation succeeds. compose is all-or-nothing; delete-then-fail
+//     would leave the user with no screenshots at all, which is worse than the orphans.
+//   * SKIPPED under --dry-run (side-effect-free validation probe) and under --only (which
+//     composes a deliberate subset — wiping the locale there would delete rows the user
+//     chose not to recompose). Skipping under --only is the safer of the two options; a
+//     full `--only`-less run afterwards still prunes everything.
+//   * Only removes files matching compose's OWN output pattern, {digits}_{knownclass}_*.png.
+//     screenshots/{locale}/ lives in the user's git repo and may hold something a human put
+//     there; a tool that deletes files it did not create is one bad assumption from
+//     destroying work.
+/// Remove previously-composed screenshots in `dir` that the current plan will not rewrite.
+/// Returns the number of files removed.
+@discardableResult
+func pruneStaleOutputs(dir: String, keeping expected: Set<String>) -> Int {
+    let fm = FileManager.default
+    guard let names = try? fm.contentsOfDirectory(atPath: dir) else { return 0 }  // nothing composed yet
+    var removed = 0
+    for name in names.sorted() {
+        guard name.hasSuffix(".png"), !expected.contains(name) else { continue }
+        // Ours only: "{order}_{class}_{id}.png" with a positive integer order and a class we know.
+        let parts = name.dropLast(4).split(separator: "_", maxSplits: 2, omittingEmptySubsequences: false)
+        guard parts.count == 3,
+              let order = Int(parts[0]), order >= 1,
+              deviceClasses[String(parts[1])] != nil,
+              !parts[2].isEmpty else { continue }
+        do {
+            try fm.removeItem(atPath: dir + "/" + name)
+            removed += 1
+        } catch {
+            die("could not remove stale screenshot \(dir)/\(name): \(error.localizedDescription)")
+        }
+    }
+    return removed
+}
+
 // MARK: - Main
 
 let opts = parseArgs(Array(CommandLine.arguments.dropFirst()))
@@ -642,6 +687,16 @@ if opts.dryRun {
     }
     print("compose: plan valid — \(ordered.count) screenshot\(ordered.count == 1 ? "" : "s") would be written to \(outputDir)")
     exit(0)
+}
+
+// Clear stale output BEFORE writing, so the composed set always matches the plan exactly.
+// Never under --dry-run (must stay side-effect free) or --only (a deliberate subset).
+if opts.only.isEmpty {
+    let expected = Set(ordered.map { ($0.outputPath as NSString).lastPathComponent })
+    let removed = pruneStaleOutputs(dir: outputDir, keeping: expected)
+    if removed > 0 {
+        print("compose: removed \(removed) stale screenshot\(removed == 1 ? "" : "s") (plan changed)")
+    }
 }
 
 for job in ordered {

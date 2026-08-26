@@ -82,7 +82,7 @@ Treat the output as a worklist, not a patch — port the *idea* into the equival
 | `product-brief` / `forge-idea` / `research` / `doc-review` | Merged lean ports (brainstorm+brief; forge exit states; three research types in one; three editorial passes in one). | DD-50 |
 | `refresh-swift` / `refresh-web` | Gold-standard + curated-author sources, idea-port only, version-axis rules; refresh-swift also refreshes `appstore-preflight` / `appstore-connect` facts. | — |
 | `swift-audit` / `web-audit` | Remediation story output; Pass-F deletion tags; swift-audit Step 4b testability retrofit staged Stage 0..N. | DD-34 DD-35 |
-| `appstore-preflight` / `appstore-connect` | Dated fact tables with Currency note (refreshed by `/refresh-swift`); `docs/store/` artifacts in fastlane layout; user-supplied bezels; bash `asc-lint.sh` (canonical copy beside SKILL.md, byte-identical copy in `setup/stubs/hooks/`). Design log: `guide/appstore-connect.md`. | DD-43 |
+| `appstore-preflight` / `appstore-connect` | Dated fact tables with Currency note (refreshed by `/refresh-swift`); `docs/store/` artifacts in fastlane layout; user-supplied bezels; bash `asc-lint.sh` (canonical copy beside SKILL.md, byte-identical copy in `setup/stubs/hooks/`). Design log: `guide/appstore-connect.md`. `compose.swift` prunes its own stale output (validated-first, own-pattern-only, never under `--dry-run`/`--only`); `asc-lint.sh` WARNs on plan-orphaned screenshots. | DD-43 DD-65 |
 | `next` / `status` | Zero-token state detection routed on the readiness / retro stamps; `status` points at `/next`. | — |
 | `correct-course`, `discover`, `investigate`, `prd` (alias), `security-review` | Identical to upstream — safe to overwrite on sync. | — |
 
