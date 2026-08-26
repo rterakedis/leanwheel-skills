@@ -14,7 +14,7 @@ Not to be confused with a user project's `docs/project/decisions.md` (owned by t
 - Verification: DD-10 verify by running · DD-11 gate integrity · DD-12 Fix-Now · DD-13 evals command-default · DD-14 invariant evidence
 - Orchestration: DD-20 subagent routing · DD-21 non-return rule · DD-22 orchestrator-owned tracking · DD-23 epic-context cache gate · DD-24 docs-sync audiences · DD-25 boundary merge
 - Testing & test plans: DD-30 manual pass at the epic boundary · DD-31 TESTING PLAN split + subtract · DD-32 plan-defect kind · DD-33 done stories immutable · DD-34 testability foundation · DD-35 flow tiering · DD-36 e2e backfill
-- Simulator automation: DD-40 sim.sh + route navigation · DD-41 silent-failure guards · DD-42 orientation · DD-43 store preset · DD-44 sim.json committed · DD-45 release parity for store captures · DD-46 vendored-script drift is reported, never silent
+- Simulator automation: DD-40 sim.sh + route navigation · DD-41 silent-failure guards · DD-42 orientation · DD-43 store preset · DD-44 sim.json committed · DD-45 release parity for store captures · DD-46 vendored-script drift is reported, never silent · DD-47 runtime pin + ambiguity guard
 - Planning & docs: DD-50 planning consolidation · DD-51 pinned story frontmatter · DD-52 design contract decoupled from docs/ux · DD-53 simplicity doctrine placement · DD-54 CLAUDE.md tiers & budget · DD-55 epic archive · DD-56 dark patterns · DD-57 doc-free lane · DD-58 architecture promotion
 - Packaging: DD-60 hooks for hard rules · DD-61 no project names · DD-62 ledger via ledger.sh · DD-63 quiet toolchain output
 
@@ -404,3 +404,28 @@ the flags the skill literally passes cannot. For the same reason skew is reporte
 present upstream and absent locally only — flags present locally and not upstream are
 project-local features, not drift. Consistent with DD-60: a signal a human reads, because
 this can be neither a hook nor a test.
+
+### DD-47 — Device names resolve within a pinned runtime; ambiguity is a hard stop
+**Decision.** `.leanwheel/sim.json` gained an optional `runtime` key. `resolve_device` matches
+a device name *within* that runtime when it is set; when it is not set and the name matches on
+more than one installed runtime, `sim.sh` **dies** naming the runtimes rather than picking one.
+Unpinned and unambiguous is unchanged, so no existing project needs a config edit. The pin
+applies to `devices` and `store_devices` alike.
+
+**Why.** Device names are not unique across runtimes — a machine doing Xcode-N compatibility
+work carries the same `iPhone 17` on two — and the old resolution was "grep the name, `head -1`".
+That is a DD-41 silent failure in its purest form: every screenshot, dump, and flow runs against
+a different OS than intended, nothing reports it, and the output looks completely normal. A
+runtime reshuffle or a new install flips it with no diff anywhere.
+
+**Why refusing beats guessing.** A pin alone would have fixed the reference project, which set
+one by hand. But an unpinned project is the default state, and quietly picking the first match is
+the exact behaviour that caused the bug. Converting the silent wrong-OS run into a loud stop is
+the fix; the pin is how you answer it. The error names the runtimes and shows the literal line to
+paste, so the stop costs one edit, once.
+
+**Implementation note worth keeping.** Split the device name off at the **UUID**, never at the
+first `(` — real names contain parentheses (`iPad Pro 11-inch (M5)`, `iPad Pro 13-inch (M5)`),
+and a first-paren split silently matches nothing for exactly the two store classes
+`shots --store` depends on. This was caught by testing a paren-named device, not by reading the
+code; the first version of the change looked correct and was not.
