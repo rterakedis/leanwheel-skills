@@ -60,14 +60,15 @@ Rules:
 
 ## Launch Argument Contract
 
-The app honors five DEBUG-only launch arguments, parsed once at startup:
+The app honors six DEBUG-only launch arguments, parsed once at startup:
 
 | Argument | Effect |
 |---|---|
 | `--seed <scenario>` | Apply the named `SeedScenario` at launch |
 | `--route <name>` | Navigate to a route at startup, through the **same route table** `.onOpenURL` uses (see Deep-Link Routes below) |
 | `--uitest` | Use an **in-memory store** (never touches real user data; hermetic, no cleanup) and disable animations |
-| `--reset` | Wipe the persistent store before launch (manual-testing convenience) |
+| `--reset` | Destroy the **on-disk** store before it is loaded, so the app launches against a genuinely empty database (manual-testing convenience). Use the persistence API's own destroy call, not a `FileManager` delete — it also clears the `-wal`/`-shm` companion files. No-op under `--uitest`, where there is no on-disk store to destroy. |
+| `--no-cloudkit` | Do **not** attach CloudKit mirroring to the on-disk store. On a physical device the container otherwise re-imports the iCloud private database on first load, so `--reset` alone can never yield an empty store there — settings come straight back down and onboarding never shows. Pair with `--reset` to test first launch on hardware; nothing written in such a run is pushed to iCloud. Also the right flag for a battery or performance measurement, where a one-off initial-sync burst would contaminate the number being measured — say so next to the number. |
 | `--assetcapture` | Release parity for App Store captures — hide every DEBUG-only visible affordance (see below) |
 
 ```swift
@@ -245,6 +246,9 @@ Three things that bite on Core Data specifically:
 - **CloudKit must be off for any seeded or `--uitest` run** (above). Non-negotiable.
 - **`/dev/null` beats `NSInMemoryStoreType`** — it keeps real SQLite semantics (constraints, batch requests, `NSFetchedResultsController` behavior), so tests fail the way production would.
 - **Sample data takes a `context`**, unlike SwiftData's context-free `static let samples`. Keep them as `static func samples(in:)` on the entity so a model change still breaks seeds at compile time.
+- **Gate in-memory on *any* automated run, not on `--uitest` alone.** A bare `--seed` launch with no `--uitest` gets a real on-disk store, and on a physical device that store has CloudKit attached — so the fixture rows go into the developer's own iCloud account and stay there. `--no-cloudkit` (above) mitigates it per-run; the root fix is one line, and a comment promising an invariant the code does not enforce is worse than no comment.
+
+The schema rules that make a Core Data + CloudKit model loadable at all — all-optional attributes, no ordered relationships, no uniqueness constraints, optional generated properties — are in `core-data-cloudkit.md`. Every one of them is a launch crash, so they precede anything here.
 
 ### `--init-cloudkit-schema` — the launch argument that prevents a production sync failure
 
@@ -332,7 +336,9 @@ List(trips) { trip in
 app.buttons["Add Trip"].tap()
 ```
 
-Convention: `{feature}-{element}-{role}`, kebab-case. These double as the semantic locators `/e2e-tests` requires.
+Convention: `{feature}-{element}-{role}`, kebab-case, **never localized** and never in the String Catalog. These double as the semantic locators `/e2e-tests` requires.
+
+A **shared component takes its identifier as a parameter** rather than deriving one from its label — a derived handle changes with the device language and breaks every flow outside the source locale. Before writing a flow, audit every control it will touch for an identifier; an advisory hook warns on new views but never re-checks an existing one, so gaps surface mid-flow. See `testing.md` § *UI Test Targets*.
 
 **The floor is never zero.** The same story that adds a screen ships its route **and one landmark identifier on the screen's root** (~2 lines) — that alone makes the screen dumpable and capturable by `sim.sh dump`/`shots`. "We'll add identifiers when a flow needs them" combined with "flows wait for stability" means a whole epic can ship with zero drivable surface; the flow tier ladder in `simulator.md` exists to prevent exactly that.
 
@@ -392,6 +398,7 @@ Full conventions — file layout, naming, the screenshot-per-step helper, and wh
 
 ## Keeping It Current — the per-story contract
 
+- **Seed data is authored in one place and is privacy-load-bearing.** Fixture records must look real and resolve to nobody — reserved phone/email ranges, coined-and-searched street and company names, no live payment handles. A UI test or capture script that hand-writes its own records sits outside the pinning test, which is exactly how real addresses re-enter after a cleanup. Full rules: `demo-data-and-copy.md`.
 - A story that **adds or changes a persisted model entity** updates `SeedScenario` (at minimum `.typical` and `.edge`) in the same story. The compile-time break from `samples` makes skipping this hard — don't silence it with empty arrays.
 - A story that **adds user-facing views** assigns accessibility identifiers as the views are written, using the identifiers its Design Contract already names.
 - A story that **adds a screen** adds that screen's deep-link route **and a landmark identifier on its root** in the same story — otherwise the screen is unreachable by `/design-verify`, undumpable, and invisible to every future flow.

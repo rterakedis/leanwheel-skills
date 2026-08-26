@@ -401,3 +401,147 @@ func content() -> AnyView {
     return AnyView(OrderList())
 }
 ```
+
+---
+
+## Presentation over persisted data
+
+Every rule here shares one mechanism: **a store save fires a change notification, which
+re-evaluates every fetched property and re-renders every view derived from one.** In SwiftUI
+that re-render can land in the middle of a presentation, and the symptoms look like
+unrelated framework bugs — a blank sheet, a cover that dismisses itself, a crash on a
+property access that was valid a frame ago. They are not timing flakes and retries never fix
+them.
+
+### Attach `.sheet` / `.alert` / `.confirmationDialog` to the List or the top-level view — never to a `Section`
+
+Attaching the modifier next to the button that triggers it looks tidiest and is wrong. A
+`Section` gets a **new identity** when the enclosing `List` re-renders on appear, and a
+presentation owned by that Section is dismissed with it — so the sheet flashes up and
+vanishes on the first tap, and works on the second. The intermittency is what makes this
+expensive to diagnose.
+
+```swift
+// ❌ Sheet owned by a Section — dismisses itself on first present
+List {
+    Section("Orders") {
+        Button("Details") { showing = true }
+            .sheet(isPresented: $showing) { OrderSheet() }
+    }
+}
+
+// ✅ Presentation owned by the List (or the top-level view in the modifier chain)
+List {
+    Section("Orders") { Button("Details") { showing = true } }
+}
+.sheet(isPresented: $showing) { OrderSheet() }
+```
+
+### `sheet(item:)`, never `isPresented` plus a separately-set `@State`
+
+Setting an optional and a Bool in the same tap handler is two state changes; SwiftUI may
+evaluate the sheet closure before the optional's update lands in that render pass, producing
+a **blank sheet**. `sheet(item:)` makes presentation and payload one atomic change, hands the
+closure a guaranteed non-nil value, and dismisses when the optional is set to nil.
+
+```swift
+// ❌ WRONG — the sheet can open before selectedOrder is set
+.onTapGesture { selectedOrder = order; showSheet = true }
+.sheet(isPresented: $showSheet) { if let selectedOrder { OrderDetail(order: selectedOrder) } }
+
+// ✅ CORRECT — item and presentation are one state change
+.onTapGesture { selectedOrder = order }
+.sheet(item: $selectedOrder) { order in OrderDetail(order: order) }
+```
+
+### Dismiss *before* saving a deletion of the object being displayed
+
+A sheet or cover that deletes the record it is showing must dismiss first. `save()` fires the
+change notification, SwiftUI re-renders the still-presented sheet against a now-deleted
+(zombie) object, and **any** property access on it crashes.
+
+Order: `dismiss()` → callback to the parent → `context.delete(obj)` → `context.save()`. The
+parent owns the mutation because it outlives the object.
+
+### Never drive `sheet` / `fullScreenCover` from a fetched-data-derived Bool
+
+```swift
+// ❌ A background write to AppSettings re-evaluates this and yanks the cover away
+.fullScreenCover(isPresented: .constant(settings.isEmpty)) { OnboardingView() }
+```
+
+Any save anywhere re-evaluates the Bool, so an unrelated background write can dismiss the
+cover before the user has seen it — classically, first-run onboarding vanishing because the
+persistence controller created its settings singleton on a background context.
+
+Pattern: **latch** the initial state into a `@State` Bool in `.onAppear`, and dismiss only via
+an explicit callback from the presented view.
+
+```swift
+@State private var showOnboarding = false
+…
+.onAppear { showOnboarding = settings.isEmpty }          // latch once
+.fullScreenCover(isPresented: $showOnboarding) {
+    OnboardingView(onComplete: { showOnboarding = false })   // explicit dismissal only
+}
+```
+
+The same mechanism dictates *when* a multi-step flow may write. A save **during** a page
+transition disrupts a paged `TabView` or cover mid-flow, so a flow that ends in persistence
+writes its record **once, at the final step**, with the save and the dismissal coincident —
+not one step earlier "so it isn't lost".
+
+### Stateful mutations live in a service; the view captures intent
+
+Multi-step persistence work (delete + cascade + regenerate, status transitions, chain repair)
+inside `.onDisappear` / `.onChange` / a button closure is unreachable by unit tests, so every
+regression ships silently. The view captures **intent** (a `@State` flag or id), dismisses,
+then dispatches to a `static`/`actor` service method in `onDisappear`; tests target the
+service. Full treatment, with the before/after: `anti-patterns.md` #11.
+
+### Parent owns its own fetch and passes a `@Binding` — never an Array snapshot
+
+If a child sheet modifies fetched data, the parent must own a fetch for it too and pass a
+`@Binding` to the source object. An `Array(fetchResults)` handed down is a **snapshot**: the
+child's save lands in the store, the parent's copy doesn't know, and the change appears only
+after an extra navigation. Verify by editing in the sheet, dismissing, and confirming the
+parent reflects it with no further taps. See `anti-patterns.md` #6.
+
+### Validate count-derived UI gates against what the creation path actually writes
+
+A gate like `if occurrences.count == 1 { … }` encodes an assumption about the steady-state
+shape of the data. Trace the **creation path** before trusting it: a create that writes two
+rows up front (an occurrence plus a look-ahead) means a `count == 1` gate never fires and
+whatever it guards — a confirmation intercept, a first-run prompt — is silently unreachable.
+Nothing fails; the branch is simply dead.
+
+---
+
+## `NavigationSplitView` — `navigationDestination` goes on the sidebar content
+
+SwiftUI connects `NavigationLink(value:)` to the nearest enclosing `navigationDestination`
+**in the same column**. On the split view itself, the modifier is outside the sidebar column,
+so the link fires with nowhere to route and the detail pane stays on its placeholder forever
+— no error, no warning.
+
+```swift
+// ❌ Detail column never populates
+NavigationSplitView {
+    OrderListView()                 // contains NavigationLink(value: order)
+} detail: {
+    Text("Select an order")
+}
+.navigationDestination(for: Order.self) { OrderDetailView(order: $0) }
+
+// ✅ On the sidebar content
+NavigationSplitView {
+    OrderListView()
+        .navigationDestination(for: Order.self) { OrderDetailView(order: $0) }
+} detail: {
+    Text("Select an order")
+}
+```
+
+This does not affect the `NavigationStack` branch, where the modifier is already attached to
+the content view — so an app that switches layout by size class can be correct on phone and
+broken on tablet with one code path.

@@ -1,8 +1,17 @@
 ## Swift/SwiftUI Guardrails (iOS 18+)
 
-> Updated: 2026-07-19 — iOS 18+ / Swift 6.3 (iOS 26 features gated with `#available`)
+<!-- leanwheel:guardrails swift v2 — MANAGED BLOCK.
+     Everything between this marker and the next `---` is re-synced by /upgrade-project.
+     Do not add project-specific rules here; they belong in `## Critical Rules` above.
+     This block is a POINTER plus tripwires: full patterns live in docs/setup/swift/ and are
+     refreshed by /refresh-swift. Never inline a reference file's contents here — it is loaded
+     every turn, and an inlined copy drifts from the file it was copied from.
+-->
 
-Full reference patterns live in `docs/setup/swift/`. This section contains only the always-active hard rules.
+> **Full reference: `docs/setup/swift/`** — read the file that matches the work before writing code.
+> `state-management` · `concurrency` · `architecture` · `ui-composition` · `testing` ·
+> `testability` · `simulator` · `anti-patterns` · `accessibility` · `core-data-cloudkit` ·
+> `localization` · `xcode-footguns` · `demo-data-and-copy` · `PROVENANCE`
 
 ### Hard Rejections — Never Use in New Code
 
@@ -24,29 +33,54 @@ Full reference patterns live in `docs/setup/swift/`. This section contains only 
 | `contains()` for user-input filtering | `localizedStandardContains()` |
 | `onTapGesture` on plainly tappable content | `Button` (gesture only for location/count) |
 | `Task.sleep(nanoseconds:)`, `UIScreen.main.bounds` | `Task.sleep(for:)`, `containerRelativeFrame` |
+| `Array(fetchResults)` passed parent → child | `@Binding` to the source object, or the child owns its own fetch |
+| `.sheet(isPresented:)` + a separately-set `@State` item | `.sheet(item: $optional) { item in … }` |
+| `.sheet`/`.alert`/`.confirmationDialog` on a `Section` | Attach to the `List` or the top-level view |
+| `import XCTest` in new **unit** tests | `import Testing` (UI-test targets keep XCTest — no Swift Testing UI API) |
+| `simctl shutdown all` | Create your own device, target by `id=`, delete only that UDID |
+| Reasoning from a screenshot to a tap coordinate | A named `--route`, a `--seed`, an `.accessibilityIdentifier` |
 
-### Property Wrapper Quick Reference
+**`@ObservedObject` exception:** legitimate for a row/detail view receiving a single
+`NSManagedObject` — Core Data objects are `ObservableObject` natively with no `@Observable`
+alternative.
 
-| Situation | Use |
-|---|---|
-| View-private transient state (sheet flag, search text, form field) | `@State` |
-| Pass mutable access to a child view | `@Binding` |
-| Bind to a property on an `@Observable` object in a child view | `@Bindable` |
-| Shared app/feature-level service | `@Environment(MyService.self)` |
-| Core Data query results owned by the rendering view | `@FetchRequest` |
-| Persistent cross-launch UI state | `@SceneStorage` / `@AppStorage` |
-| Custom environment value key (iOS 18+) | `@Entry` macro in `EnvironmentValues` extension |
+### Tripwires — violating these corrupts data or ships a liability
+
+One line each; the mechanism is in the linked file. These are here rather than in a reference
+file because they must be known **before** a plan is formed.
+
+- **Core Data + CloudKit:** every attribute `optional="YES"`, generated object-typed properties
+  optional (never "fixed" with `!`), no `ordered="YES"`, no uniqueness constraints, CloudKit
+  options behind `#if !targetEnvironment(simulator)`. Each is a **launch crash**, and once
+  deployed, a permanently wrong Production schema. → `core-data-cloudkit.md`
+- **Dismiss before saving a deletion** of the object a sheet is displaying, and never drive a
+  `sheet`/`fullScreenCover` from a fetch-derived Bool — a save re-renders the presentation
+  against a zombie object, or yanks the cover away. → `ui-composition.md`
+- **Stateful persistence mutations live in a service**, never inline in a view-lifecycle
+  modifier — logic in a view is untestable, so every regression ships silently. → `anti-patterns.md` #11
+- **A seeded record must look real and resolve to nobody** — `555-01xx`, `@example.com`, every
+  coined street or company name searched individually, no live payment handles. `#if DEBUG` is
+  not the control: fixtures end up in screenshots and docs. → `demo-data-and-copy.md`
+- **Regulated copy names the purpose, never the status** — no "IRS-ready" / "compliant" /
+  "audit-proof", and never let copy imply completeness. Legal exposure, not style. → `demo-data-and-copy.md`
+- **`xcodebuild` needs its full path**, a fresh simulator needs `privacy grant` before `test`
+  (or it hangs at 0% CPU looking like a wedged toolchain), and a green-looking log can be missing
+  an entire target — score the teed unfiltered log. → `simulator.md`
+- **`isHittable` lies under translucent bars** — scroll clear of the nav and tab bars first. It
+  is not a timing flake and retries cannot fix it. → `simulator.md`
+- **`EXCLUDED_SOURCE_FILE_NAMES = "CLAUDE.md"`** at project level, in both configurations, before
+  a second nested `CLAUDE.md` exists — otherwise the build fails with "Multiple commands produce".
+  → `xcode-footguns.md`
 
 ### Pre-Implementation Checklist
 
 Before marking any story done, verify:
-- [ ] No `ObservableObject`, `@Published`, `@StateObject`, `@ObservedObject`, `@EnvironmentObject`
-- [ ] No new `*ViewModel.swift` file created to serve a single view
+- [ ] Nothing from the Hard Rejections table
 - [ ] Shared services injected via `@Environment(MyService.self)`, not init parameters
-- [ ] View-lifecycle async uses `.task` or `.task(id:)`, not `.onAppear { Task { } }`
-- [ ] No deprecated APIs from the rejection table (`foregroundColor`, `DateFormatter`, 1-param `onChange`, …)
-- [ ] `ForEach` over `Identifiable` items, never index-based ranges on mutable data
-- [ ] Icon-only buttons have text labels; no fixed font sizes (Dynamic Type — see `accessibility.md`)
-- [ ] New tests use `import Testing`, not `import XCTest`
+- [ ] View-lifecycle async uses `.task` / `.task(id:)`; persistence mutations live in a service
+- [ ] Icon-only buttons have text labels; no fixed font sizes (Dynamic Type — `accessibility.md`)
+- [ ] New views carry `.accessibilityIdentifier`s; a new screen carries its route
+- [ ] New unit tests use `import Testing`; every new gate has been watched failing
+- [ ] Build is at **zero warnings** and the test log was scored, not eyeballed
 
-> Full patterns, code examples, and architecture guidance: `docs/setup/swift/`
+<!-- /leanwheel:guardrails swift v2 -->

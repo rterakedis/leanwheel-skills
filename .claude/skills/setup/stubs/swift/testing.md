@@ -230,3 +230,73 @@ Test **service and business logic** — not SwiftUI rendering. Views are not uni
 - Navigation stack state
 - Core Data `@FetchRequest` results (integration concern; verify in Simulator)
 - Animation timing
+
+---
+
+## UI Test Targets — `import XCTest` is correct here
+
+`import Testing` is the rule for **unit** tests. Swift Testing has no UI-automation API, so a
+UI-test target is the one sanctioned exception: `import XCTest`, `XCTestCase` subclasses,
+`XCUIApplication`. This is not legacy code and should not be flagged in review.
+
+Host-side driving (`sim.sh`, routes, seeds, screenshot matrices, the `isHittable` and
+cross-test-state hazards) lives in `simulator.md`. What follows is what belongs in the *test
+target's own* conventions.
+
+### Audit the control chain for identifiers before writing the flow
+
+<!-- FIELD -->
+
+**Walk every control the flow will touch and confirm each has an `.accessibilityIdentifier` —
+before writing the first assertion.** Add whatever is missing as part of that flow's story.
+
+This is the cheap version of a rule nothing enforces. An identifier hook is *advisory*: it warns
+on newly-written views, it does not fail, and it never re-checks an existing view the day a flow
+first tries to drive it. So identifiers go missing exactly where they are needed, and the gap
+surfaces **mid-flow**, after the setup is already written and under story pressure — which is
+how identifiers end up backfilled, the very thing "assigned at view creation" exists to prevent.
+
+Convention: `{feature}-{element}-{role}`, kebab-case, **never localized**, never in the String
+Catalog. A dynamic row carries its record id: `job-row-{uuid}`, `date-pill-{yyyy-MM-dd}`.
+
+### Shared components take their identifier as a parameter
+
+```swift
+// ❌ Derived from the label — the label is localized, so every flow breaks outside English
+struct FilterChip: View {
+    let label: LocalizedStringKey
+    var body: some View { … .accessibilityIdentifier(slug(label)) }
+}
+
+// ✅ The caller names the handle; it is stable regardless of device language
+struct FilterChip: View {
+    let label: LocalizedStringKey
+    let identifier: String
+    var body: some View { … .accessibilityIdentifier(identifier) }
+}
+```
+
+Any shared component that grows an identifier should take it the same way.
+
+### Dump the tree before blaming the framework
+
+<!-- FIELD -->
+
+When an element cannot be addressed in an XCUITest, **dump the accessibility hierarchy before
+concluding the test framework is at fault** — the element may simply not exist, or may not
+surface as the type you are querying. The platform quirks that produce this (containers that
+don't publish identifiers, constructs that publish twice, rows below the fold that are never
+instantiated) are tabulated in `simulator.md` § *SwiftUI × XCUITest*, and every row there was
+diagnosed exactly that way.
+
+The general form of the rule is broader than testing: **existence in source is not evidence that
+something reaches the screen.** A placeholder on a pre-filled field never renders. A description
+that reads correctly in source truncates on device. A confirmation button can be absent from the
+hierarchy entirely. Dev, review, and static validation can all pass while only confirming a
+string is *in the source*. Confirm it renders — drive the app, or dump the tree.
+
+### A new gate is not done until it has been shown to fail
+
+Every test written for a story is watched failing, **naming the item it guards**, before it is
+trusted. Stash the non-test changes, run the gate expecting a red that names the item, restore,
+re-run expecting green. A gate observed only green is unverified, however many times it ran.

@@ -115,3 +115,20 @@ After reporting, ask:
 > "Guidance updated. Run `/web-audit` now to check the current site against the new patterns? (y/n)"
 
 If yes: invoke `/web-audit` immediately. If no: stop.
+
+---
+
+## Managed guardrails block and field knowledge
+
+`stubs/modern-web.md` is a **managed block** delimited by `<!-- leanwheel:guardrails web vN -->`
+… `<!-- /leanwheel:guardrails web vN -->`. It is a pointer to `docs/setup/web/` plus always-active
+hard rules — never an inlined copy of a reference file, and never a home for project-specific
+rules. **Bump `vN` whenever the block's content changes**, or `/upgrade-project` cannot detect the
+change and no existing project ever receives it (DD-67).
+
+Field-earned rules in `docs/setup/web/` carry `<!-- FIELD: … -->` after their heading. Run
+`grep -rn "<!-- FIELD" docs/setup/web/` before writing and treat every hit as protected: append a
+dated verification note, version-scope it against a citation, or retire it with the citation that
+shows the **mechanism** is gone — never a silent rewrite because newer general guidance covers the
+same topic. Conflicts you cannot resolve to that bar are reported, not decided. Convention:
+`docs/setup/swift/PROVENANCE.md` (DD-66).

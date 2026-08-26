@@ -131,6 +131,42 @@ Research each section in turn. For each: compare findings against the existing f
 
 ## Step 3 — Write Updated Files
 
+### Field knowledge is protected — read this before editing anything
+
+Two kinds of claim live in these files and they age differently. **Research knowledge** comes
+from Apple docs, WWDC, release notes, and curated authors, and goes stale on the OS/Xcode
+cadence — that is what this skill exists to refresh. **Field knowledge** comes from trial and
+error on a real shipping project: a mechanism observed, a symptom paid for, a fix verified by
+running. It is typically *absent* from any primary source, which is precisely why it is
+valuable, and it does **not** go stale on a version bump.
+
+Field-earned rules are marked with an HTML comment after their heading:
+
+```bash
+grep -rn "<!-- FIELD" docs/setup/swift/ "{skills_path}/.claude/skills/setup/stubs/swift/"
+```
+
+**Run that grep before writing, and treat every hit as protected.** A refresh pass may:
+
+- ✅ **Append** a dated verification note beside it (`<!-- verified still current YYYY-MM-DD -->`).
+- ✅ **Version-scope** it when a cited source establishes the range ("on iOS 26" → "on iOS 26–26.x").
+- ✅ **Retire** it — move it to a `## Retired` section with the citation that shows the
+  **mechanism** no longer exists, and name it in the report.
+- ❌ **Never silently rewrite or delete it** because newer general guidance covers the same topic.
+
+The bar for retirement is the mechanism, not the topic. *"Apple's current docs recommend X"* does
+not retire a rule about what happens when X is used near a translucent bar. *"The bar is no longer
+translucent as of iOS 28, per <release note>"* does. When a research finding appears to conflict
+with a field rule and cannot meet that bar, **surface the conflict in the report and change
+nothing** — the person who paid for the rule decides whether it retires.
+
+Full convention, including how to add a new field rule: `docs/setup/swift/PROVENANCE.md`.
+
+Note that some files are field-derived end to end and carry the marker once under their H1 —
+`demo-data-and-copy.md`, and large parts of `simulator.md`, `testability.md`, `xcode-footguns.md`,
+`core-data-cloudkit.md`, and `localization.md`. Research findings **augment** these; they do not
+replace them.
+
 For each file with changes:
 
 1. Update `docs/setup/swift/{file}.md` with current content.
@@ -147,13 +183,24 @@ For each file with changes:
 
 ### Guardrails Block (`modern-swiftui.md`)
 
-After updating the sectioned files, review the guardrails stub (`modern-swiftui.md`). Update it only if:
-- A wrapper was added to the "hard rejection" table
-- A wrapper was removed from the rejection table (document why)
-- The property wrapper quick reference table has a new row
+After updating the sectioned files, review the guardrails stub (`modern-swiftui.md`). It is a
+**managed block** — a pointer to `docs/setup/swift/` plus the tripwires that must be known before
+a plan is formed. Update it only if:
+- A row was added to, or removed from, the "hard rejection" table (document why on removal)
 - A checklist item changed
+- A **new reference file** was added to `stubs/swift/` — add it to the pointer list at the top
+- A tripwire's one-line statement no longer matches the file it links to
 
-The guardrails file must stay under ~50 lines — it lives in CLAUDE.md and is loaded every turn.
+Rules for editing it:
+- **Never inline a reference file's contents.** The block is loaded every turn, and an inlined
+  copy drifts from its source. One line plus a `→ file.md` pointer, always.
+- **Never delete a tripwire** whose linked section is `<!-- FIELD -->`-marked without meeting the
+  retirement bar above.
+- **Bump the `vN` in the `<!-- leanwheel:guardrails swift vN -->` markers** whenever the block's
+  content changes. `/upgrade-project` uses that version to detect and re-sync stale copies in
+  existing projects; leaving it unchanged means no project ever receives the update.
+
+The guardrails file must stay under ~90 lines — it lives in CLAUDE.md and is loaded every turn.
 
 ---
 
