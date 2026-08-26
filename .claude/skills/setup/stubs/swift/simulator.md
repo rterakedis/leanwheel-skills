@@ -149,6 +149,13 @@ Consumed by `/design-verify`, which compares the captures against the story's De
 Contract. The accessibility-XL column is not decoration — truncation and
 pushed-off-screen controls live there and nowhere else.
 
+**`--assetcapture` (implied by `--store`).** Passes `--assetcapture` to the app so every
+DEBUG-only visible affordance is hidden and the run renders exactly what Release renders.
+Store captures set it *implicitly* — a flag a human must remember has the same failure mode
+as "remember not to screenshot Settings". Also accepted by `launch` and `dump` for checking
+the flag's effect. The app-side contract (`showsDebugAffordances`, the one-predicate rule,
+and the enforcing test) is in `docs/setup/swift/testability.md`.
+
 ### Orientation — landscape captures (especially iPad)
 
 **There is no host-side orientation control.** `xcrun simctl ui` supports only
@@ -211,7 +218,12 @@ final class HierarchyDumpTests: XCTestCase {
     func testDumpHierarchy() {
         // sim.sh passes these as TEST_RUNNER_LW_* so they land here as LW_*.
         let env = ProcessInfo.processInfo.environment
-        let app = launch(seed: env["LW_SEED"] ?? "typical", route: env["LW_ROUTE"])
+        // --assetcapture rides the same channel and MUST: the shell's ASSET_CAPTURE global
+        // cannot reach the app through `dump`, which launches via this runner rather than
+        // simctl. Without this the flag parses fine and is dead code — an absence in the
+        // dumped tree that means nothing.
+        let app = launch(seed: env["LW_SEED"] ?? "typical", route: env["LW_ROUTE"],
+                         additionalArguments: env["LW_ASSETCAPTURE"] == "1" ? ["--assetcapture"] : [])
         let dump = XCTAttachment(string: app.debugDescription)
         dump.name = "hierarchy"
         dump.lifetime = .keepAlways      // without this it is discarded on success

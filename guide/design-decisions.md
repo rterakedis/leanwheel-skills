@@ -14,7 +14,7 @@ Not to be confused with a user project's `docs/project/decisions.md` (owned by t
 - Verification: DD-10 verify by running · DD-11 gate integrity · DD-12 Fix-Now · DD-13 evals command-default · DD-14 invariant evidence
 - Orchestration: DD-20 subagent routing · DD-21 non-return rule · DD-22 orchestrator-owned tracking · DD-23 epic-context cache gate · DD-24 docs-sync audiences · DD-25 boundary merge
 - Testing & test plans: DD-30 manual pass at the epic boundary · DD-31 TESTING PLAN split + subtract · DD-32 plan-defect kind · DD-33 done stories immutable · DD-34 testability foundation · DD-35 flow tiering · DD-36 e2e backfill
-- Simulator automation: DD-40 sim.sh + route navigation · DD-41 silent-failure guards · DD-42 orientation · DD-43 store preset · DD-44 sim.json committed
+- Simulator automation: DD-40 sim.sh + route navigation · DD-41 silent-failure guards · DD-42 orientation · DD-43 store preset · DD-44 sim.json committed · DD-45 release parity for store captures
 - Planning & docs: DD-50 planning consolidation · DD-51 pinned story frontmatter · DD-52 design contract decoupled from docs/ux · DD-53 simplicity doctrine placement · DD-54 CLAUDE.md tiers & budget · DD-55 epic archive · DD-56 dark patterns · DD-57 doc-free lane · DD-58 architecture promotion
 - Packaging: DD-60 hooks for hard rules · DD-61 no project names · DD-62 ledger via ledger.sh · DD-63 quiet toolchain output
 
@@ -352,3 +352,31 @@ argument gating puts it in `testability.md` alongside the rest of the launch-arg
 contract rather than in a new stub. Placement of the failure in the release checklist follows
 DD-60's split: it cannot be a hook (needs a device and a Console) and cannot be a test, so it
 is prose plus a preflight grep.
+
+### DD-45 — Store captures run in Release parity, and the flag is implied not remembered
+**Decision.** `sim.sh` gained `--assetcapture` (parsed by `launch`, `shots`, and `dump`;
+delivered to the app as a launch argument, and to `dump` additionally as
+`TEST_RUNNER_LW_ASSETCAPTURE` because the runner is launched by `xcodebuild`, not
+`launch_app`). `shots --store` sets it **implicitly**. The app-side half — a single
+`LaunchArguments.showsDebugAffordances` predicate that every DEBUG-only *view* is gated on,
+which **overrides** `isAutomatedRun`, plus a source-walking test that fails naming any file
+with ungated DEBUG-only UI — is documented in `testability.md`.
+
+**Why.** A Debug build is a strict superset of Release's UI and the capture pipeline
+*requires* the superset: seeding and routing are `#if DEBUG`, so a Release build cannot be
+driven to a screen at all. Every `#if DEBUG` view is therefore a standing App Store
+screenshot contaminant (Guideline 2.3.3 — a capture may not show controls the shipped app
+lacks), and nothing in the toolchain reports it: the capture looks right and the app looks
+right. On one SwiftUI project two sites leaked, and one was gated on `isAutomatedRun` — so it
+rendered *only* during seeded capture runs, invisible in ordinary Debug testing and present
+in exactly the images bound for the App Store. That is also why the predicate must override
+`isAutomatedRun` rather than sit beside it.
+
+Three sub-decisions carry the weight. **Implied, not required:** a flag a human must remember
+fails exactly like "remember not to screenshot Settings". **Not folded into `--uitest`:** some
+debug UI exists *for* tests to assert on, so suppressing it under `--uitest` breaks those
+gates — a capture run and a UI test are different intents that merely share a Debug binary.
+**Gating resolved per file, not per block:** a section gated at its call site with its body in
+a separate `#if DEBUG` block is correct code that a per-block rule flags, and a guard with
+false positives gets deleted; the enforcing test also asserts a lower-bound count so it cannot
+pass vacuously when a directory moves.
