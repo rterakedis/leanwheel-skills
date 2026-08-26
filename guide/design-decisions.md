@@ -14,7 +14,7 @@ Not to be confused with a user project's `docs/project/decisions.md` (owned by t
 - Verification: DD-10 verify by running · DD-11 gate integrity · DD-12 Fix-Now · DD-13 evals command-default · DD-14 invariant evidence
 - Orchestration: DD-20 subagent routing · DD-21 non-return rule · DD-22 orchestrator-owned tracking · DD-23 epic-context cache gate · DD-24 docs-sync audiences · DD-25 boundary merge
 - Testing & test plans: DD-30 manual pass at the epic boundary · DD-31 TESTING PLAN split + subtract · DD-32 plan-defect kind · DD-33 done stories immutable · DD-34 testability foundation · DD-35 flow tiering · DD-36 e2e backfill
-- Simulator automation: DD-40 sim.sh + route navigation · DD-41 silent-failure guards · DD-42 orientation · DD-43 store preset · DD-44 sim.json committed · DD-45 release parity for store captures
+- Simulator automation: DD-40 sim.sh + route navigation · DD-41 silent-failure guards · DD-42 orientation · DD-43 store preset · DD-44 sim.json committed · DD-45 release parity for store captures · DD-46 vendored-script drift is reported, never silent
 - Planning & docs: DD-50 planning consolidation · DD-51 pinned story frontmatter · DD-52 design contract decoupled from docs/ux · DD-53 simplicity doctrine placement · DD-54 CLAUDE.md tiers & budget · DD-55 epic archive · DD-56 dark patterns · DD-57 doc-free lane · DD-58 architecture promotion
 - Packaging: DD-60 hooks for hard rules · DD-61 no project names · DD-62 ledger via ledger.sh · DD-63 quiet toolchain output
 
@@ -380,3 +380,27 @@ gates — a capture run and a UI test are different intents that merely share a 
 a separate `#if DEBUG` block is correct code that a per-block rule flags, and a guard with
 false positives gets deleted; the enforcing test also asserts a lower-bound count so it cannot
 pass vacuously when a directory moves.
+
+### DD-46 — Vendored-script drift is reported, never silent
+**Decision.** Two signals, no behavior change. `/appstore-connect` ASSETS gained a
+**capability** precondition: it greps the project's `scripts/sim.sh` for each mode it
+actually invokes (`--store`, `--locale`, `--assetcapture`) and hard-stops with `run
+/upgrade-project to sync scripts/sim.sh`. `/upgrade-project` now reports **capability skew**
+for any vendored script it classifies CONFLICT — diffing the shipped copy's long-option
+vocabulary against the project's and naming what is absent — while still leaving the file
+untouched.
+
+**Why.** `sim.sh` is vendored into projects, copied only when *missing*, so upstream
+improvements never reach a project that already has a copy: a stale copy is the steady
+state, not an anomaly. On one project the copy predated `shots --store`/`--locale` by over a
+week, silently blocking `/appstore-connect assets`; the skill's precondition passed because
+`scripts/sim.sh` existed, without checking that it supported the modes ASSETS calls.
+`/upgrade-project`'s git-provenance test was *right* to refuse the locally-modified copy —
+the gap was that nobody was told.
+
+**Capability, not version.** A version compare drifts out of sync with what the caller
+invokes and lies about a locally-modified copy that still supports the modes; grepping for
+the flags the skill literally passes cannot. For the same reason skew is reported as flags
+present upstream and absent locally only — flags present locally and not upstream are
+project-local features, not drift. Consistent with DD-60: a signal a human reads, because
+this can be neither a hook nor a test.
