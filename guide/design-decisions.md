@@ -404,3 +404,35 @@ the flags the skill literally passes cannot. For the same reason skew is reporte
 present upstream and absent locally only — flags present locally and not upstream are
 project-local features, not drift. Consistent with DD-60: a signal a human reads, because
 this can be neither a hook nor a test.
+
+### DD-65 — A deterministic-path generator must delete its own stale output
+**Decision.** `compose.swift` clears the locale's previously-composed screenshots
+immediately before writing the full set from the plan. The clear runs **strictly after**
+all-or-nothing validation succeeds, is **skipped under `--dry-run` and `--only`**, removes
+**only files matching its own `{order}_{class}_{id}.png` pattern**, and **logs the count**
+(`compose: removed 3 stale screenshots (plan changed)`). `asc-lint.sh` separately WARNs on
+any screenshot with no matching `screenshots.md` row, so projects that already accumulated
+orphans can find them.
+
+**Why.** The output path is fully deterministic, so re-composing an unchanged plan is a
+clean in-place overwrite — which is exactly what hides the bug. Any plan edit that changes a
+*filename* (reordering a row, renaming an id, deleting a row, narrowing `devices`) leaves the
+old file behind forever, and the result is a directory of near-identical screenshots where
+nothing indicates which are current. Git does not save you: `docs/store/screenshots/` is
+committed, so an orphan is a **tracked, unmodified** file — invisible in `git status`,
+invisible in a PR diff. It reads as settled work, and there is no point at which a human
+would naturally notice. That is what makes it a code fix rather than a documented step; the
+manual workaround it replaces was `rm -rf` on a directory inside the user's repo, and a
+documented `rm -rf` outlives the need for it.
+
+**Ordering and scope carry the weight.** *After validation:* the script writes nothing on any
+error, so delete-then-fail would leave the user with no screenshots at all — strictly worse
+than orphans. *Not under `--dry-run`:* it is the "is my plan valid" probe and has to stay
+side-effect free. *Not under `--only`:* that composes a deliberate subset, and wiping the
+locale would delete rows the user chose not to recompose; skipping is the safer of the two
+available scopings, and a later full run still prunes everything. *Own pattern, not an empty
+directory:* `screenshots/{locale}/` is a committed folder in a user's repo that may hold
+something a human put there, and a tool that deletes files it did not create is one bad
+assumption away from destroying work. *Logged, not silent:* deletion inside a git repo that
+nobody is told about is its own failure mode. Same shape as DD-60 — the enforcement is in the
+tool, the signal is for the human.
