@@ -61,7 +61,7 @@ Check these:
 | Tracking script | `scripts/gh-track.sh` present + executable |
 | Sabotage script | `scripts/sabotage.sh` present + executable |
 | Ledger script | `scripts/ledger.sh` present + executable |
-| Simulator harness | `scripts/sim.sh` present + executable, and `docs/setup/swift/simulator.md` present (only if `is_apple`) |
+| Simulator harness | `scripts/sim.sh` present + executable, and `docs/setup/swift/simulator.md` present (only if `is_apple`); on CONFLICT also report **capability skew** (below) |
 | Docs structure | `## Docs Structure`, `## Task Tracking Emoji` in CLAUDE.md |
 
 **Stub-install verification.** Walk every stub under `{skills_path}/.claude/skills/setup/stubs/`
@@ -84,6 +84,24 @@ recommend installing the stub and collapsing the inlined copy to a one-line poin
   `/refresh-swift` / `/refresh-web` to reconcile).
 - If git history isn't available, fall back to: identical to current stub → OK;
   differs → CONFLICT (never auto-overwrite a differing stub without provenance).
+
+**CONFLICT must still report skew — the silence is the bug, not the refusal.** Vendored
+scripts are copied once and only when missing, so a project can hold a stale
+`scripts/sim.sh` indefinitely with no signal; refusing to overwrite a locally-modified copy
+is correct, but saying nothing about what that copy *lacks* is how a missing `shots --store`
+blocked `/appstore-connect assets` in a real project for over a week. For every vendored
+script classified CONFLICT, diff the shipped copy's **long-option vocabulary** against the
+project's and name what is absent:
+
+```bash
+diff <(grep -o -- '--[a-z-]\+' {skills_path}/scripts/sim.sh | sort -u) \
+     <(grep -o -- '--[a-z-]\+' scripts/sim.sh | sort -u)
+```
+
+Report as, e.g.: `scripts/sim.sh CONFLICT (locally modified) — shipped version adds:
+--store, --locale, --assetcapture. Not auto-refreshed; diff and merge by hand.` Flags
+present locally but not upstream are project-local features, not skew — do not report those
+as missing. This is a **signal only**: no behavior changes, nothing is overwritten.
 
 Present the plan as a table: `ADD / REFRESH / CONFLICT / OK` per item. Summarize:
 "Will add N, refresh M, skip K conflicts (need manual merge). Proceed? (y/n)"
@@ -112,7 +130,9 @@ In dependency order, applying only ADD and REFRESH items:
    `scripts/sim.sh` is missing, and `chmod +x`. `sim.sh` derives its own
    `.leanwheel/sim.json` on first run — never author that file here.
    These are unedited-overwrite-safe by the same git-provenance test as stubs (REFRESH
-   if the project copy matches a historical committed version; CONFLICT otherwise).
+   if the project copy matches a historical committed version; CONFLICT otherwise). A
+   CONFLICT here is still *reported* with its capability skew (Step 3) — the copy is left
+   untouched, but the user is told which shipped flags it lacks.
 6. **CLAUDE.md sections:** append any missing guardrail/structure blocks (same logic as
    `/setup` Steps 3/3s/3a/3c) — check-heading-then-append, never modify existing prose.
    The simplicity doctrine is unconditional but is **not** a CLAUDE.md block: write
@@ -146,4 +166,7 @@ Print:
 - It never touches `docs/epics/` story files, `docs/prd.md`, `docs/architecture.md`,
   or any planning content — only framework scaffolding.
 - The CONFLICT path is deliberately conservative: a locally-tuned stub is a feature,
-  not drift. We surface it; we never silently overwrite it.
+  not drift. We surface it; we never silently overwrite it. "Surface" is load-bearing for
+  vendored scripts: refusing to touch a modified `scripts/sim.sh` is right, and reporting
+  nothing about what it is missing is what turns a correct refusal into a silent failure
+  downstream.

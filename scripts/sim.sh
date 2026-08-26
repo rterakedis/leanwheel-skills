@@ -38,7 +38,12 @@
 #                             --locale <ll-RR> applies AppleLanguages/AppleLocale launch
 #                             overrides to capture a localized UI (default en-US with
 #                             --store, otherwise empty/unset).
-#   dump [--route R] [--orientation O]   Dump the accessibility hierarchy (identifiers).
+#                             --assetcapture passes `--assetcapture` to the app so every
+#                             DEBUG-only affordance is hidden (Release parity for App
+#                             Store captures — Guideline 2.3.3). --store implies it.
+#                             Also available on `launch` and `dump`.
+#   dump [--route R] [--orientation O] [--assetcapture]   Dump the accessibility
+#                             hierarchy (identifiers).
 #   flow <Name> [--orientation O]        Run one named XCUITest flow, export its
 #                             screenshots.
 #   privacy grant|reset [svc] Pre-grant permission alerts so a run doesn't stall.
@@ -68,6 +73,17 @@ SETTLE=2          # seconds to let the UI settle before a capture
 # capture — marketing/App Store assets need the native pixels, agents do not.
 SHOT_MAX_PX="${SHOT_MAX_PX:-1000}"
 GRANT_OVERRIDE="" # --grant on launch/shots; else config's privacy_grant
+# --assetcapture on launch/shots/dump, and implied by `shots --store`: pass `--assetcapture` to the
+# app so every DEBUG-only visible affordance is hidden and the run renders exactly what Release
+# renders. Required for App Store captures (Guideline 2.3.3 — a screenshot may not show controls the
+# shipped app lacks): a Debug build is a strict SUPERSET of Release's UI, and the capture pipeline
+# needs the superset because seeding/routing are `#if DEBUG` (a Release build cannot honour
+# --seed/--route at all). So every `#if DEBUG` view is a standing capture contaminant, and nothing
+# in the toolchain reports it — the capture looks right and the app looks right.
+# NOT folded into --uitest on purpose: some debug UI exists FOR tests to assert on, and suppressing
+# it under --uitest breaks those gates. A capture run and a UI test are different intents that
+# merely share a Debug binary.
+ASSET_CAPTURE=0
 
 die() { echo "sim: $*" >&2; exit 1; }
 note() { echo "sim: $*" >&2; }
@@ -580,6 +596,7 @@ launch_app() {
   # Orientation is app-side by necessity — no simctl rotates a device (see the
   # orientation section above). Delivered like --seed/--route; verified by `shots`.
   [ -n "$orientation" ] && args="$args --orientation $orientation"
+  [ "${ASSET_CAPTURE:-0}" = "1" ] && args="$args --assetcapture"
   xcrun simctl terminate "$udid" "$bundle" >/dev/null 2>&1 || true
   # Locale is delivered as UserDefaults overrides, NOT a --locale launch arg: simctl
   # launch forwards argv straight to the app process, and -AppleLanguages/-AppleLocale
@@ -733,15 +750,17 @@ cmd_launch() {
       --grant)  GRANT_OVERRIDE="$2"; shift 2 ;;
       --orientation) orientation=$(normalize_orientation "$2"); shift 2 ;;
       --locale) locale="$2"; shift 2 ;;
+      --assetcapture) ASSET_CAPTURE=1; shift ;;
       --uitest) uitest=1; shift ;;
       --reset)  reset=1; shift ;;
+      --assetcapture) ASSET_CAPTURE=1; shift ;;
       *) die "unknown option for launch: $1" ;;
     esac
   done
   local udid; udid=$(resolve_device "$device")
   boot_device "$udid" "$fresh"
   launch_app "$udid" "$seed" "$uitest" "$reset" "$route" "$orientation" "$locale"
-  note "launched${seed:+ --seed $seed}${route:+ --route $route}${orientation:+ --orientation $orientation}"
+  note "launched${seed:+ --seed $seed}${route:+ --route $route}${orientation:+ --orientation $orientation}$([ "$ASSET_CAPTURE" = 1 ] && echo " --assetcapture")"
   [ -n "$orientation" ] && note "orientation is applied by the app's launch-argument handler — 'launch' cannot verify it; 'shots' can (it checks the capture's aspect ratio)."
   return 0
 }
@@ -749,7 +768,7 @@ cmd_launch() {
 cmd_shots() {
   ensure_config; ensure_artifacts_dir
   local name="${1:-}"; shift || true
-  [ -n "$name" ] || die "usage: sim.sh shots <name> [--route R] [--seed S] [--devices iphone,ipad] [--orientation portrait|landscape|landscape-left|landscape-right] [--locale ll-RR] [--store]"
+  [ -n "$name" ] || die "usage: sim.sh shots <name> [--route R] [--seed S] [--devices iphone,ipad] [--orientation portrait|landscape|landscape-left|landscape-right] [--locale ll-RR] [--store] [--assetcapture]"
 
   # Orientation is deliberately a SINGLE FLAG, not a matrix axis. Doubling the matrix
   # would double every run's cost for captures most stories never look at; a landscape
@@ -783,6 +802,11 @@ cmd_shots() {
     [ "$devices_set" = 1 ] || devices="iphone69,ipadPro13"   # explicit --devices wins (and must name store classes)
     sizes="large"
     SHOT_MAX_PX=native
+    # Release parity is not optional for a store capture: a Debug build renders DEBUG-only
+    # affordances the shipped app lacks, and a screenshot showing them violates 2.3.3. Implied
+    # rather than required so no human has to remember it — a flag a human must remember has the
+    # same failure mode as "remember not to screenshot Settings".
+    ASSET_CAPTURE=1
     [ "$seed_set" = 1 ] || seed="heavy"
     [ -n "$locale" ] || locale="en-US"
     out_dir="$STORE_DIR/$locale/$name"
@@ -849,6 +873,7 @@ cmd_dump() {
       --seed)   seed="$2"; shift 2 ;;
       --device) device="$2"; shift 2 ;;
       --orientation) orientation=$(normalize_orientation "$2"); shift 2 ;;
+      --assetcapture) ASSET_CAPTURE=1; shift ;;
       *) die "unknown option for dump: $1" ;;
     esac
   done
@@ -871,7 +896,12 @@ cmd_dump() {
   # nothing anywhere says the route was dropped. Do not "simplify" this back.
   # LW_ORIENTATION rides the same channel; the shared launch() helper applies it via
   # XCUIDevice.shared.orientation (see simulator.md, Orientation).
+  # LW_ASSETCAPTURE rides it too, and MUST: the ASSET_CAPTURE shell global cannot reach the app
+  # through `dump`, because dump launches via the HierarchyDumpTests XCUITest runner rather than
+  # launch_app. Without this line the flag parses fine and is dead code — an absence in the dumped
+  # tree that means nothing.
   TEST_RUNNER_LW_ROUTE="$route" TEST_RUNNER_LW_SEED="$seed" TEST_RUNNER_LW_ORIENTATION="$orientation" \
+  TEST_RUNNER_LW_ASSETCAPTURE="$ASSET_CAPTURE" \
   xcodebuild "$flag" "$container" -scheme "$scheme" \
     -destination "platform=iOS Simulator,id=$udid" \
     -only-testing:"$uitest/HierarchyDumpTests" \

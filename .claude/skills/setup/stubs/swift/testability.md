@@ -60,7 +60,7 @@ Rules:
 
 ## Launch Argument Contract
 
-The app honors four DEBUG-only launch arguments, parsed once at startup:
+The app honors five DEBUG-only launch arguments, parsed once at startup:
 
 | Argument | Effect |
 |---|---|
@@ -68,6 +68,7 @@ The app honors four DEBUG-only launch arguments, parsed once at startup:
 | `--route <name>` | Navigate to a route at startup, through the **same route table** `.onOpenURL` uses (see Deep-Link Routes below) |
 | `--uitest` | Use an **in-memory store** (never touches real user data; hermetic, no cleanup) and disable animations |
 | `--reset` | Wipe the persistent store before launch (manual-testing convenience) |
+| `--assetcapture` | Release parity for App Store captures — hide every DEBUG-only visible affordance (see below) |
 
 ```swift
 @main
@@ -122,6 +123,71 @@ extension Router {
     }
 }
 ```
+
+### `--assetcapture` — Release parity for App Store captures
+
+A Debug build is a strict **superset** of Release's UI, and the screenshot pipeline
+*requires* the superset: `LaunchArguments` and `SeedScenario` are `#if DEBUG`, so a Release
+build cannot honour `--seed`/`--route` and cannot be driven to a screen at all. That leaves a
+standing hazard — **every `#if DEBUG` view is a potential App Store screenshot contaminant**, a
+capture showing controls the shipped app lacks (Guideline 2.3.3). Nothing in the toolchain
+reports it: the capture looks right and the app looks right.
+
+Not theoretical. On one SwiftUI project two sites leaked, and one of them was gated on
+`isAutomatedRun` — so it appeared **only** during seeded capture runs, invisible during ordinary
+Debug testing, present in exactly the images destined for the App Store.
+
+**Do not fold this into `--uitest`.** Some debug UI exists *for* tests to assert on (a row-count
+label that renders only on an automated run, asserted by a UI-test flow). Suppressing debug UI
+under `--uitest` breaks those gates. A capture run and a UI test are different intents that merely
+share a Debug binary.
+
+**One predicate, and it overrides `isAutomatedRun`.** Expose `showsDebugAffordances` and gate every
+DEBUG-only *view* on it. Never let a call site read `isAssetCapture` directly — the rule fragments
+and the next debug view copies whichever spelling it sees. It must **override** `isAutomatedRun`,
+not sit beside it: capture runs pass `--seed`, so they already satisfy `isAutomatedRun`, which is
+precisely how the leak happened.
+
+```swift
+#if DEBUG
+extension LaunchArguments {
+    /// `scripts/sim.sh shots --store` passes this automatically — nobody should have to
+    /// remember it. A flag a human must type fails exactly like "remember not to
+    /// screenshot Settings".
+    static var isAssetCapture: Bool {
+        ProcessInfo.processInfo.arguments.contains("--assetcapture")
+    }
+
+    /// The single predicate every DEBUG-only *visible* affordance is gated on.
+    /// Overrides isAutomatedRun rather than sitting beside it.
+    static var showsDebugAffordances: Bool { !isAssetCapture }
+}
+#endif
+
+// Call site — the only spelling that may appear outside LaunchArguments.swift:
+#if DEBUG
+if LaunchArguments.showsDebugAffordances {
+    Section("Developer") { … }
+}
+#endif
+```
+
+**Pin the rule with an enforcing test**, or it rots the moment someone adds the next debug view.
+Walk the source for `#if DEBUG` blocks containing view constructors (`Section(`, `Button(`,
+`Text(`, `Toggle(`, …), excluding `#Preview` / `PreviewProvider` bodies, and fail naming any file
+that does not consult `showsDebugAffordances`. A second test asserts no file outside
+`LaunchArguments.swift` reads `isAssetCapture` directly. Two properties of that test matter more
+than its exact code:
+
+- **Assert a lower-bound count** on what the walk found (files scanned, files with debug UI). A
+  gate that enumerates must assert it enumerated, or it passes vacuously the day a directory moves
+  and the walk returns nothing.
+- **Resolve gating per *file*, not per *block*.** A section is often gated at its call site while
+  its body lives in a separate `#if DEBUG` block; a per-block rule flags that correct code, and a
+  guard with false positives gets deleted. File-level costs some precision and buys zero false
+  positives.
+
+Source files are not compiled into the test bundle — resolve the tree from `#file`.
 
 ### Core Data — same contract, three extra hazards
 
