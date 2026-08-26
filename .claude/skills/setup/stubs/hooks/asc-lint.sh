@@ -312,6 +312,37 @@ for loc in $LOCALES; do
   fi
 
   # --- screenshots/{locale}/*.png -------------------------------------------
+  # Expected output filenames from the plan ({order}_{class}_{id}.png, one per device),
+  # used to flag orphans left behind by an older compose.swift or a hand-composed run.
+  expected_shots=""
+  if [ -f "$plan_file" ]; then
+    expected_shots="$(awk '
+      /^\|/ {
+        line=$0
+        n=split(line, cols, "|")
+        for (i=1; i<=n; i++) gsub(/^[ \t]+|[ \t]+$/, "", cols[i])
+        if (!intable) {
+          if (line ~ /\|[[:space:]]*#[[:space:]]*\|/ && tolower(line) ~ /id/) {
+            intable=1; header=1
+            for (i=1; i<=n; i++) { c=tolower(cols[i]); if (c != "") idx[c]=i }
+            next
+          }
+          next
+        }
+        if (header==1) { header=0; next }
+        order=cols[idx["#"]]; id=cols[idx["id"]]; devs=cols[idx["devices"]]
+        if (order !~ /^[0-9]+$/ || id == "") next
+        d=split(devs, dev, ",")
+        for (i=1; i<=d; i++) {
+          gsub(/^[ \t]+|[ \t]+$/, "", dev[i])
+          if (dev[i] != "") print order "_" dev[i] "_" id ".png"
+        }
+        next
+      }
+      { if (intable) intable=0 }
+    ' "$plan_file")"
+  fi
+
   shot_dir="$STORE_DIR/screenshots/$loc"
   if [ -d "$shot_dir" ]; then
     count_iphone69=0
@@ -327,6 +358,14 @@ for loc in $LOCALES; do
       fi
       [ "$cls" = "iphone69" ] && count_iphone69=$((count_iphone69 + 1))
       classes_seen="$classes_seen $cls"
+
+      # Orphan: a composed-looking file with no matching plan row. Left behind by an
+      # older compose.swift (which never removed stale output), a hand-composed run, or
+      # a plan edit that changed a filename. WARN, not ERROR — the plan may legitimately
+      # be mid-edit, and screenshots/ is a user directory we only report on.
+      if [ -n "$expected_shots" ] && ! printf '%s\n' "$expected_shots" | grep -qxF "$base"; then
+        finding WARN "$loc/screenshots/$base: no matching row in screenshots.md (stale? re-run compose.swift for this locale, which now clears stale output)"
+      fi
 
       if command -v sips >/dev/null 2>&1; then
         w="$(sips -g pixelWidth "$f" 2>/dev/null | awk '/pixelWidth/{print $2}')"
