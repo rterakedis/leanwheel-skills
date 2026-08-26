@@ -22,6 +22,10 @@ description: Implement a story from its story file. Use when the user says "dev 
    - Any story adding tests: read `docs/setup/swift/testing.md`
    - Any story adding views or UI components: also read `docs/setup/swift/accessibility.md`
    - If the project uses SwiftData and the story touches models, queries, or persistence: read `docs/setup/swift/swiftdata.md`
+   - If the project uses Core Data / `NSPersistentCloudKitContainer` and the story touches the model, persistence, or sync: read `docs/setup/swift/core-data-cloudkit.md` — every schema rule there is a launch crash, and a deployed violation is a permanently wrong Production schema
+   - Any story adding user-facing strings: read `docs/setup/swift/localization.md`
+   - Any story adding or changing seed/preview/demo records, or writing copy for a regulated or consequential surface (tax, health, legal, safety, financial): read `docs/setup/swift/demo-data-and-copy.md`
+   - Any story that changes the Xcode project itself — build settings, capabilities, targets, bundled resources, schemes: read `docs/setup/swift/xcode-footguns.md` (these fail at runtime or with a misleading error, never at compile time)
    - Any story adding/changing a persisted model entity, adding user-facing views, or touching launch behavior: read `docs/setup/swift/testability.md` (seed scenarios, launch arguments, deep-link routes, accessibility identifiers)
    - Any story that needs the app *rendered* — screenshot verification, adding a flow, or stabilizing a screen: read `docs/setup/swift/simulator.md` (`scripts/sim.sh`, the screenshot matrix, flow conventions)
    - Read `docs/setup/swift/anti-patterns.md` if present

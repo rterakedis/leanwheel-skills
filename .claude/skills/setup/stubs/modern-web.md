@@ -1,5 +1,13 @@
 ## Web Guardrails (Baseline CSS / Astro 6+ / Hugo 0.146+)
 
+<!-- leanwheel:guardrails web v2 — MANAGED BLOCK.
+     Everything between this marker and the closing one is re-synced by /upgrade-project.
+     Do not add project-specific rules here; they belong in `## Critical Rules` above.
+     This block is a POINTER plus always-active hard rules: full patterns live in
+     docs/setup/web/ and are refreshed by /refresh-web. Never inline a reference file's
+     contents here — it is loaded every turn, and an inlined copy drifts from its source.
+-->
+
 > Updated: 2026-07-19
 
 Full reference patterns live in `docs/setup/web/`. This section contains only the always-active hard rules.
@@ -49,3 +57,5 @@ Before marking any story done, verify:
 - [ ] Animation gated behind `prefers-reduced-motion: no-preference`
 
 > Full patterns, code examples, and SSG guidance: `docs/setup/web/`
+
+<!-- /leanwheel:guardrails web v2 -->

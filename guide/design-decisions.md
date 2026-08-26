@@ -461,3 +461,57 @@ first `(` — real names contain parentheses (`iPad Pro 11-inch (M5)`, `iPad Pro
 and a first-paren split silently matches nothing for exactly the two store classes
 `shots --store` depends on. This was caught by testing a paren-named device, not by reading the
 code; the first version of the change looked correct and was not.
+
+### DD-66 — Field knowledge is tracked separately from research knowledge, and is protected from refresh passes
+
+`docs/setup/swift/` (and its `web` sibling) carries two kinds of claim with opposite ageing
+behaviour, and until now nothing distinguished them.
+
+**Research knowledge** comes from Apple docs, WWDC, release notes, and curated authors. It goes
+stale on the OS/Xcode cadence, and a newer primary source supersedes it outright. Refreshing it
+is exactly what `/refresh-swift` and `/refresh-web` exist to do.
+
+**Field knowledge** comes from trial and error on a real shipping project — a mechanism observed,
+a symptom paid for, a fix verified by running. It is typically *absent* from any primary source,
+which is precisely what makes it valuable, and it does **not** go stale on a version bump. It
+retires only when a source shows the underlying **mechanism** changed.
+
+Left undistinguished, a research pass eventually flattens the second kind: it finds current
+guidance on the same topic, rewrites the section, and the rule that cost three sessions to
+discover disappears with no diff anyone reads as a loss. The failure is quiet and one-directional.
+
+**The convention.** A field-earned rule carries `<!-- FIELD: … -->` immediately after its
+heading (once under the H1 for a file that is field-derived end to end). Invisible when rendered,
+greppable when not. `docs/setup/swift/PROVENANCE.md` is the canonical statement, is copied into
+every scaffolded project, and is named in `/refresh-swift` Step 3.
+
+**The rule for automated passes.** A `<!-- FIELD -->` block may be appended to with a dated
+verification note, version-scoped against a citation, or retired into a `## Retired` section with
+the citation that shows the mechanism is gone. It may never be silently rewritten or deleted
+because newer general guidance covers the same topic. The bar is the mechanism, not the topic:
+"Apple now recommends X" does not retire a rule about what happens when X is used near a
+translucent bar. When a finding conflicts with a field rule and cannot meet that bar, the refresh
+**reports the conflict and changes nothing** — the person who paid for the rule decides.
+
+Same shape as DD-60: the enforcement is a cheap mechanical marker plus one rule about it, rather
+than added prose asking the model to be careful.
+
+### DD-67 — The CLAUDE.md guardrails block is a managed pointer, versioned so it can be re-synced
+
+The Swift and Web guardrail sections of a generated `CLAUDE.md` used to be a plain append: the
+stub's contents were copied in at scaffold time and then diverged forever. Two costs. First,
+whatever was inlined drifts from the reference file it was copied from, and the copy in
+`CLAUDE.md` is the one loaded on **every turn** — so the stale version is the one that wins.
+Second, `/upgrade-project` could only ever detect the heading's *presence*, so a project scaffolded
+a year ago never received a single guardrail update.
+
+The block is now delimited by `<!-- leanwheel:guardrails {surface} vN -->` … `<!-- /… -->` and is
+declared managed: it holds a **pointer** to `docs/setup/{swift,web}/` plus the tripwires that must
+be known *before* a plan is formed (violating them corrupts data or ships a liability), and
+nothing else. Project-specific rules live in `## Critical Rules`, outside it.
+
+`/upgrade-project` reads the version: matching `vN` is a no-op, an older `vN` is a REFRESH that
+rewrites the block in place, and a block with **no** marker is a CONFLICT — a pre-managed project
+whose block may carry hand-added rules, so it is diffed and offered, never overwritten.
+`/refresh-swift` must bump `vN` whenever the block changes; leaving it unchanged means no existing
+project ever receives the update, which is the failure the marker exists to prevent.

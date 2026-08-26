@@ -78,6 +78,7 @@ Applies to every project, not gated on platform. The doctrine lives in its own f
 If {is_apple_platform} is yes:
 - Check whether `## Swift/SwiftUI Guardrails` already exists in CLAUDE.md. If it does, skip (never duplicate).
 - Otherwise, append the full contents of `{skills_path}/.claude/skills/setup/stubs/modern-swiftui.md` to CLAUDE.md, preceded by a `---` separator.
+- That stub is a **managed block**, delimited by `<!-- leanwheel:guardrails swift vN -->` … `<!-- /leanwheel:guardrails swift vN -->`. It is a pointer to `docs/setup/swift/` plus the tripwires that must be known before a plan is formed — never inline a reference file's contents into it, and never add project-specific rules inside it (those go in `## Critical Rules`). `/upgrade-project` re-syncs the block by these markers.
 
 ### Step 3b — Scaffold Swift Reference Docs (conditional)
 
@@ -93,7 +94,12 @@ If {is_apple_platform} is true:
   - `simulator.md`
   - `anti-patterns.md`
   - `accessibility.md`
+  - `core-data-cloudkit.md` (guidance self-gates: applies only if the project uses Core Data / `NSPersistentCloudKitContainer`)
   - `swiftdata.md` (guidance self-gates: applies only if the project uses SwiftData)
+  - `localization.md`
+  - `xcode-footguns.md`
+  - `demo-data-and-copy.md`
+  - `PROVENANCE.md` (how research knowledge and field knowledge are kept apart — read by `/refresh-swift`)
 - If {platforms} includes **iPadOS**: also copy `ipados-specific.md`.
 - If {platforms} includes **macOS**: also copy `macos-specific.md`.
 

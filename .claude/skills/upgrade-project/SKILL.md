@@ -55,7 +55,7 @@ Check these:
 | Swift stubs | each `docs/setup/swift/*.md` vs `{skills_path}/.../stubs/swift/*.md` (only if `is_apple`) |
 | Web stubs | each `docs/setup/web/*.md` vs stubs (only if `is_web`) |
 | Simplicity doctrine | `docs/setup/simplicity.md` present, and CLAUDE.md references it (all projects — not gated). A legacy inlined `## Simplicity & Anti-Over-Engineering` block in CLAUDE.md counts as missing — see **Missing stubs** below |
-| Swift guardrails block | `## Swift/SwiftUI Guardrails` in CLAUDE.md (only if `is_apple`) |
+| Swift guardrails block | `## Swift/SwiftUI Guardrails` in CLAUDE.md (only if `is_apple`), **and** the block carries the current `<!-- leanwheel:guardrails swift vN -->` marker. A block with an older `vN`, or with no marker at all, is a **stale inlined copy** — see *Re-syncing the guardrails block* below |
 | Web guardrails block | `## Web Guardrails` in CLAUDE.md (only if `is_web`) |
 | Commit script | `scripts/commit-push.sh` present + executable; `## Git Workflow` in CLAUDE.md |
 | Tracking script | `scripts/gh-track.sh` present + executable |
@@ -135,6 +135,25 @@ In dependency order, applying only ADD and REFRESH items:
    untouched, but the user is told which shipped flags it lacks.
 6. **CLAUDE.md sections:** append any missing guardrail/structure blocks (same logic as
    `/setup` Steps 3/3s/3a/3c) — check-heading-then-append, never modify existing prose.
+
+   **Re-syncing the guardrails block.** The Swift and Web guardrail stubs are **managed
+   blocks** delimited by `<!-- leanwheel:guardrails {surface} vN -->` … `<!-- /leanwheel:guardrails {surface} vN -->`.
+   They are a pointer to `docs/setup/{swift,web}/` plus tripwires — never an inlined copy of a
+   reference file, which drifts from the file it was copied from and is paid for on every turn.
+
+   - **Marker present and `vN` matches the stub** → nothing to do.
+   - **Marker present with an older `vN`** → replace everything between the markers with the
+     current stub's block. This is the one case where existing CLAUDE.md prose is rewritten, and
+     it is safe because the block is declared managed. Report it as a REFRESH.
+   - **`## Swift/SwiftUI Guardrails` present with no marker** (a project scaffolded before the
+     block was managed, typically carrying an inlined hard-rejection table and a verbose
+     patterns section) → this is a **CONFLICT**: the block may carry hand-added project rules.
+     Do not overwrite. Show the diff between the project's block and the current stub, name any
+     project-specific lines found inside it, and offer to (a) move those lines up into
+     `## Critical Rules`, then (b) replace the block with the managed one. Only proceed on
+     confirmation.
+   - Project-specific rules must never live inside the managed block. If the re-sync finds any,
+     surface them by name rather than silently discarding them.
    The simplicity doctrine is unconditional but is **not** a CLAUDE.md block: write
    `stubs/simplicity.md` to `docs/setup/simplicity.md` (skip if present) and ensure CLAUDE.md
    carries a one-line pointer to it (check-then-add). If a legacy project has the doctrine
