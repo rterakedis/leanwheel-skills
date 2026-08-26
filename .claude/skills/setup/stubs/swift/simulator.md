@@ -65,6 +65,34 @@ and inside a session worktree. If it ever points at something that no longer exi
 `sim.sh` re-derives it rather than failing. (`.leanwheel/sim/` — the artifacts — is a
 different story and self-ignores.)
 
+### `runtime` — which OS a device name resolves on
+
+Device names are **not unique**. Install a second iOS runtime for compatibility work and the
+same `iPhone 17` exists twice; nothing in the name says which OS it is. Resolving by name
+alone and taking the first hit means every capture, dump, and flow can run against the wrong
+OS while reporting nothing — the results look completely normal.
+
+So `sim.sh` refuses to guess. When a configured device name matches on more than one runtime
+and `runtime` is empty, it stops:
+
+```
+sim: 'iPhone 17' is ambiguous — it exists on 2 runtimes:
+       iOS 26.5
+       iOS 27.0
+     Refusing to guess: picking one silently would run every capture, dump, and flow
+     against the wrong OS and report nothing.
+     Fix: set "runtime" in .leanwheel/sim.json to the one you mean, e.g. "runtime": "iOS 26.5"
+```
+
+Set `runtime` to a runtime name exactly as `xcrun simctl list runtimes` prints it. It then
+applies to **every** device key — `devices` and `store_devices` alike — so a store capture
+cannot drift onto a different OS from a design-verify run. A pinned runtime that lacks the
+device is also a hard stop, listing the runtimes that do carry it.
+
+Leaving `runtime` empty stays correct and is the default: with one runtime installed nothing
+is ambiguous and behaviour is unchanged. The pin is what you reach for the day you install
+the next Xcode beta.
+
 ### Where output lands
 
 ```
@@ -374,6 +402,8 @@ and the `confirmationDialog` row above.
 | First launch stalls on a permission prompt | Permission never granted | `sim.sh privacy grant` — but note camera, Face ID, Bluetooth, ATT and notifications have **no** simctl service and cannot be pre-granted; handle those with an XCUITest interruption monitor or capture them deliberately |
 | `--route` runs but nothing moves | Route not in the route table, or `applyLaunchRoute()` never wired into the root view | Add the route; verify with `sim.sh dump` |
 | `no available simulator named …` | Device names change between Xcode releases | `sim.sh doctor` lists what's installed; edit `devices` in `.leanwheel/sim.json` |
+| `no available simulator named … on runtime 'X'` | `runtime` is pinned to a runtime that lacks that device | The error lists the runtimes that do carry it — correct `runtime`, or install the runtime in Xcode ▸ Settings ▸ Components |
+| `'…' is ambiguous — it exists on N runtimes` | Two installed runtimes carry the same device name | Set `runtime` in `.leanwheel/sim.json` (above). This is a guard, not a regression: the alternative is silently running against the wrong OS |
 | Build fails | — | Read `.leanwheel/sim/build.log`; the last 40 lines are printed automatically |
 | `flow`/`dump` refuse to run | No UI test target | Xcode ▸ File ▸ New ▸ Target ▸ UI Testing Bundle |
 

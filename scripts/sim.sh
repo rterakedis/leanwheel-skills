@@ -205,6 +205,8 @@ derive_config() {
   "privacy_grant": "$(suggest_privacy_services "$srcroot/$plist" "$bs_json")",
   "privacy_blocked": "$(unpregrantable_services "$srcroot/$plist" "$bs_json")",
   "devices": { "iphone": "iPhone 17", "ipad": "iPad Pro 11-inch (M5)" },
+  "runtime": "",
+  "_runtime_note": "Pins which runtime device names resolve on. Empty = no pin, which is fine until the same device name exists on two runtimes (common during Xcode-N compat work) — then sim.sh stops and asks you to set this rather than silently driving the wrong OS. Set it to a runtime name exactly as 'xcrun simctl list runtimes' prints it, e.g. 'iOS 26.5'.",
   "store_devices": { "iphone69": "iPhone 17 Pro Max", "ipadPro13": "iPad Pro 13-inch (M5)" }
 }
 EOF
@@ -324,15 +326,65 @@ resolve_device() {
   esac
   [ -n "$name" ] || die "no device configured for '$key'. Edit devices in $CONFIG"
 
-  local udid
-  udid=$(xcrun simctl list devices available | sed -n "s/^ *${name} (\([0-9A-Fa-f-]*\)) (.*/\1/p" | head -1)
-  if [ -z "$udid" ]; then
-    echo "sim: no available simulator named '$name'." >&2
-    echo "     Available devices:" >&2
-    xcrun simctl list devices available | sed -n 's/^ *\([^(]*\) ([0-9A-Fa-f-]*) (.*/       \1/p' | sort -u >&2
-    echo "     Fix: edit \"devices\" in $CONFIG, or add one in Xcode > Window > Devices and Simulators." >&2
+  # Resolve by name *within a runtime*. A device name alone is AMBIGUOUS: a machine doing
+  # Xcode-N compatibility work carries the same "iPhone 17" on two runtimes, and the old
+  # `| head -1` silently took whichever `simctl` listed first. That is a silent-failure of
+  # exactly the DD-41 kind — every screenshot, dump, and flow runs against the wrong OS and
+  # nothing anywhere says so; the results look completely normal. Two behaviours replace it:
+  #   * `runtime` pinned in sim.json -> match only within that runtime.
+  #   * not pinned, and the name is ambiguous -> DIE naming the runtimes. Refusing to guess
+  #     is the point; picking one is what caused the bug.
+  # Unpinned + unambiguous is unchanged, so existing projects need no config edit.
+  local runtime matches count udid
+  runtime=$(cfg runtime)
+  # Split the name off at the UUID, NOT at the first "(" — device names contain parens
+  # ("iPad Pro 11-inch (M5)", "iPad Pro 13-inch (M5)"), and a first-paren split silently
+  # matches nothing for exactly the two store classes `shots --store` needs.
+  matches=$(xcrun simctl list devices available | awk -v want="$name" '
+      /^-- / { rt = $0; gsub(/^-- | --$/, "", rt); next }
+      match($0, /\([0-9A-Fa-f-]{36}\)/) {
+        udid = substr($0, RSTART + 1, RLENGTH - 2)
+        dev  = substr($0, 1, RSTART - 1); gsub(/^ +| +$/, "", dev)
+        if (dev == want) print rt "\t" udid
+      }')
+
+  if [ -n "$runtime" ]; then
+    matches=$(printf '%s\n' "$matches" | awk -F'\t' -v rt="$runtime" '$1 == rt')
+  fi
+
+  count=$(printf '%s' "$matches" | grep -c . || true)
+  if [ "$count" -eq 0 ]; then
+    echo "sim: no available simulator named '$name'${runtime:+ on runtime '$runtime'}." >&2
+    if [ -n "$runtime" ]; then
+      echo "     Runtimes carrying that device:" >&2
+      xcrun simctl list devices available | awk -v want="$name" '
+          /^-- / { rt = $0; gsub(/^-- | --$/, "", rt); next }
+          match($0, /\([0-9A-Fa-f-]{36}\)/) {
+            dev = substr($0, 1, RSTART - 1); gsub(/^ +| +$/, "", dev)
+            if (dev == want) print "       " rt
+          }' | sort -u >&2
+      echo "     Fix: correct \"runtime\" in $CONFIG, or install that runtime in Xcode > Settings > Components." >&2
+    else
+      echo "     Available devices:" >&2
+      xcrun simctl list devices available | awk '
+          match($0, /\([0-9A-Fa-f-]{36}\)/) {
+            dev = substr($0, 1, RSTART - 1); gsub(/^ +| +$/, "", dev); print "       " dev
+          }' | sort -u >&2
+      echo "     Fix: edit \"devices\" in $CONFIG, or add one in Xcode > Window > Devices and Simulators." >&2
+    fi
     exit 1
   fi
+
+  if [ "$count" -gt 1 ]; then
+    echo "sim: '$name' is ambiguous — it exists on $count runtimes:" >&2
+    printf '%s\n' "$matches" | awk -F'\t' '{ print "       " $1 }' >&2
+    echo "     Refusing to guess: picking one silently would run every capture, dump, and flow" >&2
+    echo "     against the wrong OS and report nothing." >&2
+    echo "     Fix: set \"runtime\" in $CONFIG to the one you mean, e.g. \"runtime\": \"$(printf '%s\n' "$matches" | head -1 | cut -f1)\"" >&2
+    exit 1
+  fi
+
+  udid=$(printf '%s\n' "$matches" | head -1 | cut -f2)
   echo "$udid"
 }
 
