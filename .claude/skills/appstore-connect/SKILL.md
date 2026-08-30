@@ -34,7 +34,7 @@ docs/store/
   metadata/
     en-US/   name.txt subtitle.txt description.txt keywords.txt promotional_text.txt
              release_notes.txt privacy_url.txt support_url.txt [marketing_url.txt]
-             screenshot-captions.txt        # `id: Caption` lines — the per-locale caption strings
+             screenshot-captions.txt        # `id: Caption [| Subtitle]` lines — the per-locale strings
     es-MX/   …                              # second locale (the acceptance test for locale-keying)
     copyright.txt  primary_category.txt  [secondary_category.txt]
     review_information/  first_name.txt last_name.txt email_address.txt phone_number.txt
@@ -42,11 +42,12 @@ docs/store/
   screenshots/{locale}/  {order}_{class}_{id}.png     # 1_iphone69_home.png, 1_ipadPro13_home.png …
   screenshots.md         # the plan (table) — the human review gate for ASSETS
   frames/                # USER-SUPPLIED bezels: iphone69.png, ipadPro13.png [, {class}-landscape.png, frames.json]
+  template.json          # OPTIONAL per-project screenshot styling; absent = the plain default
   products.md            # subscription groups / subscriptions / one-time IAPs
 ```
 
 Scripts beside this file (`{skills_path}/.claude/skills/appstore-connect/`, where `{skills_path}` is `.leanwheel/manifest.json` → `skills_path`, or the directory containing this SKILL.md):
-- **`compose.swift`** — `swift compose.swift --locale en-US [--store-dir docs/store] [--captures .leanwheel/sim/store] [--only id,id] [--dry-run]`. Plan × devices → framed, captioned PNGs at exact store size. Validates *everything* first and writes nothing on any error. On a full (non-`--only`, non-`--dry-run`) run it also **clears the locale's stale output first** — files matching its own `{order}_{class}_{id}.png` pattern that the current plan won't rewrite — so a reordered/renamed/deleted plan row can't leave an orphan behind. Never hand-`rm` the output dir.
+- **`compose.swift`** — `swift compose.swift --locale en-US [--store-dir docs/store] [--captures .leanwheel/sim/store] [--only id,id] [--dry-run]`. Plan × devices → framed, captioned PNGs at exact store size. Validates *everything* first and writes nothing on any error. Styling is the optional `{store-dir}/template.json` (Step 3b); with no template it renders the built-in plain style unchanged. On a full (non-`--only`, non-`--dry-run`) run it also **clears the locale's stale output first** — files matching its own `{order}_{class}_{id}.png` pattern that the current plan won't rewrite — so a reordered/renamed/deleted plan row can't leave an orphan behind. Never hand-`rm` the output dir.
 - **`asc-lint.sh`** — `bash asc-lint.sh [docs/store] [--locale ll-RR] [--no-network] [--quiet]`; exit 1 on ERROR. Also scaffolded into projects as `.claude/hooks/asc-lint.sh` (advisory PostToolUse on any `docs/store/` write; `/setup` Step 3e / `/upgrade-project`). Prefer the project hook copy when present.
 
 ---
@@ -97,13 +98,30 @@ Pipeline: `sim.sh shots --store` (one call per plan row → native captures, lig
    |---|----|-------|------|------------|-------------|---------|
    | 1 | home | home | heavy | light | portrait | iphone69,ipadPro13 |
    ```
-   Write the caption strings to `metadata/{locale}/screenshot-captions.txt` (`home: See every job at a glance`) — ≤ 40 chars, a benefit not a feature name, sentence case, no trailing period. **Stop here for review**: "Edit the plan/captions if you want, then say continue." Composition is deterministic after this; the words are the only judgment.
+   Write the caption strings to `metadata/{locale}/screenshot-captions.txt` (`home: See every job at a glance`) — ≤ 40 chars, a benefit not a feature name, sentence case, no trailing period. A line may carry an optional **subtitle** after a `|` (`home: See every job at a glance | Sorted by drive time`); the subtitle renders only where `template.json` gives it a slot, and **a missing subtitle is legal** (its slot is simply left empty). A missing *caption* is still an error. **Stop here for review**: "Edit the plan/captions if you want, then say continue." Composition is deterministic after this; the words are the only judgment.
 3. **Capture** — one `shots --store` call per row, per locale:
    ```bash
    scripts/sim.sh shots {id} --store --route {route} --seed {seed} --locale {locale} \
      --devices {devices} --appearances {appearance} [--orientation landscape]
    ```
    `--store` forces native pixels, `large` text size only, verifies each capture's pixel size against the accepted table and **dies** on a non-6.9"/13" device. It also runs in **release-parity mode automatically** (implies `--assetcapture`), so DEBUG-only affordances the shipped app lacks cannot reach a store screenshot (Guideline 2.3.3) — the app must honour the flag via `LaunchArguments.showsDebugAffordances` (`docs/setup/swift/testability.md` ▸ `--assetcapture`). If a capture still shows a developer-only control, the app side is missing, not the script. A capture that looks like the launch screen is a dropped route until proven otherwise (`docs/setup/swift/simulator.md` ▸ When it goes wrong).
+3b. **Styling (optional)** — `docs/store/template.json`. **Absent, empty, or not mentioned by the user ⇒ do nothing**: compose renders its built-in plain style (neutral background, centred caption, device fitted below it), byte for byte what it has always produced. Only create one when the project actually wants its brand in the screenshots; never scaffold an empty one "to be filled in later", and never copy another project's — this file is the *only* place a project's colours live, and `compose.swift` is shared by every project via symlink.
+
+   Present ⇒ merged over the defaults **per key**, so overriding `colors.light.background` alone is valid and leaves everything else at its default. What it can set:
+
+   | Group | Keys |
+   |---|---|
+   | `colors.{light,dark}` | `background` `caption` `subtitle` `panel` `lockup` — opaque `#RRGGBB` |
+   | `lockup` | `enabled` `text` `icon.{light,dark}` (paths relative to the store dir) `iconCornerRadiusFraction` |
+   | `caption` / `subtitle` | `align` (left\|center\|right) `maxLines` `maxChars` `weight` |
+   | `autoShrink` | `step` `floor` — caption and subtitle shrink **independently** |
+   | `panel` / `device` / `shadow` | `panel.{enabled,bleedsToBottom}` · `device.{bleedsOffBottom,clipCaptureToBezel}` · `shadow.{enabled,opacityLight,opacityDark}` |
+   | `geometry.{iphone69,ipadPro13}` | per-class layout — **every value is a fraction of canvas W or H, never a pixel** (the two classes differ too much in aspect for pixels to carry); leading/tracking are multiples of the font size |
+
+   Two behaviours are opt-in because no number expresses the old layout: setting `deviceTop` + `deviceWidth` **pins** the device (it may bleed off the bottom and clip) instead of fitting it below the caption, and setting `textBlockTop` + `textBlockBottom` gives the caption and subtitle **fixed slots** so the subtitle — and therefore the device — sits at the same height across the whole set instead of reflowing.
+
+   A malformed template is a **hard, named error that writes nothing** — an unknown key (i.e. a typo), a bad type, a fraction outside 0…1, a bad hex colour, or a missing icon file each name their own dotted path. It never silently falls back to the plain style. Validate cheaply with `compose.swift --dry-run` (or `asc-lint.sh`) before a real run.
+
 4. **Compose** — `swift {skills_path}/.claude/skills/appstore-connect/compose.swift --locale {locale} --dry-run`, then without `--dry-run`. All-or-nothing: any missing capture / frame / caption is listed in one report and nothing is written. Outputs `docs/store/screenshots/{locale}/{#}_{class}_{id}.png`, exact size. The full run prunes stale output for that locale before writing (reported as `compose: removed N stale screenshots`), so the directory always matches the plan — do **not** `rm -rf` it first.
 5. **Verify + lint** — open two outputs with the Read tool (caption legible, bezel aligned, no launch screen); run `asc-lint.sh --locale {locale}` (checks sizes, ≤ 10 per class, and warns on any screenshot with no matching `screenshots.md` row — an orphan from a hand-composed or pre-prune run).
 6. **Previews (optional, on request):** record while a flow runs — `xcrun simctl io <udid> recordVideo --codec h264 docs/store/previews/{locale}/{id}.mp4 &` then `scripts/sim.sh flow <FlowName>`; stop the recording with SIGINT. Real footage only (no post-processing beyond trimming); App Store preview lengths 15–30 s. Not automated in v1.

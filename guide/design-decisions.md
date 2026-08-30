@@ -515,3 +515,41 @@ rewrites the block in place, and a block with **no** marker is a CONFLICT — a 
 whose block may carry hand-added rules, so it is diffed and offered, never overwritten.
 `/refresh-swift` must bump `vN` whenever the block changes; leaving it unchanged means no existing
 project ever receives the update, which is the failure the marker exists to prevent.
+
+### DD-68 — Optional per-project styling defaults to the *old code path*, not to a re-derivation of it
+
+`compose.swift` is shared by every project via symlink, so a project that wants its brand in its
+App Store screenshots cannot get there by editing it — one project's green would leak into every
+other project's renders. Styling therefore lives in an **optional** `docs/store/template.json`,
+merged over the built-in plain style per key.
+
+The hard part is not the styling, it is the *absence* of styling. Every project that already
+composes screenshots must be unaffected, and "unaffected" has to mean byte-identical output, not
+"looks the same" — a silent few-pixel shift in a committed, tracked PNG surfaces to nobody. Two
+rules make that hold:
+
+**Defaults are the original expressions, not equivalent-looking ones.** Where a default could be
+written either as the old literal or as a value in the new vocabulary, it is written as the old
+literal. The auto-shrink multiplier is stored as `0.94`, not derived as `1 - 0.06`, because those
+are different doubles and would walk a different shrink sequence on any caption long enough to
+shrink. Tracking is omitted from the attributed string entirely when it is zero rather than set to
+zero, because an attribute that is present at all can perturb line breaking.
+
+**Where no number can express the old behaviour, the default is `nil`, not a number.** Absent
+`captionLeading` means "line height from font metrics × 1.12"; absent `deviceTop`/`deviceWidth`
+means "fit the device into the space left below the caption" — a behaviour with no fractional
+expression. Setting them opts into the new behaviour (explicit leading, a pinned device that may
+bleed off the canvas edge). This is what lets a project override `colors.light.background` alone
+and change *only* that.
+
+The corollary is that a rendering change must never be gated on "a template exists". A first
+attempt clipped the capture to the bezel silhouette whenever a template was present; that made
+mere presence a rendering switch, so a colours-only template silently altered unrelated pixels in
+the dark appearance. It became an explicit key (`device.clipCaptureToBezel`) defaulting to whether
+a panel is drawn — the condition that actually makes the difference visible.
+
+**A malformed template is a hard, named error that writes nothing**, including an unknown key,
+which is how a typo (`backgronud`) fails loudly instead of silently keeping a default. Falling
+back to the plain style on a bad template would be the worst outcome available: a wrong-looking
+set that reports success. Validation is shallow-checked cheaply by `asc-lint.sh` (hex, fractions,
+icon paths) and owned fully by `compose.swift`, which has a real JSON parser.
