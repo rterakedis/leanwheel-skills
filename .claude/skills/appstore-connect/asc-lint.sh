@@ -12,6 +12,9 @@
 #   - screenshot-captions.txt vs the id column of ../screenshots.md
 #   - screenshots/{locale}/*.png filename shape + pixel size vs the accepted
 #     table below (via `sips`), per-class count warning
+#   - template.json (optional styling), shallow: object shape, balanced braces,
+#     opaque 6-digit hex colours, canvas fractions in 0...1, icon paths resolve.
+#     compose.swift owns the full schema (unknown keys, types, coherence).
 #
 # Apple limits (chars, not bytes — counted with LC_ALL=en_US.UTF-8 `wc -m`,
 # one trailing newline stripped, so é/ñ/emoji each count as 1):
@@ -301,10 +304,26 @@ for loc in $LOCALES; do
           finding ERROR "$loc/screenshot-captions.txt: no caption for id \"$id\""
         else
           cap_text="${cap_line#*:}"
-          cap_text="$(printf '%s' "$cap_text" | sed -e 's/^[[:space:]]*//')"
+          # An optional subtitle follows the first '|'; measure the caption alone.
+          sub_text=""
+          case "$cap_text" in
+            *"|"*)
+              sub_text="${cap_text#*|}"
+              cap_text="${cap_text%%|*}"
+              ;;
+          esac
+          cap_text="$(printf '%s' "$cap_text" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          sub_text="$(printf '%s' "$sub_text" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          if [ -z "$cap_text" ]; then
+            finding ERROR "$loc/screenshot-captions.txt: caption for \"$id\" is empty (a missing subtitle is legal, a missing caption is not)"
+          fi
           n=${#cap_text}
           if [ "$n" -gt 40 ]; then
             finding WARN "$loc/screenshot-captions.txt: caption for \"$id\" is $n chars (>40, may wrap/shrink)"
+          fi
+          n_sub=${#sub_text}
+          if [ "$n_sub" -gt 60 ]; then
+            finding WARN "$loc/screenshot-captions.txt: subtitle for \"$id\" is $n_sub chars (>60, may wrap/shrink)"
           fi
         fi
       done
@@ -413,6 +432,91 @@ for loc in $LOCALES; do
     done
   fi
 done
+
+# ---------------------------------------------------------------------------
+# template.json (optional per-project screenshot styling)
+#
+# Deliberately SHALLOW. compose.swift owns the real schema — it has a JSON parser and
+# rejects unknown keys, bad types and incoherent pairs by dotted path. Re-implementing
+# that in bash 3.2 without jq would be a lot of fragile code for no extra safety, and
+# `compose.swift --dry-run` is already a zero-cost full validation.
+#
+# What is worth catching here is the subset that is cheap to see and expensive to hit
+# late: a file that is not an object, unbalanced braces, a colour that is not opaque
+# 6-digit hex, a canvas fraction outside 0...1, and an icon path that does not resolve.
+# The hook runs on every docs/store/ write, so these surface as you type rather than at
+# compose time.
+# ---------------------------------------------------------------------------
+TMPL="$STORE_DIR/template.json"
+if [ -f "$TMPL" ] && [ -s "$TMPL" ]; then
+  # An all-whitespace file is "no template" (same as absent) and is not a finding.
+  if [ -n "$(tr -d '[:space:]' < "$TMPL")" ]; then
+    if [ "$(tr -d '[:space:]' < "$TMPL" | cut -c1)" != "{" ]; then
+      finding ERROR "template.json: top level must be a JSON object"
+    fi
+    ob="$(tr -cd '{' < "$TMPL" | wc -c | tr -d ' ')"
+    cb="$(tr -cd '}' < "$TMPL" | wc -c | tr -d ' ')"
+    if [ "$ob" != "$cb" ]; then
+      finding ERROR "template.json: unbalanced braces ($ob '{' vs $cb '}')"
+    fi
+
+    # --- colours: the five per-appearance keys, string values only -------------
+    colour_lines="$(tr ',' '\n' < "$TMPL" \
+                    | grep -E '"(background|caption|subtitle|panel|lockup)"[[:space:]]*:[[:space:]]*"' || true)"
+    while IFS= read -r line; do
+      [ -n "$line" ] || continue
+      val="$(printf '%s' "$line" | sed -e 's/.*:[[:space:]]*"//' -e 's/".*//')"
+      case "$val" in
+        '#'[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]) ;;
+        *) finding ERROR "template.json: colour \"$val\" is not an opaque 6-digit hex like \"#26803D\" (output has no alpha channel)" ;;
+      esac
+    done <<EOF
+$colour_lines
+EOF
+
+    # --- canvas fractions must be 0...1 --------------------------------------
+    # Only keys that are true fractions of W/H. Tracking is negative and leading is
+    # > 1 by design, so they are NOT range-checked here.
+    frac_keys='sideInset|lockupTop|lockupIconSize|lockupIconTextGap|lockupTextSize|captionTop|captionSize|captionColumnWidth|gapCaptionToSubtitle|subtitleSize|subtitleColumnWidth|textBlockTop|textBlockBottom|panelX|panelWidth|panelTop|panelTopCornerRadius|deviceWidth|deviceTop|shadowOffsetY|shadowBlur|iconCornerRadiusFraction|opacityLight|opacityDark|step|floor'
+    frac_lines="$(tr ',' '\n' < "$TMPL" \
+                  | grep -E "\"($frac_keys)\"[[:space:]]*:[[:space:]]*-?[0-9]" || true)"
+    while IFS= read -r line; do
+      [ -n "$line" ] || continue
+      # Pull the matched "key": value pair itself — the line may open with outer
+      # objects ({ "geometry": { "iphone69": { "panelTop": 1.4 ...), and taking the
+      # first quoted token there would name 'geometry' instead of the real key.
+      pair="$(printf '%s' "$line" \
+              | grep -oE "\"($frac_keys)\"[[:space:]]*:[[:space:]]*-?[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?" \
+              | head -1)"
+      [ -n "$pair" ] || continue
+      key="$(printf '%s' "$pair" | sed -e 's/^"//' -e 's/".*//')"
+      val="$(printf '%s' "$pair" | sed -e 's/.*:[[:space:]]*//')"
+      bad="$(awk -v v="$val" 'BEGIN { print (v + 0 < 0 || v + 0 > 1) ? "1" : "0" }')"
+      if [ "$bad" = "1" ]; then
+        finding ERROR "template.json: '$key' is $val — every geometry value is a fraction of the canvas and must be in 0...1"
+      fi
+    done <<EOF
+$frac_lines
+EOF
+
+    # --- lockup icon paths resolve against the store dir ----------------------
+    icon_lines="$(tr ',' '\n' < "$TMPL" \
+                  | grep -E '"(light|dark)"[[:space:]]*:[[:space:]]*"[^"]+\.(png|PNG|jpg|jpeg)"' || true)"
+    while IFS= read -r line; do
+      [ -n "$line" ] || continue
+      p="$(printf '%s' "$line" | sed -e 's/.*:[[:space:]]*"//' -e 's/".*//')"
+      case "$p" in
+        /*) resolved="$p" ;;
+        *)  resolved="$STORE_DIR/$p" ;;
+      esac
+      if [ ! -f "$resolved" ]; then
+        finding ERROR "template.json: lockup icon does not exist: $resolved (paths are relative to the store dir)"
+      fi
+    done <<EOF
+$icon_lines
+EOF
+  fi
+fi
 
 # ---------------------------------------------------------------------------
 # Summary + exit

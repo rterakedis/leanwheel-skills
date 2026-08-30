@@ -16,7 +16,7 @@ Not to be confused with a user project's `docs/project/decisions.md` (owned by t
 - Testing & test plans: DD-30 manual pass at the epic boundary · DD-31 TESTING PLAN split + subtract · DD-32 plan-defect kind · DD-33 done stories immutable · DD-34 testability foundation · DD-35 flow tiering · DD-36 e2e backfill
 - Simulator automation: DD-40 sim.sh + route navigation · DD-41 silent-failure guards · DD-42 orientation · DD-43 store preset · DD-44 sim.json committed · DD-45 release parity for store captures · DD-46 vendored-script drift is reported, never silent · DD-47 runtime pin + ambiguity guard
 - Planning & docs: DD-50 planning consolidation · DD-51 pinned story frontmatter · DD-52 design contract decoupled from docs/ux · DD-53 simplicity doctrine placement · DD-54 CLAUDE.md tiers & budget · DD-55 epic archive · DD-56 dark patterns · DD-57 doc-free lane · DD-58 architecture promotion
-- Packaging: DD-60 hooks for hard rules · DD-61 no project names · DD-62 ledger via ledger.sh · DD-63 quiet toolchain output · DD-68 status line over IDE extension
+- Packaging: DD-60 hooks for hard rules · DD-61 no project names · DD-62 ledger via ledger.sh · DD-63 quiet toolchain output · DD-68 optional styling via template.json · DD-69 status line over IDE extension
 
 ---
 
@@ -516,7 +516,45 @@ whose block may carry hand-added rules, so it is diffed and offered, never overw
 `/refresh-swift` must bump `vN` whenever the block changes; leaving it unchanged means no existing
 project ever receives the update, which is the failure the marker exists to prevent.
 
-### DD-68 — Project status is a status line and a GitHub view, not a VS Code extension
+### DD-68 — Optional per-project styling defaults to the *old code path*, not to a re-derivation of it
+
+`compose.swift` is shared by every project via symlink, so a project that wants its brand in its
+App Store screenshots cannot get there by editing it — one project's green would leak into every
+other project's renders. Styling therefore lives in an **optional** `docs/store/template.json`,
+merged over the built-in plain style per key.
+
+The hard part is not the styling, it is the *absence* of styling. Every project that already
+composes screenshots must be unaffected, and "unaffected" has to mean byte-identical output, not
+"looks the same" — a silent few-pixel shift in a committed, tracked PNG surfaces to nobody. Two
+rules make that hold:
+
+**Defaults are the original expressions, not equivalent-looking ones.** Where a default could be
+written either as the old literal or as a value in the new vocabulary, it is written as the old
+literal. The auto-shrink multiplier is stored as `0.94`, not derived as `1 - 0.06`, because those
+are different doubles and would walk a different shrink sequence on any caption long enough to
+shrink. Tracking is omitted from the attributed string entirely when it is zero rather than set to
+zero, because an attribute that is present at all can perturb line breaking.
+
+**Where no number can express the old behaviour, the default is `nil`, not a number.** Absent
+`captionLeading` means "line height from font metrics × 1.12"; absent `deviceTop`/`deviceWidth`
+means "fit the device into the space left below the caption" — a behaviour with no fractional
+expression. Setting them opts into the new behaviour (explicit leading, a pinned device that may
+bleed off the canvas edge). This is what lets a project override `colors.light.background` alone
+and change *only* that.
+
+The corollary is that a rendering change must never be gated on "a template exists". A first
+attempt clipped the capture to the bezel silhouette whenever a template was present; that made
+mere presence a rendering switch, so a colours-only template silently altered unrelated pixels in
+the dark appearance. It became an explicit key (`device.clipCaptureToBezel`) defaulting to whether
+a panel is drawn — the condition that actually makes the difference visible.
+
+**A malformed template is a hard, named error that writes nothing**, including an unknown key,
+which is how a typo (`backgronud`) fails loudly instead of silently keeping a default. Falling
+back to the plain style on a bad template would be the worst outcome available: a wrong-looking
+set that reports success. Validation is shallow-checked cheaply by `asc-lint.sh` (hex, fractions,
+icon paths) and owned fully by `compose.swift`, which has a real JSON parser.
+
+### DD-69 — Project status is a status line and a GitHub view, not a VS Code extension
 
 The recurring suggestion is an IDE panel showing epic/story progress, in the shape of the
 several community dashboards built around the upstream method. The pain behind it is real and
