@@ -66,7 +66,7 @@ docs/store/
   metadata/
     en-US/   name.txt subtitle.txt description.txt keywords.txt promotional_text.txt
              release_notes.txt privacy_url.txt support_url.txt [marketing_url.txt]
-             screenshot-captions.txt        # `id: Caption` lines — the per-locale caption strings
+             screenshot-captions.txt        # `id: Caption [| Subtitle]` lines — the per-locale strings
     es-MX/   …                              # second locale (the acceptance test for locale-keying)
     copyright.txt  primary_category.txt  [secondary_category.txt]
     review_information/  first_name.txt last_name.txt email_address.txt phone_number.txt
@@ -74,6 +74,7 @@ docs/store/
   screenshots/{locale}/  {order}_{class}_{id}.png     # 1_iphone69_home.png, 1_ipadPro13_home.png …
   screenshots.md         # the plan (table) — the human review gate for ASSETS
   frames/                # USER-SUPPLIED bezels: iphone69.png, ipadPro13.png [, {class}-landscape.png, frames.json]
+  template.json          # OPTIONAL per-project styling; absent = the plain default (see Styling)
   products.md            # subscription groups / subscriptions / one-time IAPs
 ```
 
@@ -87,6 +88,22 @@ docs/store/
 
 **`screenshot-captions.txt` shape** (per locale, `id: Caption`, ≤ 40 chars, benefit not
 feature name, sentence case, no trailing period): `home: See every job at a glance`.
+A line may add an optional **subtitle** after the first `|` —
+`home: See every job at a glance | Sorted by drive time`. The subtitle renders only where
+`template.json` gives it a slot; a **missing subtitle is legal**, a missing caption is not.
+
+**`template.json` (optional styling).** Absent or empty ⇒ the built-in plain style, byte for
+byte what compose has always produced — the property every existing project depends on. Present
+⇒ merged over those defaults **per key**, so `colors.light.background` can be overridden alone.
+It sets `colors.{light,dark}.{background,caption,subtitle,panel,lockup}`, `lockup`
+(icon + wordmark), `caption`/`subtitle` (align, maxLines, maxChars, weight), `autoShrink`,
+`panel`, `device`, `shadow`, and `geometry.{iphone69,ipadPro13}` — where **every value is a
+fraction of canvas W or H**, never a pixel, because the two classes differ too much in aspect
+(0.46 vs 0.75) for pixels to carry. Setting `deviceTop`+`deviceWidth` pins the device (it may
+bleed off the bottom and clip) instead of fitting it below the caption; setting
+`textBlockTop`+`textBlockBottom` gives caption and subtitle fixed slots so the device sits at
+the same height across the set. A malformed template — unknown key included — is a **named
+error that writes nothing**, never a silent fall back to plain. See DD-68.
 
 **`products.md` shape** (markdown tables — human-editable, greppable):
 
@@ -194,7 +211,11 @@ A spec for an App Store Connect authoring lane in leanwheel-skills — the artif
 - 2026-08-16 — This file (`guide/appstore-connect.md`) is the decision log's home and the build brief; it will be rewritten as user documentation once the skill ships — why: this repo ships skills, not `docs/` planning docs, so `/spec` has no render target; one committed living doc serves both roles — source: /ideate
 - 2026-08-16 — Build-time implementation choices (grilled, settled): products.md = markdown tables; plan = one markdown table `# | id | route | seed | appearance | orientation | devices` + `id: caption` lines per locale; bezels user-supplied (ADR ships no fetchable PNGs) with alpha auto-detect + frames.json override, missing bezel = hard stop; linter = bash asc-lint.sh (hook-fast), one file in two places (skill + hooks stub); store classes iphone69 = iPhone 17 Pro Max 1320×2868, ipadPro13 = iPad Pro 13-inch (M5) 2064×2752 via sim.json store_devices; one `shots --store` call per plan row — source: build session
 
+- 2026-08-29 — Per-project screenshot **styling** is an optional `docs/store/template.json`, merged over the built-in plain style **per key** (colours, lockup, panel, shadow, per-class geometry as canvas fractions; captions gain an optional `| Subtitle`). Absent, empty, or malformed-and-rejected ⇒ the plain default renders byte-identically; a malformed template is a named error that writes nothing, unknown keys included, so a typo cannot silently downgrade a branded set to plain. Defaults are the *original expressions* rather than equivalents (`0.94`, not `1 - 0.06`), and keys whose absence selects an unexpressible old behaviour default to nil (`captionLeading`, `deviceTop`+`deviceWidth`, `textBlockTop`+`textBlockBottom`) — why: `compose.swift` is symlink-shared by every project, so one project's brand must be impossible to leak into another's renders, and the no-template path is the one every existing project already depends on. See DD-68 — source: build session
+- 2026-08-29 — No rendering behaviour may be gated on "a template exists". The bezel-silhouette capture clip (which stops the capture spilling into the corner slivers the bezel does not cover — invisible against the plain near-white background, glaring behind a coloured panel) is the explicit key `device.clipCaptureToBezel`, defaulting to whether a panel is drawn — why: gating it on template *presence* made a colours-only template silently change unrelated pixels in the other appearance, breaking the per-key override guarantee — source: build session
+
 ## Rejected
+- 2026-08-29 — Re-implementing the full `template.json` schema in `asc-lint.sh` — why: bash 3.2 with no jq/python would need a lot of fragile pseudo-parsing for no safety gain, since `compose.swift --dry-run` already validates completely and for free. The linter keeps only the cheap checks worth catching as you type: object shape, balanced braces, opaque 6-digit hex, canvas fractions in 0…1, icon paths resolve — source: build session
 - 2026-08-15 — fastlane (deliver/snapshot/frameit/precheck) as the upload/capture layer — why: Ruby gem toolchain on the maintainer's Mac is unwanted; leanwheel tooling must stay zero-dependency (bash/curl/openssl/xcrun/sips only, the `sim.sh` posture) — source: /ideate
 - 2026-08-15 — AI image-enhancement stage for screenshots (Gemini/Nano-Banana-style, as in adamlyttle's skill) — why: nondeterministic, external MCP dependency, and Guideline 2.3.3 (screenshots must show the real UI) makes embellishment a rejection risk — source: /ideate
 - 2026-08-15 — HTML/CSS + headless-browser composition and Python/Pillow composition — why: renderer (Chrome) / library (Pillow) aren't guaranteed-present; Swift is on every submitting machine — source: /ideate
