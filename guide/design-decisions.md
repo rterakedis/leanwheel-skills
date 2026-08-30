@@ -590,11 +590,22 @@ It would also reintroduce the build → package → install → restart cycle th
 setup exists to avoid.
 
 **What ships instead.** In order of value: (1) a status line rendering
-`Epic 3 ▸ 5/8 ▸ 3.6 in-progress` from cached `gh` output — zero tokens, always visible, works in
-a bare terminal and in the IDE's integrated terminal alike; (2) the data-gathering half of
-`/status` promoted into `scripts/status.sh`, the same split DD-62 and `gh-track.sh` already make,
-so a human can run it with no agent turn at all; (3) an on-demand HTML render of
-`docs/metrics/flywheel-ledger.jsonl` at epic boundaries, if the charts are ever actually wanted.
+`Epic 3 ▸ 5/8 ▸ 3.6 in-progress` — zero tokens, always visible, works in a bare terminal and in
+the IDE's integrated terminal alike; (2) the data-gathering half of `/status` promoted into
+`scripts/status.sh`, the same split DD-62 and `gh-track.sh` already make, so a human can run it
+with no agent turn at all; (3) an on-demand HTML render of `docs/metrics/flywheel-ledger.jsonl`
+at epic boundaries, if the charts are ever actually wanted.
+
+**As built, (1) and (2) are one script, and it never calls `gh`.** This entry originally assumed
+the status line would render *cached `gh` output*, which would have meant a cache file, a TTL, a
+staleness window, and a background refresh. It doesn't need any of that: each story's frontmatter
+`status:` is already the source of truth (DD-51) — `github-tracking` SYNC reconciles GitHub *to*
+it, never the reverse — so the same numbers are readable from local files with no network, no
+auth, and nothing to invalidate. Measured ~40ms across 300 story files, against Claude Code's
+300ms status-line debounce. `scripts/status.sh --line` is therefore the status line, `--json`
+feeds other skills, and `--drift` is the single mode that talks to GitHub, comparing the two on
+purpose and routing any mismatch to `/github-tracking sync`. The cheapest version of a caching
+design is usually the one that discovers it had a local source of truth all along.
 
 **For the IDE glance specifically, configure the extension that already exists.** Microsoft's
 GitHub Pull Requests and Issues extension has an Issues view whose `githubIssues.queries` setting
