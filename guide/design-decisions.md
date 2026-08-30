@@ -16,7 +16,7 @@ Not to be confused with a user project's `docs/project/decisions.md` (owned by t
 - Testing & test plans: DD-30 manual pass at the epic boundary · DD-31 TESTING PLAN split + subtract · DD-32 plan-defect kind · DD-33 done stories immutable · DD-34 testability foundation · DD-35 flow tiering · DD-36 e2e backfill
 - Simulator automation: DD-40 sim.sh + route navigation · DD-41 silent-failure guards · DD-42 orientation · DD-43 store preset · DD-44 sim.json committed · DD-45 release parity for store captures · DD-46 vendored-script drift is reported, never silent · DD-47 runtime pin + ambiguity guard
 - Planning & docs: DD-50 planning consolidation · DD-51 pinned story frontmatter · DD-52 design contract decoupled from docs/ux · DD-53 simplicity doctrine placement · DD-54 CLAUDE.md tiers & budget · DD-55 epic archive · DD-56 dark patterns · DD-57 doc-free lane · DD-58 architecture promotion
-- Packaging: DD-60 hooks for hard rules · DD-61 no project names · DD-62 ledger via ledger.sh · DD-63 quiet toolchain output
+- Packaging: DD-60 hooks for hard rules · DD-61 no project names · DD-62 ledger via ledger.sh · DD-63 quiet toolchain output · DD-68 status line over IDE extension
 
 ---
 
@@ -515,3 +515,72 @@ rewrites the block in place, and a block with **no** marker is a CONFLICT — a 
 whose block may carry hand-added rules, so it is diffed and offered, never overwritten.
 `/refresh-swift` must bump `vN` whenever the block changes; leaving it unchanged means no existing
 project ever receives the update, which is the failure the marker exists to prevent.
+
+### DD-68 — Project status is a status line and a GitHub view, not a VS Code extension
+
+The recurring suggestion is an IDE panel showing epic/story progress, in the shape of the
+several community dashboards built around the upstream method. The pain behind it is real and
+well stated by one of those authors: *"Every morning I was spending 5 minutes of tokens just
+asking my AI agent 'where did I leave off?'"* That is a **token and latency** cost, not a
+visualization gap — and the two have very different cheapest fixes.
+
+**Why not an extension.** Three things argue against it, in increasing order of weight.
+
+*The category does not retain.* Upstream has 43K stars and at least six independent,
+non-converging dashboards — two marketplace extensions, a third viewer extension, a terminal
+tracker, a hosted web UI, and the official one. Community response to their announcement threads
+was 1 reaction / 0 comments and 5 reactions / 0 comments; the official extension repo sits at 25
+stars. Six people each built their own rather than adopt an existing one, which is the signature
+of a scratch-your-own-itch category rather than a demand curve. Marketplace-wide, the median
+extension has ~500 installs against a ~55K mean.
+
+*The industry moved the other way.* CodeStream — the best-funded attempt at pulling project and
+observability context into the editor — reaches end of life in November 2026, and its vendor's
+stated replacement is not another panel but an MCP server feeding the same data to the coding
+agent. Meanwhile the core loop is leaving the IDE for terminal-native agents. A panel optimizes
+for a glance away from the terminal, in a workflow trending toward the terminal being the whole
+surface.
+
+*The pain is already solved here, twice.* The upstream dashboards exist because that method's
+state lives in local markdown with no viewer at all; building one is the only way to see it.
+Leanwheel's state lives in **GitHub milestones and issues**, which have several viewers already,
+and in `/status`, which renders the same data plus the next command. The genuinely novel thing an
+extension would add over `/status` is *"visible without spending a turn"* — and a status line
+does that for a few hours of work instead of a permanent TypeScript codebase, second language,
+marketplace listing, and VS Code API churn attached to a repo whose thesis is cutting ceremony.
+It would also reintroduce the build → package → install → restart cycle the symlink-consumption
+setup exists to avoid.
+
+**What ships instead.** In order of value: (1) a status line rendering
+`Epic 3 ▸ 5/8 ▸ 3.6 in-progress` from cached `gh` output — zero tokens, always visible, works in
+a bare terminal and in the IDE's integrated terminal alike; (2) the data-gathering half of
+`/status` promoted into `scripts/status.sh`, the same split DD-62 and `gh-track.sh` already make,
+so a human can run it with no agent turn at all; (3) an on-demand HTML render of
+`docs/metrics/flywheel-ledger.jsonl` at epic boundaries, if the charts are ever actually wanted.
+
+**For the IDE glance specifically, configure the extension that already exists.** Microsoft's
+GitHub Pull Requests and Issues extension has an Issues view whose `githubIssues.queries` setting
+takes GitHub search syntax plus a `groupBy` array accepting `milestone` and `repository` — its
+shipped default already groups by milestone. Epics-as-milestones and stories-as-issues therefore
+render correctly with no code written, and the leanwheel status labels filter cleanly:
+
+```jsonc
+"githubIssues.queries": [
+  { "label": "Epics & stories", "query": "is:open repo:${owner}/${repository}",
+    "groupBy": ["milestone"] },
+  { "label": "Ready for dev",   "query": "is:open label:ready-for-dev repo:${owner}/${repository}",
+    "groupBy": ["milestone"] },
+  { "label": "In progress",     "query": "is:open label:in-progress repo:${owner}/${repository}" },
+  { "label": "In review",       "query": "is:open label:review repo:${owner}/${repository}" }
+]
+```
+
+Its "Start working on issue" action also creates a branch from the issue and (via
+`githubIssues.assignWhenWorking`) self-assigns — the manual half of the story kickoff that
+`/dev-story` otherwise narrates.
+
+**What would reverse this.** Measurable adoption of an existing dashboard extension in this
+category; enough leanwheel users filing "how do I see status without burning a turn" that the
+status line demonstrably doesn't answer it; or a shift to several concurrent agents/epics at once,
+where the need becomes a cross-session fleet view — a different product from an epic/story panel,
+and the one worth reconsidering from scratch.
