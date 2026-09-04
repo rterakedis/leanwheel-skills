@@ -11,12 +11,12 @@ Not to be confused with a user project's `docs/project/decisions.md` (owned by t
 ## Contents
 
 - Principles: DD-01 verifiable artifacts over guardrails · DD-02 contract vs conduct · DD-03 fail loudly
-- Verification: DD-10 verify by running · DD-11 gate integrity · DD-12 Fix-Now · DD-13 evals command-default · DD-14 invariant evidence
-- Orchestration: DD-20 subagent routing · DD-21 non-return rule · DD-22 orchestrator-owned tracking · DD-23 epic-context cache gate · DD-24 docs-sync audiences · DD-25 boundary merge
+- Verification: DD-10 verify by running · DD-11 gate integrity · DD-12 Fix-Now · DD-13 evals command-default · DD-14 invariant evidence · DD-70 evals RUN is a script and the CI seam
+- Orchestration: DD-20 subagent routing · DD-72 effort pinned per runner · DD-21 non-return rule · DD-22 orchestrator-owned tracking · DD-23 epic-context cache gate · DD-24 docs-sync audiences · DD-25 boundary merge
 - Testing & test plans: DD-30 manual pass at the epic boundary · DD-31 TESTING PLAN split + subtract · DD-32 plan-defect kind · DD-33 done stories immutable · DD-34 testability foundation · DD-35 flow tiering · DD-36 e2e backfill
 - Simulator automation: DD-40 sim.sh + route navigation · DD-41 silent-failure guards · DD-42 orientation · DD-43 store preset · DD-44 sim.json committed · DD-45 release parity for store captures · DD-46 vendored-script drift is reported, never silent · DD-47 runtime pin + ambiguity guard
 - Planning & docs: DD-50 planning consolidation · DD-51 pinned story frontmatter · DD-52 design contract decoupled from docs/ux · DD-53 simplicity doctrine placement · DD-54 CLAUDE.md tiers & budget · DD-55 epic archive · DD-56 dark patterns · DD-57 doc-free lane · DD-58 architecture promotion
-- Packaging: DD-60 hooks for hard rules · DD-61 no project names · DD-62 ledger via ledger.sh · DD-63 quiet toolchain output · DD-68 optional styling via template.json · DD-69 status line over IDE extension
+- Packaging: DD-60 hooks for hard rules · DD-71 per-file budget in bytes · DD-61 no project names · DD-62 ledger via ledger.sh · DD-63 quiet toolchain output · DD-68 optional styling via template.json · DD-69 status line over IDE extension
 
 ---
 
@@ -622,3 +622,67 @@ category; enough leanwheel users filing "how do I see status without burning a t
 status line demonstrably doesn't answer it; or a shift to several concurrent agents/epics at once,
 where the need becomes a cross-session fleet view — a different product from an epic/story panel,
 and the one worth reconsidering from scratch.
+
+---
+
+### DD-70 — Evals RUN is a script, and the script is the CI seam
+**Context.** `docs/evals/` was described as costing "zero tokens", and its *execution* did.
+Collection did not: a model had to read every case block in `docs/evals/*.md` to gather the
+cases and group them by identical `run:` command. That read grows with every story, so the
+one gate designed to get cheaper as the project matured was quietly getting more expensive —
+the same accretion `epic-archive` exists to stop, in a different file.
+
+Separately, the regression net was reachable only from inside a Claude session. As an add-in,
+leanwheel cannot ship a pipeline config: the project's CI could be GitHub Actions, Jenkins,
+GitLab, or a pre-push hook, and guessing wrong is worse than not guessing.
+
+**Decision.** `scripts/evals.sh` owns collection, batching, assertion and reporting. RUN is one
+shell call whose cost does not scale with the case count, and skills **never** read
+`docs/evals/*.md` to run the set. The script exits 0 green / 1 on regressions / 2 on usage, and
+its last line *is* the RUN report other skills quote. Whatever the project uses for CI calls it;
+leanwheel ships the contract, not the pipeline.
+
+**Consequence.** The eval-case format now has a real parser, so it is a schema rather than a
+convention — the script owns batching by identical `run:`, empty-output failure, README
+exclusion, and the rule that a malformed case (`enabled: true` with no `run:`, an unparseable
+`expect:`) is a **failure** and never a silent skip. Changing the case format means changing the
+script. The Simulator-batching rule moved from prose the model had to honor into behavior it
+cannot bypass.
+
+### DD-71 — The per-file budget is measured in bytes, not lines
+**Context.** SKILL.md files carried a 300-line ceiling. Measuring the repo showed line count and
+token cost are close to uncorrelated across it: `epic-flywheel` sat at 263 lines and ~6,450
+tokens — the most expensive file in the repo, and formally compliant — while `swift-audit` at
+355 lines and ~3,816 tokens was carried as debt. A step-list skill wraps at 60 characters; a
+table-and-prose skill runs to 200. Ranking by lines put the cheapest file in the penalty box
+and cleared the most expensive one.
+
+**Decision.** Budget in bytes: **20 KB** per `SKILL.md`, **4 KB** per `agents/*.md`. Check with
+`find .claude/skills -name SKILL.md -size +20k`.
+
+**Consequence.** The debt list changed membership, not just order — `dev-story` and both
+`appstore-*` skills entered it, `swift-audit` and `setup` left. Two fixes apply and are not
+interchangeable: branch-conditional bulk routes out to sibling reference files (nothing lost),
+while conduct prose gets cut (Claude 5 guidance says carried-over verification instructions
+cause over-verification, so some of it is not merely costly but counterproductive).
+
+### DD-72 — Effort is pinned per subagent, never inherited
+**Context.** Model routing had a cost ceiling — Opus, never Fable — but effort was left to
+inherit the session default, on the reasoning that changing it busts the prompt cache. That
+reasoning holds *within* a conversation and not across spawns: a subagent starts its own
+conversation, so pinning its effort costs the orchestrator no cache at all. Meanwhile
+inheritance was a hole straight through the ceiling — a `max`-effort session leaked `max` into
+every phase, which is precisely what pinning the model was meant to prevent. On 5-series models
+effort is the primary cost control and governs *all* output tokens, thinking and tool calls
+alike.
+
+**Decision.** Every phase-runner pins `effort:` in its agent def: creator `medium`, developer and
+reviewer `high`, `lw-docs-sync` `low`. The developer is never stepped down to buy budget — lower
+effort also means *fewer tool calls*, which is wrong for a phase whose job is to run gates; use
+the model axis for cost, which is what it is for. (`effort` is inert on Haiku, which does not
+support it; the pin is kept against a future re-tier.)
+
+**Consequence.** Cost is now expressed on two independent axes with one ceiling each. The levels
+are a starting point, not a result: Anthropic's guidance is to sweep effort against your own
+evals rather than carry levels over, and `evals/` is where that sweep belongs.
+

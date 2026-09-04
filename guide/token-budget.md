@@ -91,11 +91,12 @@ Tokens loaded per full run of each skill (skill assets + ceremony; excludes proj
 Several layers added since the original estimate were designed to be **zero-token or off-model**, so they don't appear in the table:
 
 - **Deterministic hooks** (secret guard, design-token guard, activity log) — pure bash, never call a model.
-- **Evals RUN** — the cumulative regression net is `type: command` shell execution; a 50-case eval set costs 0 tokens to run.
+- **Evals RUN** — `scripts/evals.sh` owns collection, batching, assertion and reporting, so a 50-case eval set costs 0 tokens to run *and* 0 to collect. This was previously only half true: execution was free, but a model had to read every case block in `docs/evals/*.md` to gather and group them, a cost that grew with every story. The script also doubles as the CI seam.
 - **Build & Test Gate** — toolchain commands, not model reads; it *saves* tokens by catching regressions that would otherwise trigger re-fix loops.
 - **GitHub tracking** — label transitions moved into `scripts/gh-track.sh` (one shell call replaces a view→parse→edit→verify model round-trip per transition).
 - **Ledger/observability** — shell-append JSONL, never read into context.
 - **docs-sync** — routed to a **Haiku** subagent, so mechanical doc maintenance never lands on the dev model (which is Opus on Swift projects).
+- **Effort routing** — the second cost axis, invisible in every table above because it governs *output* tokens (thinking and tool calls), not the input loads measured here. Each phase-runner pins `effort:` in its agent def (creator `medium`, developer and reviewer `high`, docs-sync `low`) instead of inheriting the session's. A subagent spawn is its own conversation, so pinning costs no prompt cache — and it stops a `max`-effort session leaking past the model cost ceiling into every phase. Per Anthropic's guidance these levels should be swept against `evals/`, not assumed.
 
 ### What session hygiene adds on top
 
@@ -152,15 +153,46 @@ enforced advisorily by `guard-context-budget.sh` at write time and audited by
 The failure mode this document criticizes upstream for — a single 67KB `retrospective`
 SKILL.md — is reachable from here by pure accretion. Each addition is defensible; the sum is not.
 
+**The ceiling is measured in bytes, not lines.** It used to be lines, and that metric was
+measuring the wrong thing: line count and token cost turn out to be close to uncorrelated
+across this repo's skills, because a step-list skill wraps at 60 characters and a
+table-and-prose skill runs to 200.
+
+| Skill | Lines | ~Tokens | Under the old 300-line ceiling? |
+|---|---|---|---|
+| `epic-flywheel` | 263 | **6,450** | yes — and it is the most expensive file in the repo |
+| `dev-story` | 226 | 5,922 | yes |
+| `appstore-connect` | 184 | 5,552 | yes, comfortably |
+| `swift-audit` | 355 | 3,816 | no — flagged as debt at 60% of epic-flywheel's cost |
+
+Ranking by lines put the cheapest of those four in the penalty box and gave the most
+expensive one a clean bill of health. Bytes are what get tokenized, so bytes are the budget.
+
 | Asset | Ceiling | Over it → |
 |---|---|---|
-| `.claude/skills/*/SKILL.md` | **300 lines** | extract to a JIT-loaded reference file in the skill's directory that the skill reads *only when the branch needs it* — never pad the main file |
-| `agents/*.md` | **80 lines** | same: the agent's job list and report contract stay; detail moves to the skill it invokes |
+| `.claude/skills/*/SKILL.md` | **20 KB** (~5,000 tokens) | extract to a JIT-loaded reference file in the skill's directory that the skill reads *only when the branch needs it* — never pad the main file |
+| `agents/*.md` | **4 KB** (~1,000 tokens) | same: the agent's job list and report contract stay; detail moves to the skill it invokes |
 | Stubs (`stubs/**`) | no fixed ceiling — they are project-installed, not per-invocation | keep them one topic per file |
 
-Current debt against the SKILL.md ceiling: `swift-audit` (355) and `setup` (~310). Both are
-step-list skills whose branches are mostly mutually exclusive — the natural fix is routing
-the conditional platform blocks out to reference files, not prose trimming.
+Check it — zero tokens, and it is the same arithmetic the table above was built from:
+
+```bash
+find .claude/skills -name SKILL.md -size +20k -exec ls -l {} + ; find agents -name '*.md' -size +4k -exec ls -l {} +
+```
+
+Current debt against the byte ceiling: `epic-flywheel` (25.8 KB), `dev-story` (23.7 KB),
+`appstore-preflight` (23.1 KB), `story-flywheel` (22.3 KB), `appstore-connect` (22.2 KB),
+and `agents/lw-story-developer.md` (4.9 KB). Two distinct fixes apply, and they are not
+interchangeable:
+
+- **Mutually-exclusive branches** (`appstore-*`, `swift-audit`, `setup`) — route the
+  conditional blocks out to reference files the skill reads only on the branch that needs
+  them. Nothing is lost; it just stops loading unconditionally.
+- **Prose that the model no longer needs** (`dev-story`, and the review passes it carries) —
+  cut it. Current Claude 5 guidance is explicit that carried-over verification instructions
+  cause *over*-verification, so a chunk of this is not just costly but counterproductive.
+  Deterministic gates (`sabotage.sh`, `evals.sh`, the Build & Test Gate) stay; the conduct
+  prose around them is what goes.
 
 ### Bottom line
 

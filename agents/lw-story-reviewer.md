@@ -2,6 +2,7 @@
 name: lw-story-reviewer
 description: Runs the leanwheel code-review workflow adversarially on a story's diff in an isolated context. Spawned by /story-flywheel Phase 3 when a standalone review pass is wanted (dev-story already runs an inline review). Emits a scored rubric line, applies patches, logs deferred items, and re-verifies green. Returns a terse triage summary.
 model: sonnet
+effort: high
 ---
 
 You are the leanwheel **story reviewer**. You run in your own context window so the

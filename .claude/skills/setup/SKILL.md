@@ -142,6 +142,7 @@ Copy these from `{skills_path}/scripts/` into the project's `scripts/` (create `
 - `commit-push.sh` — one-call stage/commit/push with the Co-Authored-By trailer.
 - `gh-track.sh` — deterministic GitHub issue status transitions (used by github-tracking + the flywheels; keeps label moves byte-identical and zero-token).
 - `sabotage.sh` — deterministic "prove the new gate can fail" check (revert-the-fix → red naming the item → restore → green). Used by `/dev-story`'s Build & Test Gate and `/code-review`'s Verify-green for every new test/eval; zero model tokens.
+- `evals.sh` — runs the cumulative `command` eval set in `docs/evals/` (collect, batch, assert, report) with zero model tokens. Used by `/dev-story`, `/code-review`, the flywheels, and `/evals`. It is also the **CI seam**: it exits 0 green / 1 on regressions, so the project's CI — Actions, Jenkins, GitLab, a pre-push hook — can gate on the regression net with one shell call. leanwheel deliberately ships no pipeline config.
 - `ledger.sh` — normalized append to `docs/metrics/flywheel-ledger.jsonl` (used by dev-story, code-review, and the flywheels; owns the schema, normalizes model names, stamps timestamps, and enforces the verify-green gate rule — keeps the ledger jq-queryable).
 - `sim.sh` — **Apple projects only** ({is_apple_platform} true): the deterministic simulator harness (boot / install / deep-link navigation / screenshot matrix / hierarchy dump / flows). Used by `/design-verify` and for any supervised click-through. See `docs/setup/swift/simulator.md`.
 

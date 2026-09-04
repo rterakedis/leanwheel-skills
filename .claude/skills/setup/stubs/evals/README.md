@@ -38,10 +38,39 @@ expect: exit-0                        # exit-0 | output-contains:"..." | output-
 
 ## Running
 
-- `/evals` — run all enabled `command` cases across every epic (zero-token).
-  Cases sharing an identical `run:` command are batched: the command runs once
-  and each case's `expect` is checked against the one combined output — so a
-  Simulator-launching suite costs one launch, not one per case.
+The runner is `scripts/evals.sh` — plain shell, no model involved:
+
+```bash
+bash scripts/evals.sh              # whole cumulative net, every epic
+bash scripts/evals.sh --epic 3     # one epic
+bash scripts/evals.sh --list       # parse and list the cases, run nothing
+```
+
+Exit 0 = green, 1 = one or more regressions, 2 = usage / no eval files. Cases
+sharing an identical `run:` command are batched: the command runs once and each
+case's `expect` is checked against the one combined output — so a
+Simulator-launching suite costs one launch, not one per case.
+
+**Wiring it into CI.** leanwheel ships no pipeline config, because the CI could be
+anything. The script is the contract instead — anything that runs a shell command
+and reads an exit code can gate on the net:
+
+```yaml
+# GitHub Actions
+- run: bash scripts/evals.sh
+```
+
+```groovy
+// Jenkins
+sh 'bash scripts/evals.sh'
+```
+
+```bash
+# .git/hooks/pre-push
+bash scripts/evals.sh || exit 1
+```
+
+- `/evals` — the same run, invoked from a session (zero-token).
 - `/evals --judge` — also run `judge` cases (token cost).
 - `dev-story` and `code-review` run the relevant epic's set automatically as part
   of the Build & Test Gate and Verify-green steps.

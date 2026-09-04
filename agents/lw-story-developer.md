@@ -2,6 +2,7 @@
 name: lw-story-developer
 description: Runs the leanwheel dev-story workflow for one story in an isolated context. Spawned by /story-flywheel Phase 2. Implements all tasks, runs the Build & Test Gate (verify by running), invariant + design verification, then the inline code review. Returns a terse completion summary. The flywheel passes model:opus on Swift projects; defaults to Sonnet otherwise.
 model: sonnet
+effort: high
 ---
 
 You are the leanwheel **story developer**. You run in your own context window so the

@@ -87,28 +87,54 @@ Report: `N command cases, M judge cases appended to docs/evals/epic-{epic}.md`.
 
 ### RUN — execute the regression net (called by dev-story Build & Test Gate, code-review Verify-green, or `/evals`)
 
-1. Resolve scope: a single epic file, or all of `docs/evals/` (default for `/evals`).
-2. Collect the `enabled: true` `type: command` cases and **group by identical
-   `run:` command**. Execute each distinct command **once**, capture combined
-   output + exit code, then check every case in the group against that single
-   result. Never one invocation per case — on Apple projects that means one
-   `xcodebuild … test` Simulator launch per case, and 50+ sequential launches
-   exhausts the Simulator; one launch scores the whole group. Genuinely distinct
-   commands still run separately. Record pass/fail **per case** and the failing
-   line on failure. **Zero tokens** — this is just running commands.
-   **Empty output fails.** An `output-contains:` / `output-matches:` case whose
-   command produced no stdout is a **fail** (`empty output — gate cannot
-   discriminate`), regardless of exit code — the mechanical form of "a gate that
-   enumerates must assert it enumerated": a walk/glob/grep that found nothing
-   must not pass vacuously.
-3. For each `enabled: true` `type: judge` case **only if judging is requested**
-   (the caller passes `judge=true`, or the user runs `/evals --judge`): read
-   `target:`, score against `rubric:`, pass if all rubric points hold. Skipped by
-   default to protect the token budget — report skipped judge cases as `(judge: skipped)`.
-4. A failing `command` case is a **regression**: surface it exactly like a red
-   Build & Test Gate — the caller must fix and re-run or HALT, never proceed over red.
+**RUN is a script, not a model pass.** Collection, batching, assertion and reporting all
+live in `scripts/evals.sh`:
 
-Report: `RUN epic {n}: {p}/{t} command pass, {j} judge {pass|skipped}. Regressions: <list or none>`.
+```bash
+bash scripts/evals.sh --epic {n}          # one epic's set
+bash scripts/evals.sh                     # the whole cumulative net (default for /evals)
+bash scripts/evals.sh --epic {n} --quiet   # failures + summary only
+bash scripts/evals.sh --list               # parse and list, run nothing
+```
+
+The script's last line **is** the RUN report — quote it, don't re-derive it:
+
+```
+RUN {scope}: {p}/{t} command pass, {j} judge skipped. Regressions: <list or none>
+```
+
+Exit 0 = green, 1 = regressions, 2 = usage / no eval files. **Never read
+`docs/evals/*.md` into context to run the set** — that read grows with every story and is
+the whole reason the script exists.
+
+What the script guarantees, so no skill has to restate it:
+
+- Identical `run:` commands execute **once** and score every case sharing them. On Apple
+  projects a per-case invocation means one Simulator launch per case, which exhausts it.
+- **Empty output fails** an `output-contains:` / `output-matches:` case regardless of exit
+  code (`empty output — gate cannot discriminate`) — the mechanical form of "a gate that
+  enumerates must assert it enumerated".
+- An `enabled: true` command case with no `run:`, or an unparseable `expect:`, is a
+  **failure**, never a silent skip.
+- `enabled: false` cases are skipped and counted; `docs/evals/README.md` is excluded (its
+  format example would otherwise parse as a case).
+
+A failing `command` case is a **regression**: surface it exactly like a red Build & Test
+Gate — the caller must fix and re-run or HALT, never proceed over red.
+
+**Judge cases.** The script counts `type: judge` cases and reports them skipped; judging
+needs a model. Run them only when requested (`/evals --judge`, or a caller passing
+`judge=true`): read each enabled case's `target:`, score against `rubric:`, pass if all
+rubric points hold. Add the judge tally to the script's report line rather than replacing
+it. Skipped by default to protect the token budget.
+
+**If `scripts/evals.sh` is absent** (a project scaffolded before it shipped): run
+`/upgrade-project` to install it. Parsing the eval files by hand is the fallback of last
+resort — do it only if the user declines, and say that you are doing the expensive thing.
+
+**CI.** The script is the CI seam: leanwheel ships no pipeline config because the CI is
+unknown (Actions, Jenkins, GitLab, a pre-push hook). Anything that can run a shell command
+and read an exit code can gate on the regression net.
 
 ### SCORE — emit the rubric line (called by code-review)
 
