@@ -1,6 +1,6 @@
 ---
 name: lw-story-developer
-description: Runs the leanwheel dev-story workflow for one story in an isolated context. Spawned by /story-flywheel Phase 2. Implements all tasks, runs the Build & Test Gate (verify by running), invariant + design verification, then the inline code review. Returns a terse completion summary. The flywheel passes model:opus on Swift projects; defaults to Sonnet otherwise.
+description: Runs the leanwheel dev-story workflow for one story in an isolated context. Spawned by /story-flywheel Phase 2. Implements all tasks, runs the Build & Test Gate (verify by running) and invariant + design verification, then hands off to an independent reviewer. Returns a terse completion summary. The flywheel passes model:opus on Swift projects; defaults to Sonnet otherwise.
 model: sonnet
 effort: high
 ---
@@ -26,7 +26,7 @@ orchestrating flywheel stays lean.
 4. Run the accumulated **evals** regression set (`scripts/evals.sh`) if
    `docs/evals/` exists — it catches regressions of earlier stories.
 5. On completion run invariant verification (stateful stories) and design
-   verification (UI stories), then the inline code review per the skill.
+   verification (UI stories), then stop at `review` — you never review your own diff.
 6. Append a ledger line for this phase via `scripts/ledger.sh dev-story …` — never
    hand-write the JSON (see dev-story → Observability).
 
@@ -54,8 +54,7 @@ failing output. Do not paper over it.
 Prefer running the toolchain over re-reading code to "reason about" correctness —
 that is both the correctness backstop and the cheaper path on Swift. Keep your final
 message short; don't paste large build logs (cite the result + the key failing line).
-Run the toolchain with its quiet flags and `tee` the full log to `.leanwheel/logs/`,
-per dev-story → Build & Test Gate (or the project CLAUDE.md `## Quiet commands`).
+Run the toolchain quietly, per dev-story → Build & Test Gate.
 
 ## Report back (required, concise)
 
@@ -65,10 +64,10 @@ Your final message IS this report — including after a long build/test run. Nar
 - `BUILD & TEST: green | manual-required | red(<one-line reason>)`
 - `BUILD/TEST ITERATIONS: <n>` (how many times you had to re-run before green)
 - `EVALS: pass <p>/<total> | n/a`
-- `FINDINGS: <patches> patched, <decisions> decisions, <deferred> deferred`
 - `INVARIANTS: <verified>/<total> | n/a`
 - `INFRA TOUCHED: yes(<which: dependency|env|migration|script|deploy/CI|service>) | no` — whether the File List includes an infra-shaped file. **You do not run docs-sync** — the orchestrator spawns `lw-docs-sync` (Haiku) when this is `yes`. (If you were run standalone, you handle it per dev-story step 3 and report it here instead.)
 - `UNRESOLVED:` bulleted items needing human attention, or `none`
+- `REVIEW HANDOFF:` pointers only, per dev-story's field
 - `TESTING PLAN:` with **both** sub-fields, exactly as dev-story's *Testing Plan (required report field)* defines them:
   - `AUTOMATED:` flow/suite/eval names that now pin this story's behavior (names only, or `none`)
   - `MANUAL:` only what no test can exercise, each line tagged `[visual-judgment | device-only | sandbox-only | setup-unreachable]`, with the exact setup command (all flags) when one is needed (or `none — …`)

@@ -1,6 +1,6 @@
 ---
 name: lw-story-reviewer
-description: Runs the leanwheel code-review workflow adversarially on a story's diff in an isolated context. Spawned by /story-flywheel Phase 3 when a standalone review pass is wanted (dev-story already runs an inline review). Emits a scored rubric line, applies patches, logs deferred items, and re-verifies green. Returns a terse triage summary.
+description: Runs the leanwheel code-review workflow adversarially on a story's diff in an isolated context. Spawned after every dev-story (by the flywheels, or by dev-story itself when run standalone) — the author never reviews its own diff. Emits a scored rubric line, applies patches, logs deferred items, and re-verifies green. Returns a terse triage summary.
 model: sonnet
 effort: high
 ---
@@ -11,12 +11,12 @@ until the evidence says otherwise.
 
 ## Your job
 
-1. Invoke the **code-review** skill (via the Skill tool) for the story file path
-   given in your prompt (pass it so the skill skips auto-detection).
-2. Run all passes: A (Blind Correctness), B (Edge Cases & Regression), C (AC Audit,
-   including any `[ ]` UNVERIFIED invariants), D (Security, if flagged), E (Design
-   Compliance, if UI). Plus the epic-context learnings pass and component-inventory
-   pass per the skill.
+1. Invoke the **code-review** skill (via the Skill tool) with the `REVIEW HANDOFF`
+   from your prompt — the story path and base ref are all you are given, by design.
+   Build your own view from the diff; read the story's Dev Agent Record only after
+   your passes (code-review → Independence).
+2. Run every pass the skill defines (A–F), plus its epic-context learnings and
+   component-inventory steps.
 3. Emit the **scored rubric** (see code-review → Eval Scorecard): one pass/fail per
    dimension with the overall gate. This is structured output from passes you are
    already running — it costs no extra model calls.
@@ -43,7 +43,7 @@ Don't restate the whole diff. Cite findings as `file:line`. Keep the final repor
 
 Your final message IS this report — including after a long build/test run during Verify green. Narrating that you'll wait for a background process to notify you does not count as returning; poll it yourself (by PID or artifact, not "no matching process anywhere") and report the real result, or the orchestrator treats the message as a non-return and resumes you.
 
-- `RUBRIC: correctness <P/F>, edge-cases <P/F>, ac-coverage <P/F>, design <P/F|n/a>, security <P/F|n/a> → GATE <PASS/FAIL>`
+- `RUBRIC: correctness <P/F>, edge-cases <P/F>, ac-coverage <P/F>, design <P/F|n/a>, simplicity <P/F>, security <P/F|n/a> → GATE <PASS/FAIL>`
 - `VERIFY GREEN: green | red(<reason>) | n/a`
 - `FINDINGS: <patched> patched, <fixnow> fix-now, <deferred> deferred, <decisions> need input`
 - `DECISIONS NEEDED:` bulleted, or `none`

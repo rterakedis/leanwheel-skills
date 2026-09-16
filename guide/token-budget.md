@@ -56,7 +56,7 @@ Tokens loaded per full run of each skill (skill assets + ceremony; excludes proj
 |-------|-----------|-----------|-------|
 | Activation ceremony (every skill call) | ~1,000 | 0 | 1,000/call |
 | `create-story` (skill + checklist + TOML + templates) | ~12,000 | ~3,900 | ~8,100 |
-| `dev-story` | ~9,200 | ~4,000 (inline review included) | ~5,200 |
+| `dev-story` | ~9,200 | ~4,000 (measured with the review inline — see note below) | ~5,200 |
 | `code-review` (upstream: separate session, 4 step files) | ~9,000 | ~2,600 | ~6,400 |
 | `retrospective` (upstream: one 67KB SKILL.md) | ~17,800 | ~2,100 | ~15,700 |
 | `prd` (upstream: 8 JIT step files) | ~15,200 | ~1,700 | ~13,500 |
@@ -77,7 +77,7 @@ Tokens loaded per full run of each skill (skill assets + ceremony; excludes proj
 | Planning (PRD + architecture + epics + readiness gate) | ~55,000 | ~14,000 | ~75% |
 | `/ux` (1 Create run) | ~10,000 | ~8,000 | ~20% |
 | `create-story` × 12 | ~200,000 | ~65,000 | ~67% |
-| `dev-story` + review × 12 | ~285,000 | ~110,000 (review inline) | ~61% |
+| `dev-story` + review × 12 | ~285,000 | ~110,000 (review inline when measured) | ~61% |
 | Retrospective × 3 epics | ~54,000 | ~11,000 | ~80% |
 | Flywheel orchestration (3 epics) | — | ~15,000 | — |
 | **Total** | **~600,000** | **~220,000** | **~63%** |
@@ -85,6 +85,16 @@ Tokens loaded per full run of each skill (skill assets + ceremony; excludes proj
 > The Leanwheel total also *buys more* than the upstream total: it includes the Behavior
 > Contract / edge-case AC pass, Design Contract extraction, invariant verification, and the
 > inline adversarial review — verification layers upstream's equivalent phases don't run.
+
+> **Review is no longer inline (DD-75).** The rows above were measured when dev-story reviewed
+> its own diff. Now a fresh `lw-story-reviewer` does it on every story, and that re-reads what
+> independence requires — the story up to its Dev Agent Record, `CLAUDE.md`, the routed guidance,
+> and the diff: roughly 10–24K input tokens per story in a disposable window. Against that,
+> dev-story no longer carries the review instructions (~1.4K per story), and the review turns no
+> longer re-send the whole implementation history, which the load-based numbers here never
+> counted. The net is unmeasured; `code-review` ledger lines are tagged `standalone`, so a real
+> project's ledger is where to settle it. On Swift projects the review also moved from Opus to
+> Sonnet.
 
 ### Where Leanwheel spends nothing at all
 
@@ -187,9 +197,10 @@ day one and never enforced is one people learn to ignore; the ratchet stops accr
 immediately and lets the debt come down as it is worked. `--update` never raises a ceiling
 and never adds a file — new debt is a deliberate, reviewed edit to the baseline.
 
-Current debt (four files): `epic-flywheel`, `dev-story`, `story-flywheel`, and
+Current debt (three files): `epic-flywheel`, `story-flywheel`, and
 `agents/lw-story-developer.md` — `budget.sh` prints the live figures. Both App Store skills
-were paid off by splitting them along the lines below (DD-74). Two distinct fixes
+were paid off by splitting them along the lines below (DD-74), and `dev-story` by moving its
+review out to an independent reviewer (DD-75). Two distinct fixes
 apply, and they are not interchangeable:
 
 - **Mutually-exclusive branches** (`appstore-*`, `swift-audit`, `setup`) — route the
@@ -203,4 +214,4 @@ apply, and they are not interchangeable:
 
 ### Bottom line
 
-Leanwheel uses roughly **a third of the tokens** of BMAD v6 for the same 12-story project (~220K vs ~600K on the loading side) — while running more verification (build gates, evals, invariant checks, inline review) than upstream does. The savings come from the same four levers as before, all of which survived both systems' growth: no activation ceremony, epic-context caching, inline review, and session hygiene — now compounded by subagent isolation, model routing, and the zero-token guardrail/eval/tracking layers.
+Leanwheel uses roughly **a third of the tokens** of BMAD v6 for the same 12-story project (~220K vs ~600K on the loading side) — while running more verification (build gates, evals, invariant checks, an independent review) than upstream does. The savings come from three levers that survived both systems' growth — no activation ceremony, epic-context caching, and session hygiene; a fourth, inline review, was given up for independence (DD-75) — now compounded by subagent isolation, model routing, and the zero-token guardrail/eval/tracking layers.

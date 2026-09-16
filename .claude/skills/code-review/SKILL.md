@@ -1,19 +1,18 @@
 ---
 name: code-review
-description: Review code changes adversarially. Use when the user says "review", "code review", or "review story {X}". Also embedded automatically at the end of /dev-story — see that skill for the inline variant.
+description: Review code changes adversarially. Use when the user says "review", "code review", or "review story {X}". Also run by the lw-story-reviewer subagent after every /dev-story, as the independent review.
 ---
 
 # Code Review Skill
 
 **Goal:** Find real bugs, missing behavior, AC violations. Assume problems exist — your job is to find them. Zero findings requires explicit justification ("re-analyzed, clean because…"), not silence.
 
-**Note:** Inline in `/dev-story` skips Steps 1–2 (context already loaded). This is for PRs/branches/commits outside the flywheel.
-
-**When an independent review is owed:** a clean inline pass is not the only trigger — blast radius is. See `story-flywheel` → Phase 3 for the trigger set.
+**Independence (DD-75).** You did not write this diff, and you do not inherit the author's view of it. The diff and the story's contract are the evidence. The author's own account — the story's `## Dev Agent Record` (Debug Log, Completion Notes) — is read only *after* your passes, to check its claims (e.g. the recorded sabotage checks), never to decide what to look at. A claim the diff contradicts — a test that doesn't exist, a guard that isn't there — is a `patch` finding against the verification record (add the missing check, or correct the record), never a note. If you did write this diff in this same context (a flywheel's no-subagent fallback), say so in the report and omit `--standalone` from the ledger line.
 
 ## Step 1 — Find the Diff
 
 Check in order (stop when found):
+0. A `REVIEW HANDOFF` (from dev-story)? The diff is `git diff {BASE}` — everything since the base, committed or not — **plus** new files, which `git diff` omits while untracked: `git ls-files --others --exclude-standard`. The story is `STORY`.
 1. Explicit argument (PR, branch, commit, story file)?
 2. Story with `Status: review` in `docs/epics/`?
 3. Current branch not main/master?
@@ -23,7 +22,7 @@ If empty diff: stop. If >3000 lines: warn, offer to chunk by file.
 
 ## Step 2 — Load Context
 
-- If story file identified: read fully.
+- If story file identified: read it up to its author record — `sed '/^## Dev Agent Record/q' {story}` — and leave the rest for after the passes (see Independence).
 - Read CLAUDE.md if exists.
 - **If `docs/setup/swift/` exists** (Apple platform project): read `docs/setup/swift/anti-patterns.md` and `docs/setup/swift/state-management.md` before beginning passes — use them as the rejection criteria for Pass A and Pass C. Also read `docs/setup/swift/core-data-cloudkit.md` if present and the diff touches the data model, persistence, or sync; `docs/setup/swift/demo-data-and-copy.md` if the diff touches seed/preview data or copy on a regulated surface; `docs/setup/swift/xcode-footguns.md` if the diff touches the `.xcodeproj`. Also read `docs/setup/swift/ipados-specific.md` if present and the diff touches navigation, split view, or multi-window code; read `docs/setup/swift/macos-specific.md` if present and the diff touches menus, windows, settings, or toolbar code.
 - **If `docs/setup/web/` exists** (web/SSG project) and the diff touches templates, markup, or styles: read `docs/setup/web/anti-patterns.md` and `docs/setup/web/css-design-system.md` — use them as rejection criteria.
@@ -52,6 +51,7 @@ Work each pass independently. Look for what's *missing* (absent behavior, unhand
 - Input validation: missing size/type/range checks at trust boundaries
 - Session/token: insecure storage (localStorage), missing expiry, no rotation
 - Rate limiting absent on auth, registration, reset, or expensive endpoints
+- **Deep security (conditional):** if the story's Dev Notes has a non-blank `### Security Sensitivity`, also run the matching categories from `skills/security-review/SKILL.md`.
 
 **Pass C: Edge Case & Regression** — break it with inputs
 - Boundary values: empty collection, zero, negative, max int, nil/null
@@ -66,6 +66,7 @@ Work each pass independently. Look for what's *missing* (absent behavior, unhand
 - ACs that contradict each other or the architecture
 - Constraints in Dev Notes that were ignored
 - Files the story said would be touched that weren't (missing implementation)
+- Invariants left `[ ]` UNVERIFIED in `### Invariant Verification` — each is a finding
 
 **Pass E: Design Compliance** (only if the diff touches user-visible UI and `docs/ux/DESIGN.md` or a `### Design Contract` exists)
 - Hardcoded colors/spacing/type values where a DESIGN.md token exists (near-miss hex counts)
@@ -175,7 +176,7 @@ One-off layout subviews don't qualify; only components future stories should reu
 
 **Ledger:** Append one `code-review` line via `scripts/ledger.sh` (never hand-write the JSON — the script owns the schema, normalizes the model name, stamps the timestamp, and no-ops if `docs/metrics/` is absent):
 `bash scripts/ledger.sh code-review --story {id} --model {model} --build-test green|red|blocked|n/a --rubric-gate PASS|FAIL|n/a --evals P/T --patched {n} --decisions {n} --deferred {n} [--standalone] [--notes "≤300 chars"]`
-Pass `--standalone` for an independent review pass (vs the dev-story inline review). Notes are a one-line pointer — review detail lives in `### Review Findings`, not the ledger. The script enforces the verify-green gate rule below and refuses a qualified PASS.
+Pass `--standalone` for every review except a same-context one (see Independence). Notes are a one-line pointer — review detail lives in `### Review Findings`, not the ledger. The script enforces the verify-green gate rule below and refuses a qualified PASS.
 
 **Update status** (in the YAML frontmatter — the source of truth; never as a `**Status:**` body line):
 - All resolved: `status: done` → **CLOSE-ISSUE**

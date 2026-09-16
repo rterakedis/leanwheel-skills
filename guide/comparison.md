@@ -18,7 +18,7 @@
 | PRD decision log + addendum | Captured inline in story Dev Notes instead. (A *project-wide* decision ledger, `docs/project/decisions.md`, later arrived via the decision-loop consolidation — see the added-capabilities table — serving planning across all docs rather than per-PRD bookkeeping) |
 | HTML validation reports | Overkill for personal workflow |
 | UX/design agent persona (Sally) | Agent persona tokens not needed; UX workflow ported as `/ux` skill with Apple HIG + SwiftUI + responsive web support |
-| Checkpoint preview | Covered by code-review's 3-pass inline review |
+| Checkpoint preview | Covered by the independent code-review that runs after every story |
 | Advanced-elicitation menu (CSV method registry, interactive 1-5/r/a/x loop) | The one high-value method for this workflow — pre-mortem — is folded into `/check-readiness` as Check 10; the menu/registry infrastructure is ceremony |
 | PRFAQ / working-backwards challenge | `/ideate` (originally `/forge-idea`) already covers the adversarial idea-validation function; PRFAQ is a format, not a capability |
 
@@ -80,7 +80,7 @@ repo and changelog (August 2026):
   a `policy.toml` (retry budgets, oscillation detection), with resumable journaled run
   state and git-worktree isolation. Leanwheel's orchestrator is an in-session LLM thread
   holding short structured subagent reports, which lets it make cheap mid-loop judgment
-  calls (review-skip on clean stories, blast-radius triggers, the boundary test-plan
+  calls (auto-advance on clean stories, decision surfacing, the boundary test-plan
   subtract) that a Python loop cannot.
 - **Real programmatic subagents.** Since v6.2–6.4, upstream's code review spawns parallel
   review-layer subagents (Blind Hunter / Edge Case Hunter / Acceptance Auditor) with a

@@ -12,7 +12,7 @@ Not to be confused with a user project's `docs/project/decisions.md` (owned by t
 
 - Principles: DD-01 verifiable artifacts over guardrails · DD-02 contract vs conduct · DD-03 fail loudly
 - Verification: DD-10 verify by running · DD-11 gate integrity · DD-12 Fix-Now · DD-13 evals command-default · DD-14 invariant evidence · DD-71 evals RUN is a script and the CI seam
-- Orchestration: DD-20 subagent routing · DD-73 effort pinned per runner · DD-21 non-return rule · DD-22 orchestrator-owned tracking · DD-23 epic-context cache gate · DD-24 docs-sync audiences · DD-25 boundary merge
+- Orchestration: DD-20 subagent routing · DD-73 effort pinned per runner · DD-75 the author never reviews its own diff · DD-21 non-return rule · DD-22 orchestrator-owned tracking · DD-23 epic-context cache gate · DD-24 docs-sync audiences · DD-25 boundary merge
 - Testing & test plans: DD-30 manual pass at the epic boundary · DD-31 TESTING PLAN split + subtract · DD-32 plan-defect kind · DD-33 done stories immutable · DD-34 testability foundation · DD-35 flow tiering · DD-36 e2e backfill
 - Simulator automation: DD-40 sim.sh + route navigation · DD-41 silent-failure guards · DD-42 orientation · DD-43 store preset · DD-44 sim.json committed · DD-45 release parity for store captures · DD-46 vendored-script drift is reported, never silent · DD-47 runtime pin + ambiguity guard
 - Planning & docs: DD-50 planning consolidation · DD-51 pinned story frontmatter · DD-52 design contract decoupled from docs/ux · DD-53 simplicity doctrine placement · DD-54 CLAUDE.md tiers & budget · DD-55 epic archive · DD-56 dark patterns · DD-57 doc-free lane · DD-58 architecture promotion
@@ -759,4 +759,51 @@ by `scripts/test/checklist-render.sh`, which caught a real defect while it was b
 refuses to write a checklist containing a marker it doesn't recognise, so template drift fails
 loudly instead of leaking `{omit if …}` to a user. Three eval cases (`evals/appstore-*`) assert the
 disclosure itself: which op and branch files a run reads, and which it must not.
+
+### DD-75 — The author never reviews its own diff
+**Context.** `dev-story` ended by reviewing its own changes inline: the same context that wrote
+the diff, with its reasoning, its Debug Log narrative, and its assumptions all still loaded. An
+independent `lw-story-reviewer` ran only when a blast-radius trigger fired or the inline pass
+reported problems — so the stories most likely to hide a quiet mistake, the ones the author judged
+clean, were exactly the ones never read by anyone else. Anthropic's AI-native SDLC playbook states
+the principle directly: the agent that wrote the code has no way to approve it. The original
+reason for inlining was token cost, and that saving was measured on skill *loads*; it never counted
+that every inline review turn re-sent the whole implementation history.
+
+The consolidation also surfaced three latent defects in the inline copy: it called a `RESOLVE`
+operation the `deferred` skill does not have; its pass letters disagreed with `code-review`'s (so the
+reviewer agent named Pass B "Edge Cases" while the skill it ran called Pass B "Security"); and the
+reviewer's rubric omitted the `simplicity` dimension `code-review` scores.
+
+**Decision.** Review is always a separate context.
+- `dev-story` records a base ref at activation and ends at `status: review` with a `REVIEW HANDOFF`
+  report field: `STORY`, `BASE`, `LOG` — **pointers only**. A summary of what was done, or hints
+  about what to check, would save the reviewer tokens and quietly re-merge author and reviewer.
+- The flywheels spawn `lw-story-reviewer` on **every** story with that block verbatim; the
+  blast-radius gating is gone. Standalone, `dev-story` spawns the reviewer itself; with no
+  subagents it tells the user to `/clear` and run `/code-review` rather than review in place.
+- `code-review` is the single home of the review passes. Its Independence rule: read the story only
+  up to `## Dev Agent Record` before the passes (`sed '/^## Dev Agent Record/q'`), and read the
+  author's own record afterwards, to check its claims, never to scope the review. The diff is
+  `git diff {BASE}` **plus untracked files** — under story-flywheel nothing is committed between
+  phases, and `git diff` alone would hide every file the developer created. The two pieces only the
+  inline copy had — the conditional deep security pass and UNVERIFIED invariants as findings — moved
+  into Passes B and D.
+- A flywheel's no-subagent fallback still reviews inline, but says so: `review=inline-fallback` in
+  the roll-up and no `--standalone` on the ledger line.
+
+**Consequence.** `dev-story` dropped under the byte budget (23.5 → 20.1 KB) and both flywheels
+shrank. Each story now pays a fresh reviewer's reads — roughly 10–24K input tokens in a disposable
+window — against the removed review instructions and the review turns that no longer carry the
+implementation history; the net is unmeasured, and `code-review` ledger lines tagged `standalone`
+are where a real project settles it. On Swift projects the review moves from Opus to Sonnet, so it
+costs less per token. `dev-single-goal` keeps its condensed inline review: it is the doc-free lane,
+with no story file to hand off.
+
+Checked with a fresh Sonnet reviewer given only a handoff, on a repo where the story's Debug Log
+claimed `count >= 5` and cited a sabotage-verified test, while an *untracked* new file held
+`count > 5` and no test existed. It listed untracked files, found and fixed the off-by-one, read
+the Dev Agent Record only after its passes, and caught both false claims — but recorded them as a
+note and still scored the gate PASS. The Independence rule now makes a claim the diff contradicts
+a `patch` finding against the verification record, never a note.
 

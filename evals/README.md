@@ -41,7 +41,7 @@ bash scripts/test/checklist-render.sh  # appstore-preflight checklist rendering 
 
 | Case | Skill | Asserts |
 |---|---|---|
-| `dev-story-report-shape` | dev-story / lw-story-developer | final report carries `TESTING PLAN` with both `AUTOMATED:` and `MANUAL:` sub-fields, and `MANUAL:` lines carry a why-tag |
+| `dev-story-report-shape` | dev-story / lw-story-developer | final report carries `TESTING PLAN` with both `AUTOMATED:` and `MANUAL:` sub-fields, and `MANUAL:` lines carry a why-tag; carries a `REVIEW HANDOFF` with `STORY:` and `BASE:`; emits no `RUBRIC:` (the developer never scores its own diff) |
 | `harvest-plan-defect` | harvest-findings | an "already automated" note is captured as `plan-defect` (pre-checked, no story), the visual finding becomes a `tweak`/`bug` AC, and the plan is reset |
 | `epic-boundary-subtract` | epic-flywheel (step 5) | a rolled-up plan never re-lists a step covered by a flow/eval; every section-A flow opens with `Automated — do not re-test:` and a full-flag setup command |
 | `appstore-connect-metadata-scoped` | appstore-connect | a METADATA run reads `op-metadata.md` and never `op-assets.md` / `op-products.md` (Read or shell); writes a ≤ 100-char, space-free `keywords.txt`; ends with the `METADATA:` return line |
@@ -56,5 +56,5 @@ claude plugin eval . --case 'appstore-*' --runs 1 --allow-tools Bash Write Edit 
 
 `tool_used` graders assert which skill files were read (`input_match` is a regex over the tool input, so it matches the file name wherever the plugin is installed); `min: 0, max: 0` asserts a file was **not** read — the progressive-disclosure claim itself.
 
-Planned next: dev-story red-build → HALT (not `review`); epic-flywheel HALT on a failing
+Planned next: code-review independence on a git fixture (finds a planted bug in an *untracked* file; reads the story only up to `## Dev Agent Record` before the passes); dev-story red-build → HALT (not `review`); epic-flywheel HALT on a failing
 cumulative eval; harvest-findings idempotent re-run; migration-shape fail-first ordering.

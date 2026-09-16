@@ -1,6 +1,6 @@
 ---
 name: security-review
-description: Security audit against OWASP, SQL hardening, auth, secrets, dependencies, and LLM-specific threats. Use when the user says "security review", "security audit", or "security check". Also invoked as Pass D during code-review for security-sensitive stories.
+description: Security audit against OWASP, SQL hardening, auth, secrets, dependencies, and LLM-specific threats. Use when the user says "security review", "security audit", or "security check". Also invoked from code-review's Pass B for security-sensitive stories.
 ---
 
 # Security Review Skill
