@@ -9,7 +9,7 @@ description: Audit an iOS/iPadOS SwiftUI project's configuration, privacy declar
 
 **Requires:** An Apple app project (`.xcodeproj`, `.xcworkspace`, or an app-target `Package.swift`). If absent, stop: "No Apple app project found — nothing to preflight."
 
-**Currency note:** Requirement facts embedded below are current as of **July 19, 2026**. Items marked ⚠️VOLATILE change frequently (litigation, annual SDK mandates) — re-verify against https://developer.apple.com/news/upcoming-requirements/ at submission time rather than trusting this file.
+**Currency note:** Requirement facts in this file and its sibling `checks-*.md` / `submission-checklist.template.md` are current as of **July 19, 2026**. Items marked ⚠️VOLATILE change frequently (litigation, annual SDK mandates) — re-verify against https://developer.apple.com/news/upcoming-requirements/ at submission time rather than trusting this file.
 
 ---
 
@@ -35,11 +35,15 @@ grep -h "TARGETED_DEVICE_FAMILY\|MARKETING_VERSION\|CURRENT_PROJECT_VERSION\|IPH
 grep -rn "NSPersistentCloudKitContainer\|cloudKitContainerOptions\|\.modelContainer(\|CKContainer" \
   --include="*.swift" . 2>/dev/null | grep -v "/DerivedData/\|/.build/\|/Pods/"
 grep -rn "initializeCloudKitSchema" --include="*.swift" . 2>/dev/null | grep -v "/DerivedData/"
+
+# StoreKit in use? (Step 5 item 4, Step 7 IAP section)
+grep -rl "import StoreKit" --include="*.swift" . 2>/dev/null | grep -v "/DerivedData/\|/.build/\|/Pods/" | head -3
+find . -name "*.storekit" ! -path "*/DerivedData/*" ! -path "*/.build/*"
 ```
 
 **Critical:** most SwiftUI projects use the generated Info.plist — every plist check below must look in **both** the Info.plist file(s) **and** `INFOPLIST_KEY_*` build settings in `project.pbxproj`. A key present in neither is missing.
 
-Note what exists. `docs/ux/`, `docs/prd.md` (feature intel for Step 5), and `.leanwheel/manifest.json` are read only if present.
+Record three flags for later steps: **cloudkit**, **storekit**, and **universal** (`TARGETED_DEVICE_FAMILY` includes 2). Note what exists. `docs/ux/`, `docs/prd.md` (feature intel for Step 5), and `.leanwheel/manifest.json` are read only if present.
 
 ---
 
@@ -113,7 +117,7 @@ Check each; both plist and `INFOPLIST_KEY_*` locations.
 | iPad orientations | `TARGETED_DEVICE_FAMILY` includes 2 → all four orientations in `~ipad` set unless `UIRequiresFullScreen=YES` (ITMS-90474). ⚠️VOLATILE: `UIRequiresFullScreen` deprecated on iPadOS 26 (will be ignored) — flag its presence; durable answer is all-four + resizable scenes | **BLOCKER** / MEDIUM for the deprecated key |
 | `UIRequiredDeviceCapabilities` | Only truly-required values; adding one in an update can never narrow device support (ITMS-90109). Safest: absent or `[arm64]` | **MEDIUM** |
 | Entitlements ↔ capabilities | Parse `.entitlements`: `aps-environment`, iCloud containers, app groups, HealthKit, `applesignin`, associated domains each need the capability on the App ID / in the distribution profile (ITMS-90164). `get-task-allow=true` in a distribution archive → upload fail. Push registered in code (or Firebase present) without `aps-environment` → ITMS-90078 warning | **HIGH** (verify-by-hand item — profile state isn't in the repo) |
-| CloudKit schema deployed | iCloud entitlement + `NSPersistentCloudKitContainer` (or a CloudKit-backed `ModelContainer`) present, but **no `initializeCloudKitSchema` call anywhere** → the Development schema is whatever manual testing happened to save. Record types are created lazily on first save, so an entity, attribute, or relationship never exercised on a dev-signed device is absent from Development, is not carried to Production by *Deploy Schema Changes*, and fails to sync for the first real user who creates one. Fix: a DEBUG-only, launch-argument-gated `initializeCloudKitSchema` run on a device (see `testability.md`), then Deploy in the Console | **HIGH** (silent post-release failure; Console state isn't in the repo) |
+| CloudKit schema deployed | CloudKit in use (Step 1) → apply [checks-cloudkit.md](checks-cloudkit.md); otherwise skip | **HIGH** |
 | ATS | `NSAllowsArbitraryLoads=true` without per-domain exceptions draws review questions and is a security smell | **MEDIUM** |
 | Xcode/SDK floor | ⚠️VOLATILE: uploads must be built with iOS 26 SDK / Xcode 26+ (since Apr 28, 2026; re-check annually). Verify local + CI toolchain | **BLOCKER** if toolchain is older |
 
@@ -137,8 +141,7 @@ These need judgment, not just grep. Read the relevant source (auth flows, paywal
 1. **Account deletion — 5.1.1(v).** If the app has account *creation* (any sign-up, including Sign in with Apple/Google as the only login): there must be an **in-app entry point that initiates full account deletion** (not deactivation, not "email us"). SIWA apps must also call the token-revocation endpoint on delete. Missing → **HIGH**.
 2. **Login services — 4.8.** Third-party login SDK present (`GoogleSignIn`, `FBSDKLoginKit`, social OAuth via `ASWebAuthenticationSession`) → an equally-prominent privacy-protective option is required (SIWA is the safe choice; email/password meeting the data-minimization criteria can qualify). Missing → **HIGH**.
 3. **ATT — 5.1.2.** Ad/attribution SDKs or IDFA reads → `requestTrackingAuthorization` flow + usage-description key + manifest tracking flags, and functionality must not be gated on consent. Fingerprinting is never allowed, even with consent. Violation → **HIGH**.
-4. **Subscriptions/IAP — 3.1.1/3.1.2.** StoreKit present → paywall must show price + period + auto-renew terms; **functional Privacy Policy and Terms links on the paywall**; a working **Restore Purchases** control for restorable products. Digital goods sold via non-StoreKit checkout → **HIGH**. ⚠️VOLATILE: external purchase links are currently permitted on the **US storefront only** (post-Epic injunction; commission rules still in litigation) — if present, verify storefront-gating and re-check current rules.
-   **Product reconciliation:** run the `appstore-connect` skill's **PRODUCTS DIFF** op (`{skills_path}/.claude/skills/appstore-connect/SKILL.md`) — spec ↔ `.storekit` ↔ Swift product-ID literals, plus its recommendations (group/level structure, missing localizations, missing review screenshots, immutable-ID renames, family-sharing/offer gaps). No `docs/store/products.md` yet → its IMPORT sub-op seeds one from the existing `.storekit`/code first (never ask the user to re-type what the code declares). Each mismatch becomes a `[HIGH][BEHAVIOR]` or `[MEDIUM][BEHAVIOR]` finding; the recommendations flow into the Step 7 IAP section.
+4. **Subscriptions/IAP — 3.1.1/3.1.2.** StoreKit in use (Step 1) → apply [checks-storekit.md](checks-storekit.md), which includes the PRODUCTS DIFF reconciliation. No StoreKit → skip.
 5. **Third-party AI data sharing — 5.1.2(i), since Nov 2025.** App sends user data to an external AI API (OpenAI/Gemini/Claude endpoints in networking code) → needs explicit, provider-named consent before first send, reflected in the privacy label. Missing → **HIGH**.
 6. **In-app privacy policy access — 5.1.1.** A privacy-policy link must be reachable inside the app (settings screen is fine). Missing → **MEDIUM**.
 7. **iPad compatibility — 2.4.1.** Every app is reviewed on iPad, **even iPhone-only apps** (compatibility mode). Note as a checklist test item; flag obvious fixed-width/fixed-orientation layouts in a universal app → **MEDIUM**.
@@ -193,70 +196,18 @@ Generated: {date}
 
 ## Step 7 — Submission Checklist (non-code)
 
-Write `docs/maintainer/appstore-submission-checklist.md` (overwrite on re-runs — it's a living gate, not a log). Pre-fill every item the audit can infer: mark `[x] verified — {evidence}`, `[ ]` for human-required items, and **omit sections that don't apply** (no StoreKit → drop the IAP section; note the omission at the top).
+Write `docs/maintainer/appstore-submission-checklist.md` (overwrite on re-runs — it's a living gate, not a log) in two moves:
 
-**`docs/store/` hand-off (zero-token):** if `docs/store/metadata/` exists, run the lint — `bash .claude/hooks/asc-lint.sh docs/store` (or `{skills_path}/.claude/skills/appstore-connect/asc-lint.sh`) — and stamp the App Record name/subtitle line, the Required URLs lines, and the Media screenshot line `[x] verified — asc-lint passed ({date}, {locales})` when it exits 0; on errors leave `[ ]` and append `— asc-lint: {N} errors, run /appstore-connect metadata`. If `docs/store/` is absent, the Media / App Record `[ ]` lines gain the pointer `→ /appstore-connect {assets|metadata}` so the human knows the authoring lane exists. The IAP section embeds the PRODUCTS DIFF summary from Step 5.
+1. **Render (zero-token)** from [submission-checklist.template.md](submission-checklist.template.md) using the Step 1 flags. Run the script; don't read the template:
+   ```bash
+   bash {skills_path}/.claude/skills/appstore-preflight/render-checklist.sh \
+     --storekit yes|no --cloudkit yes|no --universal yes|no --date {YYYY-MM-DD} \
+     --out docs/maintainer/appstore-submission-checklist.md
+   ```
+   It drops the sections and lines that don't apply, notes each omission at the top, and reports how many `{…}` placeholders remain.
+2. **Fill** — read the rendered file and replace every remaining placeholder. Pre-fill every item the audit can infer as `[x] verified — {evidence}`; leave `[ ]` for human-required items.
 
-```markdown
-# App Store Submission Checklist — regenerated {date} by /appstore-preflight
-
-## Account & Legal (one-time)
-- [ ] Apple Developer Program enrollment active (individual name vs org: seller name is public)
-- [ ] Paid Applications Agreement + banking + tax forms complete — REQUIRED BEFORE any IAP/paid app; products won't even load in sandbox without it
-- [ ] EU DSA trader status declared & verified — required to distribute in the EU (since Feb 2025); if monetized, your address/phone/email become PUBLIC on the EU product page (set up a virtual address/VoIP first, or exclude EU)
-- [ ] US encryption self-classification report (annual, by Feb 1) if using non-exempt crypto — consult counsel; France declaration if distributing non-exempt crypto there
-
-## App Record (App Store Connect)
-- [ ] Bundle ID registered as explicit App ID and matches Xcode — IMMUTABLE after first upload
-- [ ] App name (≤30 chars, unique store-wide), subtitle (≤30), primary + secondary category
-- [ ] Age rating questionnaire — new 2025 system (4+/9+/13+/16+/18+) must be completed or updates are blocked (deadline was Jan 31, 2026)
-- [ ] ⚠️VOLATILE: Social-media capability question added to the age-rating questionnaire July 2026 (places the app in the Time Allowance category for Social Media); answering it becomes **required for new versions/updates and notarization starting Sept 2026** — answer honestly, don't skip
-- [ ] Content rights declaration answered honestly (third-party content?)
-- [ ] Pricing & availability set (base storefront + price; review region list vs DSA/France constraints)
-- [ ] Copyright field ("{year} {owner}")
-
-## Required URLs
-- [ ] Privacy policy URL — set in App Privacy section AND TestFlight Test Information AND linked inside the app; page must cover actual data types, retention, and every SDK's collection
-- [ ] Support URL — page must itself contain a live contact method (FAQ-only fails review); test from a non-dev network
-- [ ] (Subscriptions) Terms of Use link in the App Store description or EULA field
-
-## App Privacy (nutrition labels)
-- [ ] Data-collection questionnaire matches reality INCLUDING every third-party SDK ({detected SDK list})
-- [ ] Cross-checked against Xcode's aggregated privacy report (Organizer → PrivacyReport)
-
-## Media
-- [ ] Screenshots: 6.9" iPhone set{+ 13" iPad set if universal} — real UI of THIS build; marketing framing allowed, fabricated UI is not (2.3.3); regenerate after redesigns
-- [ ] App previews (optional): actual captured footage only
-
-## App Review Information
-- [ ] Demo account: full access, working, NO SMS/2FA (reviewers can't receive it), valid through review + future update reviews
-- [ ] Review notes answer Apple's eight Guideline 2.1 items, numbered (Step 7b) — {`[x] verified — asc-lint clean, 0 UNVERIFIED claims ({date})` or `[ ] {N} UNVERIFIED claims in docs/store/review-claims.md`}
-- [ ] Physical-device screen recording (Release build; launch, core flow, every permission prompt, IAP flow) + PDF guide zipped as ONE `.mp4`+`.pdf` attachment, ready for the 2.1 reply
-- [ ] Contact name/phone/email current
-
-## TestFlight
-- [ ] Beta App Description + feedback email + beta privacy policy filled in before external testing
-- [ ] First external build passes Beta App Review (subset of full review — approval here ≠ App Store approval)
-- [ ] Build cadence plan: TestFlight builds expire after 90 days
-- [ ] {omit if no StoreKit} Paywall recorded BEFORE any TestFlight test purchase — TestFlight buys with the Settings → App Store Apple ID (not the Sandbox Account), can't be reset by Clear Purchase History, and uses up the free trial for that account (`review-packet.md`)
-- [ ] Export compliance: {status — auto-answered via ITSAppUsesNonExemptEncryption, or answer per build}
-- [ ] CloudKit schema {omit if no CloudKit}: `--init-cloudkit-schema` run on a debug build on a **physical device signed into iCloud** since the last model change, then **Deploy Schema Changes** (Development → Production) in the CloudKit Console — spot-check that Production lists every record type in the model
-
-## In-App Purchases {omit if no StoreKit}
-- [ ] First IAP/subscription products ATTACHED to the version submission (creating them isn't submitting them — #1 IAP rejection)
-- [ ] Subscription group has ≥1 localization; review screenshot per product
-- [ ] `docs/store/products.md` reconciled — PRODUCTS DIFF: {n mismatches, m recommendations — or "not run: no .storekit"}; create products in ASC from that spec (`/appstore-connect products`)
-- [ ] Paywall shows price/period/auto-renew terms + Privacy & Terms links + Restore Purchases (verified in Step 5: {result})
-
-## Signing (verify in Apple Developer portal — not visible in repo)
-- [ ] Every entitlement in {detected .entitlements list} has its capability enabled on the App ID and distribution profile
-- [ ] Distribution archive uses Release config (get-task-allow=false)
-
-## Submission
-- [ ] Version release option chosen (manual release recommended for coordinated launches)
-- [ ] Phased release decision (updates only)
-- [ ] Final pass on developer.apple.com/news/upcoming-requirements/ for anything newer than this skill's July 2026 data
-```
+**`docs/store/` hand-off (zero-token):** if `docs/store/metadata/` exists, run the lint — `bash .claude/hooks/asc-lint.sh docs/store` (or `{skills_path}/.claude/skills/appstore-connect/asc-lint.sh`) — and stamp the App Record name/subtitle line, the Required URLs lines, and the Media screenshot line `[x] verified — asc-lint passed ({date}, {locales})` when it exits 0; on errors leave `[ ]` and append `— asc-lint: {N} errors, run /appstore-connect metadata`. If `docs/store/metadata/` is absent (Step 5's IMPORT may already have created `docs/store/` for `products.md`), the Media / App Record `[ ]` lines gain the pointer `→ /appstore-connect {assets|metadata}` so the human knows the authoring lane exists. The IAP section embeds the PRODUCTS DIFF summary from Step 5.
 
 ---
 

@@ -2,6 +2,7 @@
 name: lw-story-creator
 description: Runs the leanwheel create-story workflow for one story in an isolated context. Spawned by /story-flywheel Phase 1. Authors a complete story file (Behavior Contract, edge-case ACs, Design Contract, Clarification Gate) and updates GitHub tracking. Returns the story file path plus any clarification questions.
 model: sonnet
+effort: medium
 ---
 
 You are the leanwheel **story creator**. You run in your own context window so the

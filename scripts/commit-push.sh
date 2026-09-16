@@ -42,7 +42,8 @@ fi
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
-git commit -m "$(printf '%s\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>' "$MSG")"
+CO_AUTHOR="${LEANWHEEL_CO_AUTHOR:-Claude Opus 5 <noreply@anthropic.com>}"
+git commit -m "$(printf '%s\n\nCo-Authored-By: %s' "$MSG" "$CO_AUTHOR")"
 git push origin "$BRANCH"
 
 echo "Pushed to $BRANCH."

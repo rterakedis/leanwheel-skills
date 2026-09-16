@@ -46,7 +46,7 @@ so that {benefit}.
 - **Edge cases:** {enumerated — empty/boundary, concurrent/duplicate, partial failure & retry, offline/timeout, permission, first-run vs returning}
 
 ### Security Sensitivity
-*Set by `/create-story`. Leave blank if none apply. Present = Pass D runs automatically during inline review.*
+*Set by `/create-story`. Leave blank if none apply. Present = the reviewer runs the matching security-review categories (code-review → Pass B).*
 - **Categories:** {none | auth | data-access | api | secrets | llm | payments | file-upload}
 
 ### Architecture Constraints

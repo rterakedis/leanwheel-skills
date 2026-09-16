@@ -1,0 +1,13 @@
+# Grandfathered byte ceilings for files over budget (DD-72). Format: <bytes> <path>
+# A listed file may shrink but never grow. `bash scripts/test/budget.sh --update` lowers
+# these as debt is paid and retires entries that come back under budget. It never raises
+# a ceiling or adds a file: new debt is a deliberate, reviewed hand edit.
+#
+# Recorded at their sizes before the commit that introduced the byte budget, so the
+# growth that commit itself added is not grandfathered.
+#
+# appstore-connect / appstore-preflight were raised to their sizes on main at 5c8eea8 (growth
+# that predated this rule), then retired once split under the budget (DD-74).
+25504 .claude/skills/epic-flywheel/SKILL.md
+21360 .claude/skills/story-flywheel/SKILL.md
+4763 agents/lw-story-developer.md

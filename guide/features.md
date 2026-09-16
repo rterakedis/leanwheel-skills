@@ -17,7 +17,7 @@ This is a standalone skills library for [Claude Code](https://claude.ai/code). I
 **LEANWHEEL-SKILLS keeps:**
 - The full planning flywheel: Ideate → Spec (brief / PRD / UX / architecture) → Epics → Stories → Dev → Review
 - Epic context caching (~76% token reduction on `/create-story` after the first story)
-- Inline code review (no separate session startup cost)
+- Independent code review on every story, in a fresh subagent context — the author never approves its own diff (DD-75)
 - GitHub issue + milestone tracking
 - Security review, investigate, retrospective, correct-course
 

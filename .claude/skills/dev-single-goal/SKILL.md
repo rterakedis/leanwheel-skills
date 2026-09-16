@@ -74,7 +74,7 @@ For each task:
 **Red build or failing test = not done.** Read the output, fix, re-run until green — or HALT (below). Then:
 
 1. **Invariant verification (stateful goals):** each spec invariant needs **evidence** — a test exercising it or a cited assertion/guard (`file:line`). Record per invariant in the spec: `- [x] {invariant} — {evidence}` or `- [ ] UNVERIFIED: {why}`. No evidence = not a pass; feed it to the review below. Skip for simple goals.
-2. If `docs/evals/` happens to exist (leanwheel project, user chose this lane anyway): execute **RUN** from `skills/evals/SKILL.md` — a failing case is a regression, treat like a red build.
+2. If `docs/evals/` happens to exist (leanwheel project, user chose this lane anyway): run `bash scripts/evals.sh --quiet` — a failing case is a regression, treat like a red build.
 
 ## Phase 5 — Inline Review
 

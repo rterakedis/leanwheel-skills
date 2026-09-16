@@ -56,7 +56,7 @@ Tokens loaded per full run of each skill (skill assets + ceremony; excludes proj
 |-------|-----------|-----------|-------|
 | Activation ceremony (every skill call) | ~1,000 | 0 | 1,000/call |
 | `create-story` (skill + checklist + TOML + templates) | ~12,000 | ~3,900 | ~8,100 |
-| `dev-story` | ~9,200 | ~4,000 (inline review included) | ~5,200 |
+| `dev-story` | ~9,200 | ~4,000 (measured with the review inline — see note below) | ~5,200 |
 | `code-review` (upstream: separate session, 4 step files) | ~9,000 | ~2,600 | ~6,400 |
 | `retrospective` (upstream: one 67KB SKILL.md) | ~17,800 | ~2,100 | ~15,700 |
 | `prd` (upstream: 8 JIT step files) | ~15,200 | ~1,700 | ~13,500 |
@@ -77,7 +77,7 @@ Tokens loaded per full run of each skill (skill assets + ceremony; excludes proj
 | Planning (PRD + architecture + epics + readiness gate) | ~55,000 | ~14,000 | ~75% |
 | `/ux` (1 Create run) | ~10,000 | ~8,000 | ~20% |
 | `create-story` × 12 | ~200,000 | ~65,000 | ~67% |
-| `dev-story` + review × 12 | ~285,000 | ~110,000 (review inline) | ~61% |
+| `dev-story` + review × 12 | ~285,000 | ~110,000 (review inline when measured) | ~61% |
 | Retrospective × 3 epics | ~54,000 | ~11,000 | ~80% |
 | Flywheel orchestration (3 epics) | — | ~15,000 | — |
 | **Total** | **~600,000** | **~220,000** | **~63%** |
@@ -86,16 +86,27 @@ Tokens loaded per full run of each skill (skill assets + ceremony; excludes proj
 > Contract / edge-case AC pass, Design Contract extraction, invariant verification, and the
 > inline adversarial review — verification layers upstream's equivalent phases don't run.
 
+> **Review is no longer inline (DD-75).** The rows above were measured when dev-story reviewed
+> its own diff. Now a fresh `lw-story-reviewer` does it on every story, and that re-reads what
+> independence requires — the story up to its Dev Agent Record, `CLAUDE.md`, the routed guidance,
+> and the diff: roughly 10–24K input tokens per story in a disposable window. Against that,
+> dev-story no longer carries the review instructions (~1.4K per story), and the review turns no
+> longer re-send the whole implementation history, which the load-based numbers here never
+> counted. The net is unmeasured; `code-review` ledger lines are tagged `standalone`, so a real
+> project's ledger is where to settle it. On Swift projects the review also moved from Opus to
+> Sonnet.
+
 ### Where Leanwheel spends nothing at all
 
 Several layers added since the original estimate were designed to be **zero-token or off-model**, so they don't appear in the table:
 
 - **Deterministic hooks** (secret guard, design-token guard, activity log) — pure bash, never call a model.
-- **Evals RUN** — the cumulative regression net is `type: command` shell execution; a 50-case eval set costs 0 tokens to run.
+- **Evals RUN** — `scripts/evals.sh` owns collection, batching, assertion and reporting, so a 50-case eval set costs 0 tokens to run *and* 0 to collect. This was previously only half true: execution was free, but a model had to read every case block in `docs/evals/*.md` to gather and group them, a cost that grew with every story. The script also doubles as the CI seam.
 - **Build & Test Gate** — toolchain commands, not model reads; it *saves* tokens by catching regressions that would otherwise trigger re-fix loops.
 - **GitHub tracking** — label transitions moved into `scripts/gh-track.sh` (one shell call replaces a view→parse→edit→verify model round-trip per transition).
 - **Ledger/observability** — shell-append JSONL, never read into context.
 - **docs-sync** — routed to a **Haiku** subagent, so mechanical doc maintenance never lands on the dev model (which is Opus on Swift projects).
+- **Effort routing** — the second cost axis, invisible in every table above because it governs *output* tokens (thinking and tool calls), not the input loads measured here. Each phase-runner pins `effort:` in its agent def (creator `medium`, developer and reviewer `high`, docs-sync `low`) instead of inheriting the session's. A subagent spawn is its own conversation, so pinning costs no prompt cache — and it stops a `max`-effort session leaking past the model cost ceiling into every phase. Per Anthropic's guidance these levels should be swept against `evals/`, not assumed.
 
 ### What session hygiene adds on top
 
@@ -152,16 +163,55 @@ enforced advisorily by `guard-context-budget.sh` at write time and audited by
 The failure mode this document criticizes upstream for — a single 67KB `retrospective`
 SKILL.md — is reachable from here by pure accretion. Each addition is defensible; the sum is not.
 
+**The ceiling is measured in bytes, not lines.** It used to be lines, and that metric was
+measuring the wrong thing: line count and token cost turn out to be close to uncorrelated
+across this repo's skills, because a step-list skill wraps at 60 characters and a
+table-and-prose skill runs to 200.
+
+| Skill | Lines | ~Tokens | Under the old 300-line ceiling? |
+|---|---|---|---|
+| `epic-flywheel` | 263 | **6,450** | yes — and it is the most expensive file in the repo |
+| `dev-story` | 226 | 5,922 | yes |
+| `appstore-connect` | 184 | 5,552 | yes, comfortably |
+| `swift-audit` | 355 | 3,816 | no — flagged as debt at 60% of epic-flywheel's cost |
+
+Ranking by lines put the cheapest of those four in the penalty box and gave the most
+expensive one a clean bill of health. Bytes are what get tokenized, so bytes are the budget.
+
 | Asset | Ceiling | Over it → |
 |---|---|---|
-| `.claude/skills/*/SKILL.md` | **300 lines** | extract to a JIT-loaded reference file in the skill's directory that the skill reads *only when the branch needs it* — never pad the main file |
-| `agents/*.md` | **80 lines** | same: the agent's job list and report contract stay; detail moves to the skill it invokes |
+| `.claude/skills/*/SKILL.md` | **20 KB** (~5,000 tokens) | extract to a JIT-loaded reference file in the skill's directory that the skill reads *only when the branch needs it* — never pad the main file |
+| `agents/*.md` | **4 KB** (~1,000 tokens) | same: the agent's job list and report contract stay; detail moves to the skill it invokes |
 | Stubs (`stubs/**`) | no fixed ceiling — they are project-installed, not per-invocation | keep them one topic per file |
 
-Current debt against the SKILL.md ceiling: `swift-audit` (355) and `setup` (~310). Both are
-step-list skills whose branches are mostly mutually exclusive — the natural fix is routing
-the conditional platform blocks out to reference files, not prose trimming.
+**Enforced as a ratchet**, zero tokens:
+
+```bash
+bash scripts/test/budget.sh            # exit 1 if a file over budget grew, or a new one went over
+bash scripts/test/budget.sh --update   # lower ceilings to current sizes; retire paid-off debt
+```
+
+Files that were already over when the budget arrived are grandfathered in
+`scripts/test/budget-baseline.txt`, and **may shrink but never grow**. A ceiling broken on
+day one and never enforced is one people learn to ignore; the ratchet stops accretion
+immediately and lets the debt come down as it is worked. `--update` never raises a ceiling
+and never adds a file — new debt is a deliberate, reviewed edit to the baseline.
+
+Current debt (three files): `epic-flywheel`, `story-flywheel`, and
+`agents/lw-story-developer.md` — `budget.sh` prints the live figures. Both App Store skills
+were paid off by splitting them along the lines below (DD-74), and `dev-story` by moving its
+review out to an independent reviewer (DD-75). Two distinct fixes
+apply, and they are not interchangeable:
+
+- **Mutually-exclusive branches** (`appstore-*`, `swift-audit`, `setup`) — route the
+  conditional blocks out to reference files the skill reads only on the branch that needs
+  them. Nothing is lost; it just stops loading unconditionally.
+- **Prose that the model no longer needs** (`dev-story`, and the review passes it carries) —
+  cut it. Current Claude 5 guidance is explicit that carried-over verification instructions
+  cause *over*-verification, so a chunk of this is not just costly but counterproductive.
+  Deterministic gates (`sabotage.sh`, `evals.sh`, the Build & Test Gate) stay; the conduct
+  prose around them is what goes.
 
 ### Bottom line
 
-Leanwheel uses roughly **a third of the tokens** of BMAD v6 for the same 12-story project (~220K vs ~600K on the loading side) — while running more verification (build gates, evals, invariant checks, inline review) than upstream does. The savings come from the same four levers as before, all of which survived both systems' growth: no activation ceremony, epic-context caching, inline review, and session hygiene — now compounded by subagent isolation, model routing, and the zero-token guardrail/eval/tracking layers.
+Leanwheel uses roughly **a third of the tokens** of BMAD v6 for the same 12-story project (~220K vs ~600K on the loading side) — while running more verification (build gates, evals, invariant checks, an independent review) than upstream does. The savings come from three levers that survived both systems' growth — no activation ceremony, epic-context caching, and session hygiene; a fourth, inline review, was given up for independence (DD-75) — now compounded by subagent isolation, model routing, and the zero-token guardrail/eval/tracking layers.

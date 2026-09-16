@@ -27,7 +27,7 @@ Append-only single source of truth. Format:
 ## LOG-AND-SCHEDULE
 
 Input: `title`, `detail`, `source` (where issue found).
-Called by: dev-story/code-review/correct-course/investigate/quick-dev when triaging defer findings.
+Called by: code-review/correct-course/investigate/quick-dev when triaging defer findings.
 
 **Named trigger — observed test flake or hang.** A test suite that flakes or hangs is logged here the moment it is observed, never waved off as "passes in isolation." A festering hang blocks the next epic-boundary gate and masquerades as agent failures.
 
@@ -91,7 +91,6 @@ Find the best existing backlog story to absorb the deferred item as an AC:
 
 ## Callers of LOG-AND-SCHEDULE
 
-dev-story: triaged `defer` findings → title, detail, story path.
 code-review: triaged `defer` findings → title, detail, story/branch.
 correct-course: `new-story` impacts on done work → title, what was wrong, story path.
 investigate: handoff recommends story → root cause, summary, case path.

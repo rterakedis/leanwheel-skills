@@ -1,0 +1,33 @@
+{
+  "identifier" : "0A1B2C3D",
+  "nonRenewingSubscriptions" : [],
+  "products" : [],
+  "settings" : { "_locale" : "en_US", "_storefront" : "USA" },
+  "subscriptionGroups" : [
+    {
+      "id" : "21000001",
+      "localizations" : [],
+      "name" : "Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "31000001",
+          "introductoryOffer" : null,
+          "localizations" : [
+            { "description" : "Unlimited jobs", "displayName" : "Pro Monthly", "locale" : "en_US" }
+          ],
+          "productID" : "com.example.storeapp.pro.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Pro Monthly",
+          "subscriptionGroupID" : "21000001",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : { "major" : 4, "minor" : 0 }
+}

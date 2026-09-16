@@ -70,7 +70,7 @@ Spawn `lw-story-creator` with `{epic}.{story}`. Capture `STORY FILE`, `EPIC CONT
 - **Commit:** `story {epic}.{story}: create` (stages the story file + the epic context cache if generated/updated this step + any tracking/epics edits).
 
 ### Step 2 — Dev Story → commit
-**Track first:** `gh-track.sh transition {issue#} in-progress` before spawning, so a long dev pass shows the right state. Then spawn `lw-story-developer` (`model: opus` only if `swift_project`) with the story file path. It runs the full dev-story workflow: implementation, **Build & Test Gate** (verify by running), **evals RUN** (if `docs/evals/`), invariant + design verification, and the inline review. Capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `FINDINGS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`, `TESTING PLAN`.
+**Track first:** `gh-track.sh transition {issue#} in-progress` before spawning, so a long dev pass shows the right state. Then spawn `lw-story-developer` (`model: opus` only if `swift_project`) with the story file path. It runs the full dev-story workflow: implementation, **Build & Test Gate** (verify by running), **evals RUN** (if `docs/evals/`), and invariant + design verification, then stops at `review`. Capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`, `TESTING PLAN`, `REVIEW HANDOFF`.
 - **On HALT or red gate:** stop the loop. Report which story and why; do **not** commit a red story. Resume with `/epic-flywheel {N}` after the blocker is fixed.
 - **Operational doc sync (cheap, orchestrator-owned):** the developer does not run docs-sync (DD-24). If `INFRA TOUCHED: yes`, spawn **`lw-docs-sync`** (Haiku) with the story path and op `OPERATIONAL`; capture `DOCS UPDATED`. Skip the spawn when `INFRA TOUCHED: no`. The doc edits land in the dev commit below.
 - **Track:** on green, `gh-track.sh transition {issue#} review`.
@@ -85,9 +85,7 @@ Spawn `lw-story-creator` with `{epic}.{story}`. Capture `STORY FILE`, `EPIC CONT
   The `AUTOMATED` names are the subtract list the boundary greps against.
 
 ### Step 3 — Code Review + patch → commit
-Per story-flywheel's Phase 3 economy and its **blast-radius trigger set** (not duplicated here): the developer subagent already ran the inline review.
-- **Clean report (no `UNRESOLVED`, PASS gate, not security-sensitive) and no blast-radius trigger:** skip a separate reviewer — carry Phase 2 findings forward.
-- **Otherwise:** spawn `lw-story-reviewer` for an independent adversarial pass. It emits the SCORE rubric line, auto-patches `patch` findings, applies `fix-now` findings within code-review's Triage ceiling (recorded in Review Findings, not logged as deferred), logs `defer` via the `deferred` skill (re-homing each — slot as AC or remediation story), and **re-verifies green**. `decision-needed` findings surface to the user.
+Per story-flywheel → Phase 3 (not duplicated here): **always** spawn `lw-story-reviewer` with the developer's `REVIEW HANDOFF` as its prompt, verbatim. It emits the SCORE rubric line, auto-patches `patch` findings, applies `fix-now` findings within code-review's Triage ceiling (recorded in Review Findings, not logged as deferred), logs `defer` via the `deferred` skill (re-homing each — slot as AC or remediation story), and **re-verifies green**. `decision-needed` findings surface to the user.
 - **Deferred re-homing check:** confirm every `[Defer]` from this story landed in `docs/deferred-items.md` with a `Scheduled As` target. An orphan is a loop bug — fix before advancing.
 - **Track:** on green, `gh-track.sh close {issue#} "Story {epic}.{story} complete"` (applies `done` + closes — milestone progress ticks up here).
 - **Commit (only if green after patches):** `story {epic}.{story}: review+patch`. If patches couldn't resolve, leave status `in-progress`, don't commit, HALT.
@@ -112,7 +110,7 @@ Use the project CLAUDE.md `## Quiet commands` invocations when present; always `
 Red build / any failing test → **HALT**: report the failing target/test output and ask the user how to proceed.
 
 ### 2. Evals RUN — full cumulative set
-Invoke the `evals` RUN op over the entire `docs/evals/` (every epic, not just this one) — the cumulative `command` regression net. A failing case → **HALT** with the failing case listed.
+Run `bash scripts/evals.sh --quiet` — every epic, not just this one (per evals → RUN). Any regression → **HALT**, listing the failing cases.
 
 ### 3. Invariant verification sweep
 Collect the `### Invariant Verification` blocks recorded by dev-story across this epic's stories (read the short blocks, not full files). Any invariant left `[ ] UNVERIFIED` (no test, no cited enforcing `file:line`) → **HALT** and surface it for the user (DD-14).

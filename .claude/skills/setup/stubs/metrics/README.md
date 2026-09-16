@@ -48,7 +48,8 @@ Skim the ledger (or `/status`) for:
 - **Rising `bt_iterations`** across stories → the model is struggling on this
   surface; consider routing dev-story to a stronger model, or the guidance stubs
   are stale (run `/refresh-swift` / `/refresh-web`).
-- **Rising `findings.patched` / falling `rubric_gate`** → spec quality slipping;
+- **Rising `findings.patched` / falling `rubric_gate`** (on `code-review` lines — the
+  developer never reviews its own diff, so its lines carry zeros) → spec quality slipping;
   tighten ACs / Behavior Contracts in create-story.
 - **`build_test: manual-required` recurring** → no toolchain wired; the regression
   net isn't actually running. Fix the toolchain.

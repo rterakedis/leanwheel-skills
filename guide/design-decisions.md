@@ -11,12 +11,12 @@ Not to be confused with a user project's `docs/project/decisions.md` (owned by t
 ## Contents
 
 - Principles: DD-01 verifiable artifacts over guardrails · DD-02 contract vs conduct · DD-03 fail loudly
-- Verification: DD-10 verify by running · DD-11 gate integrity · DD-12 Fix-Now · DD-13 evals command-default · DD-14 invariant evidence
-- Orchestration: DD-20 subagent routing · DD-21 non-return rule · DD-22 orchestrator-owned tracking · DD-23 epic-context cache gate · DD-24 docs-sync audiences · DD-25 boundary merge
+- Verification: DD-10 verify by running · DD-11 gate integrity · DD-12 Fix-Now · DD-13 evals command-default · DD-14 invariant evidence · DD-71 evals RUN is a script and the CI seam
+- Orchestration: DD-20 subagent routing · DD-73 effort pinned per runner · DD-75 the author never reviews its own diff · DD-21 non-return rule · DD-22 orchestrator-owned tracking · DD-23 epic-context cache gate · DD-24 docs-sync audiences · DD-25 boundary merge
 - Testing & test plans: DD-30 manual pass at the epic boundary · DD-31 TESTING PLAN split + subtract · DD-32 plan-defect kind · DD-33 done stories immutable · DD-34 testability foundation · DD-35 flow tiering · DD-36 e2e backfill
 - Simulator automation: DD-40 sim.sh + route navigation · DD-41 silent-failure guards · DD-42 orientation · DD-43 store preset · DD-44 sim.json committed · DD-45 release parity for store captures · DD-46 vendored-script drift is reported, never silent · DD-47 runtime pin + ambiguity guard
-- Planning & docs: DD-50 planning consolidation · DD-51 pinned story frontmatter · DD-52 design contract decoupled from docs/ux · DD-53 simplicity doctrine placement · DD-54 CLAUDE.md tiers & budget · DD-55 epic archive · DD-56 dark patterns · DD-57 doc-free lane · DD-58 architecture promotion
-- Packaging: DD-60 hooks for hard rules · DD-61 no project names · DD-62 ledger via ledger.sh · DD-63 quiet toolchain output · DD-68 optional styling via template.json · DD-69 status line over IDE extension
+- Planning & docs: DD-50 planning consolidation · DD-51 pinned story frontmatter · DD-52 design contract decoupled from docs/ux · DD-53 simplicity doctrine placement · DD-54 CLAUDE.md tiers & budget · DD-55 epic archive · DD-56 dark patterns · DD-57 doc-free lane · DD-58 architecture promotion · DD-76 no plan-mode pass before dev-story
+- Packaging: DD-60 hooks for hard rules · DD-72 per-file budget in bytes · DD-61 no project names · DD-62 ledger via ledger.sh · DD-63 quiet toolchain output · DD-68 optional styling via template.json · DD-69 status line over IDE extension · DD-70 App Review 2.1 packet + device-verified claim ledger · DD-74 App Store skills load per op / per branch
 
 ---
 
@@ -663,3 +663,184 @@ v1 text is replaced; anything else is a CONFLICT for the user to resolve.
 
 **Fixed in passing.** `asc-lint.sh` treated the documented `metadata/review_information/`
 directory as a locale and raised six false ERRORs on any project that followed the tree.
+
+### DD-71 — Evals RUN is a script, and the script is the CI seam
+**Context.** `docs/evals/` was described as costing "zero tokens", and its *execution* did.
+Collection did not: a model had to read every case block in `docs/evals/*.md` to gather the
+cases and group them by identical `run:` command. That read grows with every story, so the
+one gate designed to get cheaper as the project matured was quietly getting more expensive —
+the same accretion `epic-archive` exists to stop, in a different file.
+
+Separately, the regression net was reachable only from inside a Claude session. As an add-in,
+leanwheel cannot ship a pipeline config: the project's CI could be GitHub Actions, Jenkins,
+GitLab, or a pre-push hook, and guessing wrong is worse than not guessing.
+
+**Decision.** `scripts/evals.sh` owns collection, batching, assertion and reporting. RUN is one
+shell call whose cost does not scale with the case count, and skills **never** read
+`docs/evals/*.md` to run the set. The script exits 0 green / 1 on regressions / 2 on usage, and
+its last line *is* the RUN report other skills quote. Whatever the project uses for CI calls it;
+leanwheel ships the contract, not the pipeline.
+
+**Consequence.** The eval-case format now has a real parser, so it is a schema rather than a
+convention — the script owns batching by identical `run:`, empty-output failure, README
+exclusion, and the rule that a malformed case (`enabled: true` with no `run:`, an unparseable
+`expect:`) is a **failure** and never a silent skip. Changing the case format means changing the
+script. The Simulator-batching rule moved from prose the model had to honor into behavior it
+cannot bypass. `scripts/test/evals-runner.sh` pins all of it against committed fixtures,
+asserting *which* cases fail and *why* — not merely the exit code, since an exit 1 would
+still be satisfied if only one of six failure modes worked. Each check was shown to fail
+against a deliberately broken runner before it was trusted.
+
+### DD-72 — The per-file budget is measured in bytes, not lines
+**Context.** SKILL.md files carried a 300-line ceiling. Measuring the repo showed line count and
+token cost are close to uncorrelated across it: `epic-flywheel` sat at 263 lines and ~6,450
+tokens — the most expensive file in the repo, and formally compliant — while `swift-audit` at
+355 lines and ~3,816 tokens was carried as debt. A step-list skill wraps at 60 characters; a
+table-and-prose skill runs to 200. Ranking by lines put the cheapest file in the penalty box
+and cleared the most expensive one.
+
+**Decision.** Budget in bytes: **20 KB** per `SKILL.md`, **4 KB** per `agents/*.md`, enforced
+as a **ratchet** by `scripts/test/budget.sh`. Six files were already over; they are
+grandfathered in `budget-baseline.txt` and may shrink but never grow. Their ceilings were
+recorded at pre-change sizes, so the commit that introduced the budget had to trim back its
+own growth before it could pass — the rule's first catch. A hard ceiling with six violations
+on day one would have been ignored within a week; a ratchet is enforceable from the start.
+
+**Consequence.** The debt list changed membership, not just order — `dev-story` and both
+`appstore-*` skills entered it, `swift-audit` and `setup` left. Two fixes apply and are not
+interchangeable: branch-conditional bulk routes out to sibling reference files (nothing lost),
+while conduct prose gets cut (Claude 5 guidance says carried-over verification instructions
+cause over-verification, so some of it is not merely costly but counterproductive).
+
+### DD-73 — Effort is pinned per subagent, never inherited
+**Context.** Model routing had a cost ceiling — Opus, never Fable — but effort was left to
+inherit the session default, on the reasoning that changing it busts the prompt cache. That
+reasoning holds *within* a conversation and not across spawns: a subagent starts its own
+conversation, so pinning its effort costs the orchestrator no cache at all. Meanwhile
+inheritance was a hole straight through the ceiling — a `max`-effort session leaked `max` into
+every phase, which is precisely what pinning the model was meant to prevent. On 5-series models
+effort is the primary cost control and governs *all* output tokens, thinking and tool calls
+alike.
+
+**Decision.** Every phase-runner pins `effort:` in its agent def: creator `medium`, developer and
+reviewer `high`, `lw-docs-sync` `low`. The developer is never stepped down to buy budget — lower
+effort also means *fewer tool calls*, which is wrong for a phase whose job is to run gates; use
+the model axis for cost, which is what it is for. (`effort` is inert on Haiku, which does not
+support it; the pin is kept against a future re-tier.)
+
+**Consequence.** Cost is now expressed on two independent axes with one ceiling each. The levels
+are a starting point, not a result: Anthropic's guidance is to sweep effort against your own
+evals rather than carry levels over, and `evals/` is where that sweep belongs.
+
+### DD-74 — The App Store skills load per op and per branch, not all at once
+**Context.** Both skills were over the byte budget (DD-72) and had just grown. Their shapes
+differ. `appstore-connect` has three ops — ASSETS, METADATA, PRODUCTS — that never run
+together, so every run loaded all three: 22.7 KB for a METADATA run that needed 2 KB of op
+instructions. `appstore-preflight` is a linear audit whose steps all run, so most of its content
+is genuinely needed every time. Anthropic's skill-authoring guidance covers both cases:
+organise by domain so a task loads only its own reference file, move conditional detail behind a
+link, keep references one level deep, and prefer scripts for deterministic operations.
+
+**Decision.**
+- `appstore-connect` keeps only what every op shares (inventory, the `docs/store/` tree,
+  hand-offs) and routes to `op-assets.md` / `op-metadata.md` / `op-products.md`. The `op-`
+  prefix exists because a bare `products.md` would share a name with the `docs/store/products.md`
+  artifact it writes. Preflight's IAP step reads `op-products.md` alone.
+- `appstore-preflight` moves only what is conditional or mechanical: the CloudKit and StoreKit
+  checks into `checks-*.md`, read when Step 1 finds them, and the submission checklist into
+  `submission-checklist.template.md`, which `render-checklist.sh` renders. The audit steps stay.
+
+**Consequence.** Per-run loads for `appstore-connect` fall to ~8 KB (status) through ~17 KB
+(ASSETS). For preflight the saving is smaller and mostly *output*: the model still reads the
+rendered checklist to fill its judgment placeholders, but it edits a few lines instead of writing
+~5 KB out, and projects without CloudKit or StoreKit skip those branches. The rendering is pinned
+by `scripts/test/checklist-render.sh`, which caught a real defect while it was being written — a
+`{date}` inside a judgment placeholder being overwritten with the render date — and the script
+refuses to write a checklist containing a marker it doesn't recognise, so template drift fails
+loudly instead of leaking `{omit if …}` to a user. Three eval cases (`evals/appstore-*`) assert the
+disclosure itself: which op and branch files a run reads, and which it must not.
+
+### DD-75 — The author never reviews its own diff
+**Context.** `dev-story` ended by reviewing its own changes inline: the same context that wrote
+the diff, with its reasoning, its Debug Log narrative, and its assumptions all still loaded. An
+independent `lw-story-reviewer` ran only when a blast-radius trigger fired or the inline pass
+reported problems — so the stories most likely to hide a quiet mistake, the ones the author judged
+clean, were exactly the ones never read by anyone else. Anthropic's AI-native SDLC playbook states
+the principle directly: the agent that wrote the code has no way to approve it. The original
+reason for inlining was token cost, and that saving was measured on skill *loads*; it never counted
+that every inline review turn re-sent the whole implementation history.
+
+The consolidation also surfaced three latent defects in the inline copy: it called a `RESOLVE`
+operation the `deferred` skill does not have; its pass letters disagreed with `code-review`'s (so the
+reviewer agent named Pass B "Edge Cases" while the skill it ran called Pass B "Security"); and the
+reviewer's rubric omitted the `simplicity` dimension `code-review` scores.
+
+**Decision.** Review is always a separate context.
+- `dev-story` records a base ref at activation and ends at `status: review` with a `REVIEW HANDOFF`
+  report field: `STORY`, `BASE`, `LOG` — **pointers only**. A summary of what was done, or hints
+  about what to check, would save the reviewer tokens and quietly re-merge author and reviewer.
+- The flywheels spawn `lw-story-reviewer` on **every** story with that block verbatim; the
+  blast-radius gating is gone. Standalone, `dev-story` spawns the reviewer itself; with no
+  subagents it tells the user to `/clear` and run `/code-review` rather than review in place.
+- `code-review` is the single home of the review passes. Its Independence rule: read the story only
+  up to `## Dev Agent Record` before the passes (`sed '/^## Dev Agent Record/q'`), and read the
+  author's own record afterwards, to check its claims, never to scope the review. The diff is
+  `git diff {BASE}` **plus untracked files** — under story-flywheel nothing is committed between
+  phases, and `git diff` alone would hide every file the developer created. The two pieces only the
+  inline copy had — the conditional deep security pass and UNVERIFIED invariants as findings — moved
+  into Passes B and D.
+- A flywheel's no-subagent fallback still reviews inline, but says so: `review=inline-fallback` in
+  the roll-up and no `--standalone` on the ledger line.
+
+**Consequence.** `dev-story` dropped under the byte budget (23.5 → 20.1 KB) and both flywheels
+shrank. Each story now pays a fresh reviewer's reads — roughly 10–24K input tokens in a disposable
+window — against the removed review instructions and the review turns that no longer carry the
+implementation history; the net is unmeasured, and `code-review` ledger lines tagged `standalone`
+are where a real project settles it. On Swift projects the review moves from Opus to Sonnet, so it
+costs less per token. `dev-single-goal` keeps its condensed inline review: it is the doc-free lane,
+with no story file to hand off.
+
+Checked with a fresh Sonnet reviewer given only a handoff, on a repo where the story's Debug Log
+claimed `count >= 5` and cited a sabotage-verified test, while an *untracked* new file held
+`count > 5` and no test existed. It listed untracked files, found and fixed the off-by-one, read
+the Dev Agent Record only after its passes, and caught both false claims — but recorded them as a
+note and still scored the gate PASS. The Independence rule now makes a claim the diff contradicts
+a `patch` finding against the verification record, never a note.
+
+### DD-76 — No mandatory plan-mode pass before dev-story
+**Context.** Anthropic's AI-native SDLC playbook makes plan mode the default start of the Build
+stage: before any code, the implementer reads the codebase read-only and commits a `plan.md` —
+files that change, order of work, risks, proof — which an engineer approves. Leanwheel's story file
+is already a committed, approval-shaped artifact, but `create-story` writes it from the documents
+(PRD, architecture, the epic context cache), and nobody checks it against the *code* before
+`dev-story` starts. When the two disagree — a brownfield codebase, earlier stories that drifted
+from the architecture, a helper that already exists — the developer finds out mid-implementation
+and improvises.
+
+**Decision.** Don't add one. Most of what the pass would catch already has a home:
+- `create-story`'s Dev Notes (`Files to Touch`, `Key Implementation Details`) name the surface;
+- the epic context cache's `## Prior Story Learnings` carries drift between stories;
+- `docs/ux/components-built.md` stops components being rebuilt, and code-review Pass F flags
+  `native:` / `delete:` duplication;
+- the Clarification Gate stops ambiguity before any code;
+- `docs-sync` PROMOTE keeps `architecture.md` honest at each epic boundary;
+- the Build & Test Gate fails a wrong approach quickly, and cheaply.
+
+The costs are concrete. A read-only exploration pass adds roughly 3–8K tokens per story. A human
+approval per story contradicts the flywheels' deliberate limit of three human touch points, and an
+orchestrator approving the plan instead spends the tokens without the judgment the playbook wants.
+Claude 5-generation models also plan without being told, and mandated steps of that kind are what
+Anthropic's current context-engineering guidance removes, for the same reason as carried-over
+verification instructions.
+
+**What would reverse this.** Evidence, not preference — most of it already recorded:
+- the ledger's `bt_iterations` for `dev-story` regularly at 3 or more (`/retrospective` reports it
+  per model);
+- recurring review findings that say "this duplicates X" or "the platform already does this";
+- `/correct-course` invoked mid-epic because stories did not match the code;
+- projects onboarded by `/discover`, where the docs were reverse-engineered from the code.
+
+If those appear, the first step is a **conditional** pass, not a universal one: only for
+`**Shape:** migration` stories and `/discover`-based projects, where the gap between documents and
+code is structurally widest.
+

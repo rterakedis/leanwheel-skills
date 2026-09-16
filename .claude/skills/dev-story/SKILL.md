@@ -39,6 +39,7 @@ description: Implement a story from its story file. Use when the user says "dev 
    - Read `docs/setup/web/anti-patterns.md` if present
 4c. **Design contract** (UI stories): if the story has a `### Design Contract` in Dev Notes, it is the design source of truth — use its tokens, states, and reuse list; do not read `docs/ux/` again. If the story changes user-visible UI but has **no** Design Contract and `docs/ux/DESIGN.md` exists: read DESIGN.md frontmatter and the relevant EXPERIENCE.md sections before implementing (and note the gap in Completion Notes so `/create-story` improves next time).
 5. Execute **TRANSITION** with `new_label: in-progress` (skip if unavailable).
+5b. Record the review base: `git rev-parse HEAD`. The reviewer diffs everything since it, committed or not — note any unrelated uncommitted changes in Completion Notes.
 6. Confirm: "Implementing {epic}.{story}: {title}. Starting..."
 
 ## Execution
@@ -114,7 +115,7 @@ Before review, verify all items in `checklist.md` pass. Fix any failures first.
 2. **Red build or failing test = not done.** Read the compiler/test output, fix the cause, and re-run. Loop until green. Do not patch the story file to `review` over a failure.
    **Escalation limit:** after **3 consecutive red runs** with no new fix succeeding, stop, report the failing output, and ask the user — do not keep retrying. Retry thrash burns tokens and, on GUI toolchains, ties up the device/UI. This is the HALT condition below.
 2b. **A flaky or hanging test suite is a first-class bug — file it the moment it is observed**, via **LOG-AND-SCHEDULE** in `skills/deferred/SKILL.md`. Never "it passes in isolation, ignore it": a festering hang blocks the next epic-boundary gate and masquerades as agent or dev failures. Then continue with the targeted/known-good invocation.
-3. **Run the cumulative eval set.** If `docs/evals/` exists, execute **RUN** from `skills/evals/SKILL.md` for this story's epic (zero-token: it just runs the accumulated `type: command` cases). A failing case is a **regression** of an earlier story — treat it exactly like a red build: fix and re-run, or HALT. This is what makes the regression net *cumulative* across stories, not just per-story.
+3. **Run the cumulative eval set.** If `docs/evals/` exists, run `bash scripts/evals.sh --epic {n} --quiet` (zero-token; its last line is the RUN report, per evals → RUN). A failing case is a **regression** of an earlier story — treat it exactly like a red build: fix and re-run, or HALT.
 4. **Update the eval set.** If `docs/evals/` exists and this story added tests that cover an AC or invariant, execute **BUILD** from `skills/evals/SKILL.md` to append (or flip `enabled: true` on) the corresponding `type: command` cases, so the next story inherits them.
 4b. **A new gate is not done until it has been shown to fail.** For every test, eval case, or assertion **written this story** (not every run of the existing suite): break the thing it guards — revert the fix, reintroduce the defect, or corrupt the input — and confirm the gate fails **and names the specific item**. Restore, confirm green. A gate that has only ever been observed green is unverified, however many times it ran. Record the discriminating check in Completion Notes (`{gate} — sabotage: {what was broken} → failed naming {item}; restored green`) so a reviewer can see it happened.
    **Use `scripts/sabotage.sh` for the revert-the-fix mode** (zero-token, deterministic): `scripts/sabotage.sh --name {TestName} -- {filtered gate cmd}` stashes the non-test changes, runs the *filtered* gate expecting a red that names the item, restores, and re-runs expecting green — its last line (`SABOTAGE OK` / `GATE CANNOT FAIL` / `GATE RED BUT UNNAMED`) is the Completion Notes entry. Reserve model-driven sabotage (reintroduce a defect / corrupt an input) for gates the revert can't exercise.
@@ -129,79 +130,29 @@ Before review, verify all items in `checklist.md` pass. Fix any failures first.
 
 When tasks done, DoD passes, **and the Build & Test Gate is green** (or manual-required is recorded):
 
-**Verify reachability, not presence.** A string, control, or affordance existing in source is *not* evidence it renders — dev, inline review, and automated validation can all pass while only confirming the string is in the source. Confirm by driving the app or dumping the view hierarchy. **Corollary:** when a UI element can't be addressed in a UI test, dump the tree before blaming the test framework — the element may not exist.
+**Verify reachability, not presence.** A string, control, or affordance existing in source is *not* evidence it renders — dev, review, and automated validation can all pass while only confirming the string is in the source. Confirm by driving the app or dumping the view hierarchy. **Corollary:** when a UI element can't be addressed in a UI test, dump the tree before blaming the test framework — the element may not exist.
 
-1. **Invariant verification (stateful stories):** if the story's `### Behavior Contract` lists invariants, verify each one holds in the built code with **evidence** — a test that exercises it, or a cited assertion/guard in the source (`file:line`). Record results under `### Invariant Verification` in the story file: each invariant as `- [x] {invariant} — {test name | file:line}` or `- [ ] {invariant} — UNVERIFIED: {why}`. An invariant with no test and no enforcing code is **not** a pass (DD-14) — add a one-test cover if cheap, otherwise leave it `[ ]` and let it feed the inline review as a finding. Skip entirely for simple stories or stories with no invariants.
-2. **Design verification (UI stories):** if the story changed user-visible UI, execute **VERIFY** from `skills/design-verify/SKILL.md` — render the changed surfaces (simulator or dev server + screenshots), compare against the Design Contract, and write results to `### Design Verification` in the story file. Mismatches feed into the inline review triage below as findings. If no rendering tooling is available, record the manual checklist and continue. Skip entirely for stories with no user-visible surface.
-3. Run code-review inline (don't stop). Continue directly to Code Review below.
+1. **Invariant verification (stateful stories):** if the story's `### Behavior Contract` lists invariants, verify each one holds in the built code with **evidence** — a test that exercises it, or a cited assertion/guard in the source (`file:line`). Record results under `### Invariant Verification` in the story file: each invariant as `- [x] {invariant} — {test name | file:line}` or `- [ ] {invariant} — UNVERIFIED: {why}`. An invariant with no test and no enforcing code is **not** a pass (DD-14) — add a one-test cover if cheap, otherwise leave it `[ ]` — the reviewer turns it into a finding. Skip entirely for simple stories or stories with no invariants.
+2. **Design verification (UI stories):** if the story changed user-visible UI, execute **VERIFY** from `skills/design-verify/SKILL.md` — render the changed surfaces (simulator or dev server + screenshots), compare against the Design Contract, and write results to `### Design Verification` in the story file. Unresolved mismatches stay in that section; the reviewer turns them into findings. If no rendering tooling is available, record the manual checklist and continue. Skip entirely for stories with no user-visible surface.
+3. **Hand off for independent review.** You never review your own diff (DD-75): the reviewer is a fresh context that never saw your reasoning.
+   1. Set `status: review` in the YAML frontmatter, then **TRANSITION** to `review` (skip if unavailable).
+   2. **Operational doc sync** (routed to a cheap model, DD-20/DD-24): if you are running as the `lw-story-developer` subagent, do not run docs-sync yourself — set `INFRA TOUCHED: yes` in your report when this story's File List includes an infra-shaped file (dependency manifest, `.env`/config, migration/schema, script, Dockerfile/CI/deploy, or a new service entrypoint); the orchestrator spawns `lw-docs-sync` (Haiku) to do it. If you are running **standalone** (not under a flywheel), call the Agent tool yourself — `subagent_type: "lw-docs-sync"`, prompt naming op **OPERATIONAL** and this story's path — or, if subagents are unavailable, execute **OPERATIONAL** from `skills/docs-sync/SKILL.md` inline as a fallback. Record any `DOCS UPDATED` in the Debug Log.
+   3. **Ledger:** append one `dev-story` line via `scripts/ledger.sh` (never hand-write the JSON — the script owns the schema, normalizes the model name, stamps the timestamp, and no-ops if `docs/metrics/` is absent):
+      `bash scripts/ledger.sh dev-story --story {id} --model {model} --build-test green|red|manual-required --bt-iterations {n} --evals P/T --invariants V/T [--docs-updated a,b] [--duration-min n]`
+      Status qualifiers ("233/233", "doc-only") go in `--build-detail`, never in `--build-test`.
+   4. **Report:** "{epic}.{story} ready for review.{ Docs: {list} if any}", then the **TESTING PLAN** and **REVIEW HANDOFF** blocks below.
+   5. **Start the review.** Under a flywheel (you are `lw-story-developer`): stop here — the orchestrator spawns the reviewer. Standalone: call the Agent tool with `subagent_type: "lw-story-reviewer"` and the REVIEW HANDOFF block as the prompt, and relay its report. It cannot ask the user, so put its `DECISIONS NEEDED` to the user and send the answers back to the same reviewer. If subagents are unavailable, tell the user to `/clear` and run `/code-review {story path}` — never review in this context.
 
----
+### Review Handoff (required report field)
 
-## Inline Code Review
+Pointers only. Never summarize what you did or suggest what to check — the reviewer's independence is what it is for.
 
-The diff is uncommitted changes. Story file is loaded. Go straight to the passes below.
-
-### Review Passes
-
-**Pass A — Blind Correctness:** Logic errors, null dereferences, unchecked returns, injection/auth/data exposure, races, leaks, error handling.
-
-**Pass B — Edge Case & Regression:** Boundary checks, error paths, callers outside diff, unchecked assumptions.
-
-**Pass C — Acceptance Audit:** Unimplemented/partial ACs, AC contradictions, ignored constraints, files touched/not touched. Include any `[ ]` UNVERIFIED invariants from `### Invariant Verification` as findings.
-
-**Pass D — Security (conditional):** If Dev Notes has `Security Sensitivity:`, run matching categories from `skills/security-review/SKILL.md`. Skip if blank.
-
-**Pass E — Design Compliance (conditional):** If the diff touches user-visible UI and a `### Design Contract` (or `docs/ux/DESIGN.md`) exists: hardcoded values where a token exists, missing required states (empty/loading/error), missing dark-mode pair, platform checklist violations (tap targets, Dynamic Type, semantic HTML, focus visibility), near-duplicate of an inventoried component. **Missing or renamed accessibility identifiers**: an interactive element or dynamic row with none, or one that differs from the name the Design Contract assigned (HIGH — a renamed identifier silently breaks every flow and screenshot that addresses it), or one not matching `{feature}-{element}-{role}` kebab-case (MEDIUM). A new screen with no deep-link route is MEDIUM — it is unreachable by `/design-verify` and by future flows. Include any unresolved `### Design Verification` findings. Skip for non-UI diffs.
-
-**Pass F — Over-Engineering:** Hunt complexity only (correctness/security are Passes A–D — don't duplicate). One tagged line per finding: `delete:` (dead/speculative code), `stdlib:` (hand-rolled thing the stdlib ships), `native:` (dependency/code the platform already covers), `yagni:` (one-implementation abstraction, config nobody sets, one-caller layer), `shrink:` (same logic, fewer lines). Don't flag a lone smoke test / validation / security / accessibility check for removal. Route findings as `patch`/`defer` cleanups, not blocking bugs. End with `net: −N lines possible` or `Lean already.`
-
-### Triage
-
-Tag each finding:
-- `decision-needed` — ambiguous; fix needs user input
-- `patch` — clear bug; unambiguous fix
-- `fix-now` — outside the ACs but trivially and safely fixable now; apply the fix-now ceiling from `skills/code-review/SKILL.md` → Triage (canonical — not restated here)
-- `defer` — pre-existing, not from this diff
-- `dismiss` — noise or false positive
-
-Merge duplicates. Drop `dismiss`.
-
-### Record Findings
-
-Write non-dismissed findings to `### Review Findings` subsection:
-- `- [ ] [Decision] {title} — {detail}`
-- `- [ ] [Patch] {title} [{file}:{line}]`
-- `- [x] [Fix-Now] {title} [{file}:{line}] — out of scope, applied under the fix-now ceiling`
-- `- [ ] [Defer] {title} — pre-existing`
-
-`[Fix-Now]` items are written down so an out-of-AC fix still gets reviewed (DD-12).
-
-### Resolve and Patch
-
-- Zero findings: skip to Wrap Up
-- `decision-needed`: list all, wait for answers, record decisions, convert to patch/defer/dismiss
-- Auto-patch all `patch` (including resolved decisions). Mark `[x]`.
-- Apply all `fix-now` items in the same pass, each with its covering test. Mark `[x]`. Anything that grew past the ceiling while fixing it reverts to `defer`.
-- If patch can't auto-apply: surface explicitly, leave `[ ]`
-
-### Pull Deferred Items Forward
-
-After patches, check for `[ ] [Defer]` items in story file. If found, execute **RESOLVE** from `skills/deferred/SKILL.md`. Surfaces immediately with fresh context.
-
-### Re-verify Green
-
-After patches and deferred-item resolution touch the code, **re-run the Build & Test Gate** (build + tests) — a patch is resolved only once the toolchain confirms green. If the re-run is red, the patch is not done: fix and re-run, or leave the finding `[ ]` and keep Status `in-progress`. Skip only if no code changed during review (clean review) or the gate was `manual-required`.
-
-### Wrap Up
-
-**All resolved (and Build & Test Gate green):**
-1. Set `status: done` in the YAML frontmatter
-2. **CLOSE-ISSUE** (skip if unavailable)
-3. **Operational doc sync** (routed to a cheap model, DD-20/DD-24): if you are running as the `lw-story-developer` subagent, do not run docs-sync yourself — set `INFRA TOUCHED: yes` in your report when this story's File List includes an infra-shaped file (dependency manifest, `.env`/config, migration/schema, script, Dockerfile/CI/deploy, or a new service entrypoint); the orchestrator spawns `lw-docs-sync` (Haiku) to do it. If you are running **standalone** (not under a flywheel), call the Agent tool yourself — `subagent_type: "lw-docs-sync"`, prompt naming op **OPERATIONAL** and this story's path — or, if subagents are unavailable, execute **OPERATIONAL** from `skills/docs-sync/SKILL.md` inline as a fallback. Record any `DOCS UPDATED` in the Debug Log.
-4. **Ledger:** append one `dev-story` line via `scripts/ledger.sh` (never hand-write the JSON — the script owns the schema, normalizes the model name, stamps the timestamp, and no-ops if `docs/metrics/` is absent):
-   `bash scripts/ledger.sh dev-story --story {id} --model {model} --build-test green|red|manual-required --bt-iterations {n} --evals P/T --patched {n} --decisions {n} --deferred {n} --invariants V/T [--docs-updated a,b] [--duration-min n]`
-   Status qualifiers ("233/233", "doc-only") go in `--build-detail`, never in `--build-test`.
-5. Report: "{epic}.{story} complete. {P} patches, {D} decisions, {W} deferred.{ Docs: {list} if any}" followed by the **TESTING PLAN** block below.
+```
+REVIEW HANDOFF
+STORY: {story file path}
+BASE: {the base ref recorded at Activation}
+LOG: .leanwheel/logs/build-test.log | none
+```
 
 ### Testing Plan (required report field)
 
@@ -219,8 +170,3 @@ Rules:
 - An item belongs in `MANUAL` only if you can name the reason a test can't see it. If you can't, it belongs in a test — write the test and list it under `AUTOMATED`.
 - `AUTOMATED` is the set of names the boundary greps for; cite the identifier as it appears in the test target / eval file so the grep hits.
 - Unknown-reachability ("I'm not sure a test could reach this") is **setup-unreachable**, and says so — it is still a gap worth closing, not a free pass.
-
-**Unresolved patches remain:**
-1. Set `status: in-progress` in the YAML frontmatter
-2. **TRANSITION** to `in-progress` (skip if unavailable)
-3. Report which items need attention

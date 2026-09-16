@@ -61,11 +61,11 @@ Per-phase routing (Conserve-Opus baseline, dynamic Swift exception; Opus is also
 |---|---|---|---|---|
 | 1 — Create Story | `lw-story-creator` | Sonnet (pinned) | Sonnet (pinned) | Story authoring is routine. |
 | 2 — Dev Story | `lw-story-developer` | **Sonnet** (pinned) | **Opus** (override) | The hard phase gets the expert, not the specialist: Opus caps per-story cost while still clearing the Build & Test Gate first-try. Empirical — DD-20; the ledger's `bt_iterations` by model (reported by `/retrospective`) is the evidence for changing this. |
-| 3 — Code Review | `lw-story-reviewer` | Sonnet (pinned) | Sonnet (pinned) | Adversarial reading; the Build & Test Gate is the correctness backstop, not the model. (Dev-story already runs an inline review — see Phase 3.) |
+| 3 — Code Review | `lw-story-reviewer` | Sonnet (pinned) | Sonnet (pinned) | Adversarial reading in a fresh context, every story (DD-75); the Build & Test Gate is the correctness backstop, not the model. |
 
 **How to set the model:** the subagent defs pin `model: sonnet`. Pass a per-spawn `model` override on the Agent call **only** for Phase 2 when `swift_project = true` (`model: opus`) — never `fable` (usage-tier ceiling: flywheel throughput on Fable burns a week's budget in one epic). If the user opts out for the run ("conserve everything", "stay on Sonnet"), drop the Opus override too and note it. Never ask the user to `/model`-switch mid-run — it busts the prompt cache (DD-20).
 
-**Effort routing (second axis, static):** reasoning effort is set only via `effort:` frontmatter in the agent defs — the Agent tool has no per-spawn effort override, so the dynamic-Swift-exception trick above cannot be replicated for effort. Current pins: `lw-docs-sync` = `low` (mechanical doc writing — the Haiku argument, one level deeper). The three phase-runners deliberately carry **no** `effort:` and inherit the session default (DD-20).
+**Effort routing (second axis, static):** set only via `effort:` in the agent defs — there is no per-spawn override. Every runner pins it (creator `medium`, developer and reviewer `high`, `lw-docs-sync` `low`) so a session's effort never leaks into a phase. Never step the developer down for budget; that is the model axis's job (DD-73).
 
 **Spawning a phase = one literal Agent tool call.** Everywhere this skill says "spawn", make an actual Agent tool invocation — never a prose description of delegation, and never doing the phase's work inline in this thread:
 
@@ -109,11 +109,10 @@ Repeat until the epic is complete (see **Exit Conditions**):
 
 ### Phase 2 — Dev Story
 
-**Subagent mode:** spawn `lw-story-developer` via the Agent tool with the story file path. Pass `model: opus` **only if `swift_project`** (otherwise the pinned Sonnet). Instruct it to run the full dev-story workflow including the Build & Test Gate, the evals RUN (if `docs/evals/` exists), invariant/design verification, and the inline review.
+**Subagent mode:** spawn `lw-story-developer` via the Agent tool with the story file path. Pass `model: opus` **only if `swift_project`** (otherwise the pinned Sonnet). Instruct it to run the full dev-story workflow including the Build & Test Gate, the evals RUN via `scripts/evals.sh` (if `docs/evals/` exists), and invariant/design verification. It stops at `review`; it does not review its own diff.
 **Fallback mode:** execute `skills/dev-story/SKILL.md` inline on the session model.
 
-- Note: in subagent mode the developer subagent already runs dev-story's **inline** code review (Pass A–E). Phase 3 below becomes a *light confirmation* of its report rather than a second full review — only spawn a separate reviewer if the developer reported `UNRESOLVED` items or you want an independent adversarial pass.
-- From the report capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `FINDINGS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`.
+- From the report capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`, `REVIEW HANDOFF`.
 - **Operational doc sync (cheap, orchestrator-owned):** the developer does **not** run docs-sync (it would land on the dev model). If the report's `INFRA TOUCHED` is `yes`, spawn **`lw-docs-sync`** (Haiku) via the Agent tool with the story file path and op `OPERATIONAL`; capture its `DOCS UPDATED` return for the checkpoint/ledger. Skip the spawn entirely when `INFRA TOUCHED: no` (zero cost). Fallback if subagents are unavailable: execute the docs-sync OPERATIONAL op inline.
 - Do not proceed until `STATUS` is `review`/`done` (or HALT).
 
@@ -121,15 +120,11 @@ Repeat until the epic is complete (see **Exit Conditions**):
 
 ### Phase 3 — Code Review
 
-The developer subagent already ran the inline review in Phase 2. **Independent review is gated on blast radius, not just a clean inline pass** — the inline review shares the dev's mental model and can miss a lost side-effect. Decide:
-- **Blast-radius trigger — spawn the reviewer even when the inline pass is clean** if the change touches a shared side-effect pipeline every feature routes through, money/billing, auth, or a service with many callers.
-- **Clean report (no `UNRESOLVED`, gate PASS) and no blast-radius trigger:** skip a separate review pass — carry the Phase 2 findings/rubric straight into the checkpoint. (Saves a full extra review's tokens.)
-- **`UNRESOLVED` items, FAIL gate, security-sensitive story, or a blast-radius trigger:** spawn `lw-story-reviewer` (default model: Sonnet) for an independent adversarial pass. **Fallback mode:** execute `skills/code-review/SKILL.md` inline on the session model.
-
-When a separate review runs:
-- Pass the story file path so it skips auto-detection.
-- It runs Passes A–E, emits the **SCORE rubric line**, auto-patches `patch` findings, applies `fix-now` findings within the ceiling, logs `defer` via the deferred skill, and **re-verifies green**.
-- `decision-needed` findings surface in its report — present them to the user and wait for answers, then have the patches applied.
+**Always spawn `lw-story-reviewer`** — every story, clean or not. The author never reviews its own diff (DD-75).
+- Its prompt is the developer's `REVIEW HANDOFF`, verbatim — pointers only. Never add a summary of the dev pass or hints about what to check.
+- It runs every code-review pass, emits the **SCORE rubric line**, auto-patches `patch` findings, applies `fix-now` findings within the ceiling, logs `defer` via the deferred skill, and **re-verifies green**.
+- `decision-needed` findings surface in its report — present them to the user, then send the answers back to the same reviewer to apply.
+- **Fallback mode** (no subagents): execute `skills/code-review/SKILL.md` inline on the session model. That review shares the author's context, so record `review=inline-fallback` in the roll-up and say so at the checkpoint.
 
 **On unresolvable patches:** Do not proceed to Phase 4. Leave story status `in-progress`, report which items need attention, and stop the flywheel. Resume with `/story-flywheel {epic}.{story}`.
 
@@ -175,7 +170,7 @@ Review the changes above, then:
 ```
 
 **Observability:** before presenting the checkpoint, append the story-level roll-up via `scripts/ledger.sh` (never hand-write the JSON; the script no-ops if `docs/metrics/` is absent and never reads the ledger into context):
-`bash scripts/ledger.sh story-flywheel --story {id} --models create={m},dev={m},review={m|inline|skipped},docs-sync={m|skipped} --build-test green|red --evals P/T [--rubric-gate PASS|FAIL] [--deferred n] [--unresolved n] [--tests "1139/85 suites"]`
+`bash scripts/ledger.sh story-flywheel --story {id} --models create={m},dev={m},review={m|inline-fallback},docs-sync={m|skipped} --build-test green|red --evals P/T [--rubric-gate PASS|FAIL] [--deferred n] [--unresolved n] [--tests "1139/85 suites"]`
 The per-phase `dev-story` / `code-review` lines are written by those skills/subagents; this roll-up is written every story, in both checkpoint and auto-pilot flows — a story without one is a loop bug.
 
 **Wait for user response.** Do not proceed until user explicitly types one of the above commands or equivalent.
