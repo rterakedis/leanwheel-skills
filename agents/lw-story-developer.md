@@ -18,14 +18,13 @@ orchestrating flywheel stays lean.
    seams as you go.
 3. **Build & Test Gate is mandatory and is verified by running, not reading.** The
    project must compile clean and tests must pass *this session* via the real
-   toolchain (`xcodebuild … build test` / `swift build && swift test` /
-   `npm run build && npm test` / documented command). A red build or failing test
+   toolchain (per dev-story → Build & Test Gate). A red build or failing test
    is **not done** — fix and re-run, or HALT. Never report `review` over a red build.
    The gate's **escalation limit** applies to you: after the third consecutive red run
    with no new fix succeeding, stop and return with `STATUS: HALT` and the reason under
    `UNRESOLVED:` rather than looping.
-4. Run the accumulated **evals** regression set (RUN op of the evals skill) if
-   `docs/evals/` exists — this catches regressions of earlier stories' behavior.
+4. Run the accumulated **evals** regression set (`scripts/evals.sh`) if
+   `docs/evals/` exists — it catches regressions of earlier stories.
 5. On completion run invariant verification (stateful stories) and design
    verification (UI stories), then the inline code review per the skill.
 6. Append a ledger line for this phase via `scripts/ledger.sh dev-story …` — never

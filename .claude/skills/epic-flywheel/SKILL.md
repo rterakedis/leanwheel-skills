@@ -112,7 +112,7 @@ Use the project CLAUDE.md `## Quiet commands` invocations when present; always `
 Red build / any failing test → **HALT**: report the failing target/test output and ask the user how to proceed.
 
 ### 2. Evals RUN — full cumulative set
-Run `bash scripts/evals.sh --quiet` — the whole cumulative `command` regression net, every epic, not just this one (per evals → RUN; exit 1 = regressions). A failing case → **HALT** with the failing case listed.
+Run `bash scripts/evals.sh --quiet` — every epic, not just this one (per evals → RUN). Any regression → **HALT**, listing the failing cases.
 
 ### 3. Invariant verification sweep
 Collect the `### Invariant Verification` blocks recorded by dev-story across this epic's stories (read the short blocks, not full files). Any invariant left `[ ] UNVERIFIED` (no test, no cited enforcing `file:line`) → **HALT** and surface it for the user (DD-14).

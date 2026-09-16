@@ -174,16 +174,23 @@ expensive one a clean bill of health. Bytes are what get tokenized, so bytes are
 | `agents/*.md` | **4 KB** (~1,000 tokens) | same: the agent's job list and report contract stay; detail moves to the skill it invokes |
 | Stubs (`stubs/**`) | no fixed ceiling — they are project-installed, not per-invocation | keep them one topic per file |
 
-Check it — zero tokens, and it is the same arithmetic the table above was built from:
+**Enforced as a ratchet**, zero tokens:
 
 ```bash
-find .claude/skills -name SKILL.md -size +20k -exec ls -l {} + ; find agents -name '*.md' -size +4k -exec ls -l {} +
+bash scripts/test/budget.sh            # exit 1 if a file over budget grew, or a new one went over
+bash scripts/test/budget.sh --update   # lower ceilings to current sizes; retire paid-off debt
 ```
 
-Current debt against the byte ceiling: `epic-flywheel` (25.8 KB), `dev-story` (23.7 KB),
-`appstore-preflight` (23.1 KB), `story-flywheel` (22.3 KB), `appstore-connect` (22.2 KB),
-and `agents/lw-story-developer.md` (4.9 KB). Two distinct fixes apply, and they are not
-interchangeable:
+Files that were already over when the budget arrived are grandfathered in
+`scripts/test/budget-baseline.txt`, and **may shrink but never grow**. A ceiling broken on
+day one and never enforced is one people learn to ignore; the ratchet stops accretion
+immediately and lets the debt come down as it is worked. `--update` never raises a ceiling
+and never adds a file — new debt is a deliberate, reviewed edit to the baseline.
+
+Current debt (≈15 KB over, across six files): `epic-flywheel`, `dev-story`,
+`appstore-preflight`, `story-flywheel`, `appstore-connect`, and
+`agents/lw-story-developer.md` — `budget.sh` prints the live figures. Two distinct fixes
+apply, and they are not interchangeable:
 
 - **Mutually-exclusive branches** (`appstore-*`, `swift-audit`, `setup`) — route the
   conditional blocks out to reference files the skill reads only on the branch that needs

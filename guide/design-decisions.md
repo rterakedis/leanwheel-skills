@@ -647,7 +647,10 @@ convention — the script owns batching by identical `run:`, empty-output failur
 exclusion, and the rule that a malformed case (`enabled: true` with no `run:`, an unparseable
 `expect:`) is a **failure** and never a silent skip. Changing the case format means changing the
 script. The Simulator-batching rule moved from prose the model had to honor into behavior it
-cannot bypass.
+cannot bypass. `scripts/test/evals-runner.sh` pins all of it against committed fixtures,
+asserting *which* cases fail and *why* — not merely the exit code, since an exit 1 would
+still be satisfied if only one of six failure modes worked. Each check was shown to fail
+against a deliberately broken runner before it was trusted.
 
 ### DD-71 — The per-file budget is measured in bytes, not lines
 **Context.** SKILL.md files carried a 300-line ceiling. Measuring the repo showed line count and
@@ -657,8 +660,12 @@ tokens — the most expensive file in the repo, and formally compliant — while
 table-and-prose skill runs to 200. Ranking by lines put the cheapest file in the penalty box
 and cleared the most expensive one.
 
-**Decision.** Budget in bytes: **20 KB** per `SKILL.md`, **4 KB** per `agents/*.md`. Check with
-`find .claude/skills -name SKILL.md -size +20k`.
+**Decision.** Budget in bytes: **20 KB** per `SKILL.md`, **4 KB** per `agents/*.md`, enforced
+as a **ratchet** by `scripts/test/budget.sh`. Six files were already over; they are
+grandfathered in `budget-baseline.txt` and may shrink but never grow. Their ceilings were
+recorded at pre-change sizes, so the commit that introduced the budget had to trim back its
+own growth before it could pass — the rule's first catch. A hard ceiling with six violations
+on day one would have been ignored within a week; a ratchet is enforceable from the start.
 
 **Consequence.** The debt list changed membership, not just order — `dev-story` and both
 `appstore-*` skills entered it, `swift-audit` and `setup` left. Two fixes apply and are not

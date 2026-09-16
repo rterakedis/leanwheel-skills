@@ -17,11 +17,14 @@ only when you need the why. Repo-wide rules live in the root [CLAUDE.md](../../C
 - Skill files are `SKILL.md`; cross-references use `skills/{name}/SKILL.md`. **Budget is bytes,
   not lines** — 20 KB per SKILL.md, 4 KB per `agents/*.md` (line count turned out to be nearly
   uncorrelated with token cost; see [token-budget.md](../../guide/token-budget.md) → Per-file
-  ceilings, DD-71). Check with `find .claude/skills -name SKILL.md -size +20k`. Over budget → move the
-  branch-conditional detail to a sibling reference file the skill reads only on that branch,
-  linked one level deep; never pad the main file.
+  ceilings, DD-71). Enforced as a ratchet by `bash scripts/test/budget.sh`: files already over are
+  grandfathered in `scripts/test/budget-baseline.txt` and **may not grow**; `--update` lowers
+  ceilings as debt is paid. Over budget → move branch-conditional detail to a sibling reference
+  file the skill reads only on that branch, or cut conduct prose; never pad the main file.
 - Changing a report field, parsed heading, or gate outcome → update the matching case under
-  `evals/` and every consumer listed in the table below.
+  `evals/` and every consumer listed in the table below. Changing `scripts/evals.sh` → run
+  `bash scripts/test/evals-runner.sh`. `scripts/test/` holds this repo's own gates and is never
+  scaffolded into projects.
 
 ## Upstream Sync Workflow
 

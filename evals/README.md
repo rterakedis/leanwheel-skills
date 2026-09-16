@@ -25,6 +25,17 @@ outcome** (the contracts in `.claude/skills/CLAUDE.md`'s table) must add or upda
 Graders should be deterministic (`regex`, `file_exists`, `tool_used`) wherever the contract
 is a shape; use `llm` graders only for judgment calls.
 
+## Shell self-tests
+
+Deterministic scripts are tested by shell, not by `claude plugin eval` — a model call is the
+wrong instrument for asserting a parser's behavior. They live in `scripts/test/` and cost
+zero tokens:
+
+```bash
+bash scripts/test/evals-runner.sh   # scripts/evals.sh against committed fixtures (DD-70)
+bash scripts/test/budget.sh         # per-file byte budget ratchet (DD-71)
+```
+
 ## Cases
 
 | Case | Skill | Asserts |
