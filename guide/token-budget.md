@@ -187,7 +187,7 @@ day one and never enforced is one people learn to ignore; the ratchet stops accr
 immediately and lets the debt come down as it is worked. `--update` never raises a ceiling
 and never adds a file — new debt is a deliberate, reviewed edit to the baseline.
 
-Current debt (≈15 KB over, across six files): `epic-flywheel`, `dev-story`,
+Current debt (≈18 KB over, across six files): `epic-flywheel`, `dev-story`,
 `appstore-preflight`, `story-flywheel`, `appstore-connect`, and
 `agents/lw-story-developer.md` — `budget.sh` prints the live figures. Two distinct fixes
 apply, and they are not interchangeable:

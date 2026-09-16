@@ -5,9 +5,13 @@
 #
 # Recorded at their sizes before the commit that introduced the byte budget, so the
 # growth that commit itself added is not grandfathered.
+#
+# appstore-connect / appstore-preflight: raised to their sizes on main at 5c8eea8 (the App
+# Review 2.1 packet, DD-70), which merged before this rule reached main. Growth that predates
+# the rule is grandfathered; growth after it is not.
 25732 .claude/skills/epic-flywheel/SKILL.md
 23466 .claude/skills/dev-story/SKILL.md
-23104 .claude/skills/appstore-preflight/SKILL.md
+25466 .claude/skills/appstore-preflight/SKILL.md
 22179 .claude/skills/story-flywheel/SKILL.md
-22208 .claude/skills/appstore-connect/SKILL.md
+22733 .claude/skills/appstore-connect/SKILL.md
 4855 agents/lw-story-developer.md

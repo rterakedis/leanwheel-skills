@@ -24,6 +24,10 @@
 #   promotional_text.txt    <=170  ERROR, optional file
 #   description.txt         <=4000 ERROR, required
 #   release_notes.txt       <=4000 ERROR, optional file (WARN if missing: required for updates)
+#   review_information/notes.txt <=4000 ERROR, optional file (App Review Notes field)
+#
+# Also: each `| ... | UNVERIFIED |` row in ../review-claims.md is a WARN — a review-notes
+# claim nobody has walked on a device yet (appstore-preflight Step 7b, DD-70).
 #
 # Accepted screenshot pixel sizes (portrait; landscape = swapped):
 #   iphone69    1320x2868, 1290x2796
@@ -165,6 +169,7 @@ elif [ -d "$STORE_DIR/metadata" ]; then
   for d in "$STORE_DIR"/metadata/*/; do
     [ -d "$d" ] || continue
     loc="$(basename "$d")"
+    [ "$loc" = "review_information" ] && continue   # fastlane non-locale dir
     LOCALES="$LOCALES $loc"
   done
 fi
@@ -432,6 +437,26 @@ for loc in $LOCALES; do
     done
   fi
 done
+
+# ---------------------------------------------------------------------------
+# App Review notes + claim ledger (appstore-preflight Step 7b, DD-70)
+# ---------------------------------------------------------------------------
+NOTES="$STORE_DIR/metadata/review_information/notes.txt"
+if [ -s "$NOTES" ]; then
+  n="$(char_count "$NOTES")"
+  if [ "$n" -gt 4000 ] 2>/dev/null; then
+    finding ERROR "review_information/notes.txt: $n chars (max 4000) — move overflow to review-guide.md"
+  fi
+fi
+CLAIMS="$STORE_DIR/review-claims.md"
+if [ -f "$CLAIMS" ]; then
+  while IFS= read -r row; do
+    [ -n "$row" ] || continue
+    finding WARN "review-claims.md: not verified on device — $row"
+  done <<EOF_CLAIMS
+$(grep -E '^\|.*\|[[:space:]]*UNVERIFIED[[:space:]]*\|[[:space:]]*$' "$CLAIMS" | cut -c1-100)
+EOF_CLAIMS
+fi
 
 # ---------------------------------------------------------------------------
 # template.json (optional per-project screenshot styling)

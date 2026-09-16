@@ -230,13 +230,15 @@ Write `docs/maintainer/appstore-submission-checklist.md` (overwrite on re-runs �
 
 ## App Review Information
 - [ ] Demo account: full access, working, NO SMS/2FA (reviewers can't receive it), valid through review + future update reviews
-- [ ] Review notes: non-obvious features, hardware/geo dependencies, feature-flag disclosures
+- [ ] Review notes answer Apple's eight Guideline 2.1 items, numbered (Step 7b) — {`[x] verified — asc-lint clean, 0 UNVERIFIED claims ({date})` or `[ ] {N} UNVERIFIED claims in docs/store/review-claims.md`}
+- [ ] Physical-device screen recording (Release build; launch, core flow, every permission prompt, IAP flow) + PDF guide zipped as ONE `.mp4`+`.pdf` attachment, ready for the 2.1 reply
 - [ ] Contact name/phone/email current
 
 ## TestFlight
 - [ ] Beta App Description + feedback email + beta privacy policy filled in before external testing
 - [ ] First external build passes Beta App Review (subset of full review — approval here ≠ App Store approval)
 - [ ] Build cadence plan: TestFlight builds expire after 90 days
+- [ ] {omit if no StoreKit} Paywall recorded BEFORE any TestFlight test purchase — TestFlight buys with the Settings → App Store Apple ID (not the Sandbox Account), can't be reset by Clear Purchase History, and uses up the free trial for that account (`review-packet.md`)
 - [ ] Export compliance: {status — auto-answered via ITSAppUsesNonExemptEncryption, or answer per build}
 - [ ] CloudKit schema {omit if no CloudKit}: `--init-cloudkit-schema` run on a debug build on a **physical device signed into iCloud** since the last model change, then **Deploy Schema Changes** (Development → Production) in the CloudKit Console — spot-check that Production lists every record type in the model
 
@@ -258,6 +260,19 @@ Write `docs/maintainer/appstore-submission-checklist.md` (overwrite on re-runs �
 
 ---
 
+## Step 7b — App Review packet
+
+Read [review-packet.md](review-packet.md) (it sits beside this file) before drafting. It covers the eight items, the attachment mechanics, the recording rules, and the TestFlight purchase caveats.
+
+1. **Draft** `docs/store/metadata/review_information/notes.txt`, numbered 1–8 to match the 2.1 letter, with explicit "not applicable" lines. Build it from the brief, the PRD, the Step 1–5 inventory (SDKs, permission keys, StoreKit, CloudKit, `FoundationModels` imports), and the permission call sites. Keep it ≤ 4,000 characters and move overflow to `docs/store/review-guide.md`, which is rendered to PDF for the reply.
+2. **Claim ledger.** Write `docs/store/review-claims.md` as a table (`| # | claim | how to reach it on device | verified |`) with one row per navigable or permission claim in the notes. Every row starts as `UNVERIFIED`. Only the human changes a row, to `device {model} iOS {x} {date}`, after walking the claim in the running app. For permission rows, "how to reach it" is the tap that fires the call site, not the screen where the permission is conceptually used.
+3. **Shot list.** Append a recording shot list to `review-guide.md`: fresh-install state, every prompt with its staged trigger, and the paywall. Multiple clips are fine.
+4. **Gate (zero-token).** `asc-lint.sh` reports an oversized `notes.txt` as an ERROR and each `UNVERIFIED` row as a WARN. The checklist's review-notes line is stamped `[x]` only when both are clear. Never flip a row to verified yourself: a claim that reads correctly in source is exactly the kind that fails.
+
+Skip this step on update submissions unless the user asks, or unless `review_information/notes.txt` is absent.
+
+---
+
 ## Step 8 — Report
 
 1. Print the summary table:
@@ -266,6 +281,6 @@ Write `docs/maintainer/appstore-submission-checklist.md` (overwrite on re-runs �
 |---|---|---|---|---|
 | PLIST / MANIFEST / SIGNING / ASSET / CODE / BEHAVIOR | | | | |
 
-2. State both output paths.
+2. State both output paths, plus the Step 7b packet paths and the `UNVERIFIED` claim count.
 3. Say: "Run `/dev-story docs/maintainer/appstore-preflight-{date}.md` to fix the code/config findings. The checklist items in `appstore-submission-checklist.md` are human actions in App Store Connect — work through them before submitting; `/appstore-connect` authors the screenshots, listing copy, and product spec those items ask for. Re-run `/appstore-preflight` after fixes to confirm clean."
 4. If any ⚠️VOLATILE finding was flagged (external purchase links, SDK-floor, UIRequiresFullScreen), remind the user those rules are in flux and name the one(s) to re-verify.
