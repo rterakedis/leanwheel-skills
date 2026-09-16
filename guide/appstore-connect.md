@@ -173,8 +173,12 @@ Recorded as `store_devices` in `.leanwheel/sim.json` (the everyday `devices` pai
   here; on re-run preflight calls PRODUCTS DIFF as its IAP step and stamps
   `[x] verified — asc-lint passed ({date})` on the metadata/screenshot lines once
   `docs/store/` exists and the lint is clean.
-- **`refresh-swift` Step 4** refreshes the store facts embedded in this skill (screenshot
-  classes/sizes, char limits) alongside `appstore-preflight`'s facts.
+- **`refresh-swift` Step 4** refreshes the store facts (screenshot classes/sizes in
+  `op-assets.md`, char limits in `op-metadata.md`) alongside `appstore-preflight`'s facts,
+  and bumps the SKILL.md Currency note date.
+- **Layout:** SKILL.md holds only what every op shares (inventory, the `docs/store/` tree,
+  hand-offs); each op is a sibling `op-{assets,metadata,products}.md` read only by that op.
+  Preflight's IAP step reads `op-products.md` alone (DD-74).
 - **Hooks:** `asc-lint.sh` is scaffolded to `.claude/hooks/asc-lint.sh` (`/setup` Step 3e /
   `/upgrade-project`) as an advisory PostToolUse hook on any `docs/store/` write.
 - **Never:** invent UI, embellish captures with generated imagery, write anything into ASC,
@@ -213,6 +217,7 @@ A spec for an App Store Connect authoring lane in leanwheel-skills — the artif
 
 - 2026-08-29 — Per-project screenshot **styling** is an optional `docs/store/template.json`, merged over the built-in plain style **per key** (colours, lockup, panel, shadow, per-class geometry as canvas fractions; captions gain an optional `| Subtitle`). Absent, empty, or malformed-and-rejected ⇒ the plain default renders byte-identically; a malformed template is a named error that writes nothing, unknown keys included, so a typo cannot silently downgrade a branded set to plain. Defaults are the *original expressions* rather than equivalents (`0.94`, not `1 - 0.06`), and keys whose absence selects an unexpressible old behaviour default to nil (`captionLeading`, `deviceTop`+`deviceWidth`, `textBlockTop`+`textBlockBottom`) — why: `compose.swift` is symlink-shared by every project, so one project's brand must be impossible to leak into another's renders, and the no-template path is the one every existing project already depends on. See DD-68 — source: build session
 - 2026-08-29 — No rendering behaviour may be gated on "a template exists". The bezel-silhouette capture clip (which stops the capture spilling into the corner slivers the bezel does not cover — invisible against the plain near-white background, glaring behind a coloured panel) is the explicit key `device.clipCaptureToBezel`, defaulting to whether a panel is drawn — why: gating it on template *presence* made a colours-only template silently change unrelated pixels in the other appearance, breaking the per-key override guarantee — source: build session
+- 2026-09-16 — Ops split into `op-assets.md` / `op-metadata.md` / `op-products.md`, each read only by its own op; SKILL.md keeps the shared inventory, tree, and hand-offs — why: the ops never run together, so every run paid for all three (22.7 KB); now 8–17 KB depending on op. `op-` prefix because `products.md` would collide with the `docs/store/products.md` artifact it writes (DD-74).
 
 ## Rejected
 - 2026-08-29 — Re-implementing the full `template.json` schema in `asc-lint.sh` — why: bash 3.2 with no jq/python would need a lot of fragile pseudo-parsing for no safety gain, since `compose.swift --dry-run` already validates completely and for free. The linter keeps only the cheap checks worth catching as you type: object shape, balanced braces, opaque 6-digit hex, canvas fractions in 0…1, icon paths resolve — source: build session

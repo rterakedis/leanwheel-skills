@@ -206,7 +206,7 @@ The guardrails file must stay under ~90 lines — it lives in CLAUDE.md and is l
 
 ## Step 4 — Refresh App Store Submission Facts (`appstore-preflight`)
 
-App Store submission requirements move on the same annual iOS/Xcode cadence as the coding guidance (plus litigation-driven changes mid-cycle), so this run also refreshes the requirement facts embedded in `{skills_path}/.claude/skills/appstore-preflight/SKILL.md`. Skip this step only if that skill file is not reachable (skills repo absent).
+App Store submission requirements move on the same annual iOS/Xcode cadence as the coding guidance (plus litigation-driven changes mid-cycle), so this run also refreshes the requirement facts in `{skills_path}/.claude/skills/appstore-preflight/` — `SKILL.md`, the branch files `checks-cloudkit.md` / `checks-storekit.md`, and `submission-checklist.template.md`. Skip this step only if that skill file is not reachable (skills repo absent).
 
 **Cheap gate first:** read the skill's "Currency note" date, then check developer.apple.com/news/upcoming-requirements/ and Apple's App Review Guidelines changelog for anything newer. If nothing has changed since that date, update nothing and report "appstore-preflight facts confirmed current" — done.
 
@@ -218,15 +218,15 @@ Otherwise research what moved:
 - **Privacy plumbing** — new `NS*UsageDescription` keys, new required-reason API categories or reason codes, privacy-manifest enforcement changes (new ITMS codes)
 - **⚠️VOLATILE items specifically** — external purchase link rules (US storefront litigation), `UIRequiresFullScreen`/iPad windowing enforcement, launch-screen mandates, age-rating system, EU DSA / regulatory, TestFlight policy changes
 
-Then update in `appstore-preflight/SKILL.md`:
+Then update in `appstore-preflight/` (each fact lives in exactly one of those files — grep for it):
 
 1. The "Currency note" date, and any ⚠️VOLATILE flags now resolved (or newly needed)
 2. The fact tables — purpose-string keys, required-reason categories/codes, listed SDKs, config/asset rules and their ITMS codes
-3. Step 7 checklist items for any new App Store Connect requirements
+3. Checklist items for any new App Store Connect requirements — in `submission-checklist.template.md`. Keep its `{omit if no StoreKit}` / `{omit if no CloudKit}` / `{+ … if universal}` markers intact; a new conditional kind needs `render-checklist.sh` and `scripts/test/checklist-render.sh` updated too, or the render fails on purpose.
 
 **Facts only** — never restructure that skill's steps, severity scheme, or output formats. This updates the skills-repo file only; `appstore-preflight` has no per-project guidance copies.
 
-Same gate, same run: refresh the store facts embedded in `{skills_path}/.claude/skills/appstore-connect/` — the required screenshot classes and accepted pixel sizes (SKILL.md Currency note, `compose.swift` output-size table, `asc-lint.sh` accepted-size table, `sim.sh` `verify_store_capture`) and the metadata character limits (SKILL.md METADATA rules, `asc-lint.sh` limits). Sources: developer.apple.com/help/app-store-connect/reference/screenshot-specifications/ and the App Store Connect help "app information" field limits. Facts only.
+Same gate, same run: refresh the store facts embedded in `{skills_path}/.claude/skills/appstore-connect/` — the required screenshot classes and accepted pixel sizes (`op-assets.md` store facts, `compose.swift` output-size table, `asc-lint.sh` accepted-size table, `sim.sh` `verify_store_capture`) and the metadata character limits (`op-metadata.md` rules, `asc-lint.sh` limits); bump the SKILL.md Currency note date. Sources: developer.apple.com/help/app-store-connect/reference/screenshot-specifications/ and the App Store Connect help "app information" field limits. Facts only.
 
 ---
 

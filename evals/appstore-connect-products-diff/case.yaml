@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: appstore-connect-products-diff
+context:
+  add_dirs:
+    - ../fixtures/storeapp

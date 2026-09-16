@@ -16,7 +16,7 @@ Not to be confused with a user project's `docs/project/decisions.md` (owned by t
 - Testing & test plans: DD-30 manual pass at the epic boundary · DD-31 TESTING PLAN split + subtract · DD-32 plan-defect kind · DD-33 done stories immutable · DD-34 testability foundation · DD-35 flow tiering · DD-36 e2e backfill
 - Simulator automation: DD-40 sim.sh + route navigation · DD-41 silent-failure guards · DD-42 orientation · DD-43 store preset · DD-44 sim.json committed · DD-45 release parity for store captures · DD-46 vendored-script drift is reported, never silent · DD-47 runtime pin + ambiguity guard
 - Planning & docs: DD-50 planning consolidation · DD-51 pinned story frontmatter · DD-52 design contract decoupled from docs/ux · DD-53 simplicity doctrine placement · DD-54 CLAUDE.md tiers & budget · DD-55 epic archive · DD-56 dark patterns · DD-57 doc-free lane · DD-58 architecture promotion
-- Packaging: DD-60 hooks for hard rules · DD-72 per-file budget in bytes · DD-61 no project names · DD-62 ledger via ledger.sh · DD-63 quiet toolchain output · DD-68 optional styling via template.json · DD-69 status line over IDE extension · DD-70 App Review 2.1 packet + device-verified claim ledger
+- Packaging: DD-60 hooks for hard rules · DD-72 per-file budget in bytes · DD-61 no project names · DD-62 ledger via ledger.sh · DD-63 quiet toolchain output · DD-68 optional styling via template.json · DD-69 status line over IDE extension · DD-70 App Review 2.1 packet + device-verified claim ledger · DD-74 App Store skills load per op / per branch
 
 ---
 
@@ -731,4 +731,32 @@ support it; the pin is kept against a future re-tier.)
 **Consequence.** Cost is now expressed on two independent axes with one ceiling each. The levels
 are a starting point, not a result: Anthropic's guidance is to sweep effort against your own
 evals rather than carry levels over, and `evals/` is where that sweep belongs.
+
+### DD-74 — The App Store skills load per op and per branch, not all at once
+**Context.** Both skills were over the byte budget (DD-72) and had just grown. Their shapes
+differ. `appstore-connect` has three ops — ASSETS, METADATA, PRODUCTS — that never run
+together, so every run loaded all three: 22.7 KB for a METADATA run that needed 2 KB of op
+instructions. `appstore-preflight` is a linear audit whose steps all run, so most of its content
+is genuinely needed every time. Anthropic's skill-authoring guidance covers both cases:
+organise by domain so a task loads only its own reference file, move conditional detail behind a
+link, keep references one level deep, and prefer scripts for deterministic operations.
+
+**Decision.**
+- `appstore-connect` keeps only what every op shares (inventory, the `docs/store/` tree,
+  hand-offs) and routes to `op-assets.md` / `op-metadata.md` / `op-products.md`. The `op-`
+  prefix exists because a bare `products.md` would share a name with the `docs/store/products.md`
+  artifact it writes. Preflight's IAP step reads `op-products.md` alone.
+- `appstore-preflight` moves only what is conditional or mechanical: the CloudKit and StoreKit
+  checks into `checks-*.md`, read when Step 1 finds them, and the submission checklist into
+  `submission-checklist.template.md`, which `render-checklist.sh` renders. The audit steps stay.
+
+**Consequence.** Per-run loads for `appstore-connect` fall to ~8 KB (status) through ~17 KB
+(ASSETS). For preflight the saving is smaller and mostly *output*: the model still reads the
+rendered checklist to fill its judgment placeholders, but it edits a few lines instead of writing
+~5 KB out, and projects without CloudKit or StoreKit skip those branches. The rendering is pinned
+by `scripts/test/checklist-render.sh`, which caught a real defect while it was being written — a
+`{date}` inside a judgment placeholder being overwritten with the render date — and the script
+refuses to write a checklist containing a marker it doesn't recognise, so template drift fails
+loudly instead of leaking `{omit if …}` to a user. Three eval cases (`evals/appstore-*`) assert the
+disclosure itself: which op and branch files a run reads, and which it must not.
 

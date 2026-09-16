@@ -34,6 +34,7 @@ zero tokens:
 ```bash
 bash scripts/test/evals-runner.sh   # scripts/evals.sh against committed fixtures (DD-71)
 bash scripts/test/budget.sh         # per-file byte budget ratchet (DD-72)
+bash scripts/test/checklist-render.sh  # appstore-preflight checklist rendering (DD-74)
 ```
 
 ## Cases
@@ -43,6 +44,17 @@ bash scripts/test/budget.sh         # per-file byte budget ratchet (DD-72)
 | `dev-story-report-shape` | dev-story / lw-story-developer | final report carries `TESTING PLAN` with both `AUTOMATED:` and `MANUAL:` sub-fields, and `MANUAL:` lines carry a why-tag |
 | `harvest-plan-defect` | harvest-findings | an "already automated" note is captured as `plan-defect` (pre-checked, no story), the visual finding becomes a `tweak`/`bug` AC, and the plan is reset |
 | `epic-boundary-subtract` | epic-flywheel (step 5) | a rolled-up plan never re-lists a step covered by a flow/eval; every section-A flow opens with `Automated — do not re-test:` and a full-flag setup command |
+| `appstore-connect-metadata-scoped` | appstore-connect | a METADATA run reads `op-metadata.md` and never `op-assets.md` / `op-products.md` (Read or shell); writes a ≤ 100-char, space-free `keywords.txt`; ends with the `METADATA:` return line |
+| `appstore-connect-products-diff` | appstore-connect | IMPORT seeds `products.md` marking the code-only product; DIFF emits `PRODUCTS DIFF: n mismatches, m recommendations` naming it; `op-assets.md` stays unread |
+| `appstore-preflight-branch-scoped` | appstore-preflight | on a StoreKit-but-no-CloudKit project: `checks-storekit.md` read, `checks-cloudkit.md` and the checklist template never read, `render-checklist.sh` run; the written checklist keeps the IAP section, drops the CloudKit line, and carries no unresolved markers |
+
+The `appstore-*` cases use Bash, Write, and Edit, and read files by name — run them with those tools granted:
+
+```bash
+claude plugin eval . --case 'appstore-*' --runs 1 --allow-tools Bash Write Edit --max-cost-usd 5
+```
+
+`tool_used` graders assert which skill files were read (`input_match` is a regex over the tool input, so it matches the file name wherever the plugin is installed); `min: 0, max: 0` asserts a file was **not** read — the progressive-disclosure claim itself.
 
 Planned next: dev-story red-build → HALT (not `review`); epic-flywheel HALT on a failing
 cumulative eval; harvest-findings idempotent re-run; migration-shape fail-first ordering.
