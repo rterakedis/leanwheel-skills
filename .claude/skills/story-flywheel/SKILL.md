@@ -65,7 +65,7 @@ Per-phase routing (Conserve-Opus baseline, dynamic Swift exception; Opus is also
 
 **How to set the model:** the subagent defs pin `model: sonnet`. Pass a per-spawn `model` override on the Agent call **only** for Phase 2 when `swift_project = true` (`model: opus`) — never `fable` (usage-tier ceiling: flywheel throughput on Fable burns a week's budget in one epic). If the user opts out for the run ("conserve everything", "stay on Sonnet"), drop the Opus override too and note it. Never ask the user to `/model`-switch mid-run — it busts the prompt cache (DD-20).
 
-**Effort routing (second axis, static):** set only via `effort:` in the agent defs — there is no per-spawn override. Every runner pins it (creator `medium`, developer and reviewer `high`, `lw-docs-sync` `low`) so a session's effort never leaks into a phase. Never step the developer down for budget; that is the model axis's job (DD-72).
+**Effort routing (second axis, static):** set only via `effort:` in the agent defs — there is no per-spawn override. Every runner pins it (creator `medium`, developer and reviewer `high`, `lw-docs-sync` `low`) so a session's effort never leaks into a phase. Never step the developer down for budget; that is the model axis's job (DD-73).
 
 **Spawning a phase = one literal Agent tool call.** Everywhere this skill says "spawn", make an actual Agent tool invocation — never a prose description of delegation, and never doing the phase's work inline in this thread:
 

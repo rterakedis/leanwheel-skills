@@ -2,7 +2,7 @@
 # evals-runner.sh — self-test for scripts/evals.sh. Zero model tokens.
 #
 # evals.sh is the only sanctioned way to RUN a project's regression net, and five skills
-# depend on its report line and exit code (DD-70). This test pins its behavior against
+# depend on its report line and exit code (DD-71). This test pins its behavior against
 # committed fixtures so an edit to the parser cannot silently weaken a gate.
 #
 # It asserts *which* cases passed and failed and *why*, not just the exit code: an exit 1

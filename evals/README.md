@@ -32,8 +32,8 @@ wrong instrument for asserting a parser's behavior. They live in `scripts/test/`
 zero tokens:
 
 ```bash
-bash scripts/test/evals-runner.sh   # scripts/evals.sh against committed fixtures (DD-70)
-bash scripts/test/budget.sh         # per-file byte budget ratchet (DD-71)
+bash scripts/test/evals-runner.sh   # scripts/evals.sh against committed fixtures (DD-71)
+bash scripts/test/budget.sh         # per-file byte budget ratchet (DD-72)
 ```
 
 ## Cases

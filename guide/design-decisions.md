@@ -11,12 +11,12 @@ Not to be confused with a user project's `docs/project/decisions.md` (owned by t
 ## Contents
 
 - Principles: DD-01 verifiable artifacts over guardrails · DD-02 contract vs conduct · DD-03 fail loudly
-- Verification: DD-10 verify by running · DD-11 gate integrity · DD-12 Fix-Now · DD-13 evals command-default · DD-14 invariant evidence · DD-70 evals RUN is a script and the CI seam
-- Orchestration: DD-20 subagent routing · DD-72 effort pinned per runner · DD-21 non-return rule · DD-22 orchestrator-owned tracking · DD-23 epic-context cache gate · DD-24 docs-sync audiences · DD-25 boundary merge
+- Verification: DD-10 verify by running · DD-11 gate integrity · DD-12 Fix-Now · DD-13 evals command-default · DD-14 invariant evidence · DD-71 evals RUN is a script and the CI seam
+- Orchestration: DD-20 subagent routing · DD-73 effort pinned per runner · DD-21 non-return rule · DD-22 orchestrator-owned tracking · DD-23 epic-context cache gate · DD-24 docs-sync audiences · DD-25 boundary merge
 - Testing & test plans: DD-30 manual pass at the epic boundary · DD-31 TESTING PLAN split + subtract · DD-32 plan-defect kind · DD-33 done stories immutable · DD-34 testability foundation · DD-35 flow tiering · DD-36 e2e backfill
 - Simulator automation: DD-40 sim.sh + route navigation · DD-41 silent-failure guards · DD-42 orientation · DD-43 store preset · DD-44 sim.json committed · DD-45 release parity for store captures · DD-46 vendored-script drift is reported, never silent · DD-47 runtime pin + ambiguity guard
 - Planning & docs: DD-50 planning consolidation · DD-51 pinned story frontmatter · DD-52 design contract decoupled from docs/ux · DD-53 simplicity doctrine placement · DD-54 CLAUDE.md tiers & budget · DD-55 epic archive · DD-56 dark patterns · DD-57 doc-free lane · DD-58 architecture promotion
-- Packaging: DD-60 hooks for hard rules · DD-71 per-file budget in bytes · DD-61 no project names · DD-62 ledger via ledger.sh · DD-63 quiet toolchain output · DD-68 optional styling via template.json · DD-69 status line over IDE extension
+- Packaging: DD-60 hooks for hard rules · DD-72 per-file budget in bytes · DD-61 no project names · DD-62 ledger via ledger.sh · DD-63 quiet toolchain output · DD-68 optional styling via template.json · DD-69 status line over IDE extension
 
 ---
 
@@ -625,7 +625,7 @@ and the one worth reconsidering from scratch.
 
 ---
 
-### DD-70 — Evals RUN is a script, and the script is the CI seam
+### DD-71 — Evals RUN is a script, and the script is the CI seam
 **Context.** `docs/evals/` was described as costing "zero tokens", and its *execution* did.
 Collection did not: a model had to read every case block in `docs/evals/*.md` to gather the
 cases and group them by identical `run:` command. That read grows with every story, so the
@@ -652,7 +652,7 @@ asserting *which* cases fail and *why* — not merely the exit code, since an ex
 still be satisfied if only one of six failure modes worked. Each check was shown to fail
 against a deliberately broken runner before it was trusted.
 
-### DD-71 — The per-file budget is measured in bytes, not lines
+### DD-72 — The per-file budget is measured in bytes, not lines
 **Context.** SKILL.md files carried a 300-line ceiling. Measuring the repo showed line count and
 token cost are close to uncorrelated across it: `epic-flywheel` sat at 263 lines and ~6,450
 tokens — the most expensive file in the repo, and formally compliant — while `swift-audit` at
@@ -673,7 +673,7 @@ interchangeable: branch-conditional bulk routes out to sibling reference files (
 while conduct prose gets cut (Claude 5 guidance says carried-over verification instructions
 cause over-verification, so some of it is not merely costly but counterproductive).
 
-### DD-72 — Effort is pinned per subagent, never inherited
+### DD-73 — Effort is pinned per subagent, never inherited
 **Context.** Model routing had a cost ceiling — Opus, never Fable — but effort was left to
 inherit the session default, on the reasoning that changing it busts the prompt cache. That
 reasoning holds *within* a conversation and not across spawns: a subagent starts its own

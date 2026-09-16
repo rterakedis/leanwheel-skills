@@ -1,4 +1,4 @@
-# Grandfathered byte ceilings for files over budget (DD-71). Format: <bytes> <path>
+# Grandfathered byte ceilings for files over budget (DD-72). Format: <bytes> <path>
 # A listed file may shrink but never grow. `bash scripts/test/budget.sh --update` lowers
 # these as debt is paid and retires entries that come back under budget. It never raises
 # a ceiling or adds a file: new debt is a deliberate, reviewed hand edit.

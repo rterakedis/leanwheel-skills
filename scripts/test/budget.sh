@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# budget.sh — the per-file byte budget, enforced as a ratchet (DD-71). Zero model tokens.
+# budget.sh — the per-file byte budget, enforced as a ratchet (DD-72). Zero model tokens.
 #
 # Budget: 20 KB per .claude/skills/*/SKILL.md, 4 KB per agents/*.md. Files already over
 # budget are grandfathered in budget-baseline.txt at a recorded size, and the rule that is
