@@ -15,7 +15,7 @@ Not to be confused with a user project's `docs/project/decisions.md` (owned by t
 - Orchestration: DD-20 subagent routing · DD-73 effort pinned per runner · DD-75 the author never reviews its own diff · DD-21 non-return rule · DD-22 orchestrator-owned tracking · DD-23 epic-context cache gate · DD-24 docs-sync audiences · DD-25 boundary merge
 - Testing & test plans: DD-30 manual pass at the epic boundary · DD-31 TESTING PLAN split + subtract · DD-32 plan-defect kind · DD-33 done stories immutable · DD-34 testability foundation · DD-35 flow tiering · DD-36 e2e backfill
 - Simulator automation: DD-40 sim.sh + route navigation · DD-41 silent-failure guards · DD-42 orientation · DD-43 store preset · DD-44 sim.json committed · DD-45 release parity for store captures · DD-46 vendored-script drift is reported, never silent · DD-47 runtime pin + ambiguity guard
-- Planning & docs: DD-50 planning consolidation · DD-51 pinned story frontmatter · DD-52 design contract decoupled from docs/ux · DD-53 simplicity doctrine placement · DD-54 CLAUDE.md tiers & budget · DD-55 epic archive · DD-56 dark patterns · DD-57 doc-free lane · DD-58 architecture promotion
+- Planning & docs: DD-50 planning consolidation · DD-51 pinned story frontmatter · DD-52 design contract decoupled from docs/ux · DD-53 simplicity doctrine placement · DD-54 CLAUDE.md tiers & budget · DD-55 epic archive · DD-56 dark patterns · DD-57 doc-free lane · DD-58 architecture promotion · DD-76 no plan-mode pass before dev-story
 - Packaging: DD-60 hooks for hard rules · DD-72 per-file budget in bytes · DD-61 no project names · DD-62 ledger via ledger.sh · DD-63 quiet toolchain output · DD-68 optional styling via template.json · DD-69 status line over IDE extension · DD-70 App Review 2.1 packet + device-verified claim ledger · DD-74 App Store skills load per op / per branch
 
 ---
@@ -806,4 +806,41 @@ claimed `count >= 5` and cited a sabotage-verified test, while an *untracked* ne
 the Dev Agent Record only after its passes, and caught both false claims — but recorded them as a
 note and still scored the gate PASS. The Independence rule now makes a claim the diff contradicts
 a `patch` finding against the verification record, never a note.
+
+### DD-76 — No mandatory plan-mode pass before dev-story
+**Context.** Anthropic's AI-native SDLC playbook makes plan mode the default start of the Build
+stage: before any code, the implementer reads the codebase read-only and commits a `plan.md` —
+files that change, order of work, risks, proof — which an engineer approves. Leanwheel's story file
+is already a committed, approval-shaped artifact, but `create-story` writes it from the documents
+(PRD, architecture, the epic context cache), and nobody checks it against the *code* before
+`dev-story` starts. When the two disagree — a brownfield codebase, earlier stories that drifted
+from the architecture, a helper that already exists — the developer finds out mid-implementation
+and improvises.
+
+**Decision.** Don't add one. Most of what the pass would catch already has a home:
+- `create-story`'s Dev Notes (`Files to Touch`, `Key Implementation Details`) name the surface;
+- the epic context cache's `## Prior Story Learnings` carries drift between stories;
+- `docs/ux/components-built.md` stops components being rebuilt, and code-review Pass F flags
+  `native:` / `delete:` duplication;
+- the Clarification Gate stops ambiguity before any code;
+- `docs-sync` PROMOTE keeps `architecture.md` honest at each epic boundary;
+- the Build & Test Gate fails a wrong approach quickly, and cheaply.
+
+The costs are concrete. A read-only exploration pass adds roughly 3–8K tokens per story. A human
+approval per story contradicts the flywheels' deliberate limit of three human touch points, and an
+orchestrator approving the plan instead spends the tokens without the judgment the playbook wants.
+Claude 5-generation models also plan without being told, and mandated steps of that kind are what
+Anthropic's current context-engineering guidance removes, for the same reason as carried-over
+verification instructions.
+
+**What would reverse this.** Evidence, not preference — most of it already recorded:
+- the ledger's `bt_iterations` for `dev-story` regularly at 3 or more (`/retrospective` reports it
+  per model);
+- recurring review findings that say "this duplicates X" or "the platform already does this";
+- `/correct-course` invoked mid-epic because stories did not match the code;
+- projects onboarded by `/discover`, where the docs were reverse-engineered from the code.
+
+If those appear, the first step is a **conditional** pass, not a universal one: only for
+`**Shape:** migration` stories and `/discover`-based projects, where the gap between documents and
+code is structurally widest.
 
