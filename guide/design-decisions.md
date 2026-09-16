@@ -622,3 +622,44 @@ category; enough leanwheel users filing "how do I see status without burning a t
 status line demonstrably doesn't answer it; or a shift to several concurrent agents/epics at once,
 where the need becomes a cross-session fleet view — a different product from an epic/story panel,
 and the one worth reconsidering from scratch.
+
+### DD-70 — The App Review 2.1 answer is a pre-submission artifact, and its claims are device-verified
+
+A first submission of a SwiftUI + CloudKit + StoreKit app was rejected under Guideline 2.1,
+*Information Needed — New App Submission*. That is the normal first response to a new app, and
+it asks for eight things that are all known before submission. Answering it afterwards cost about
+two weeks. `/appstore-preflight` previously covered this with a single checklist line.
+
+**What ships.** Preflight Step 7b drafts `review_information/notes.txt` numbered against the eight
+items, with explicit "not applicable" lines. `review-packet.md`, beside the skill, holds the
+mechanics: the 4,000-character cap, one reply attachment, no `.mov`. It also holds the recording
+rules and the TestFlight purchase caveats. The file is marked `<!-- FIELD -->` (DD-66), because
+none of it comes from a primary source.
+
+**The claims are the risk, not the prose.** Four claims drafted from source read correctly there
+and were false in the running app. An out-of-process picker needs no permission. A prompt was
+gated behind an overdue-item guard. A sheet rendered a different field. A unit was hardcoded.
+They surfaced only when the owner recorded the video. This is *verify reachability, not presence*
+applied to copy sent to Apple. Following the verifiable-artifact pattern, the rule is a ledger
+plus a zero-token gate rather than more prose: `docs/store/review-claims.md` has one row per
+navigable claim, every row starts `UNVERIFIED`, only a human flips it, and `asc-lint.sh` WARNs per
+unverified row and ERRORs on an oversized `notes.txt`. Permission rows name the tap that reaches
+the `request*Authorization` call site, not the screen where the permission conceptually belongs.
+
+**Also recorded from the same session** (in `review-packet.md` and the git stub):
+- iOS hides the location alert from screen capture.
+- Turning a permission off in Settings sets it to *denied*, not undetermined.
+- Alert-suppressing UI-test launch arguments hide exactly the prompts Apple wants to see.
+- A TestFlight purchase uses the Settings → App Store Apple ID, not the Sandbox Account, so
+  Clear Purchase History can't reset it and the trial is used up once per group per account.
+- On squash-merge repos, a branch that outlives its first merge conflicts on every later PR.
+- zsh's non-splitting of unquoted variables silently turned a multi-file `git diff` into a false
+  "identical".
+
+The squash and shell rules live in `setup/stubs/commit-workflow.md`. That stub is now a
+managed, versioned block (`<!-- leanwheel:git-workflow v2 -->`, the DD-67 pattern), so
+`/upgrade-project` re-syncs it into existing projects. An unmarked block that matches the original
+v1 text is replaced; anything else is a CONFLICT for the user to resolve.
+
+**Fixed in passing.** `asc-lint.sh` treated the documented `metadata/review_information/`
+directory as a locale and raised six false ERRORs on any project that followed the tree.

@@ -57,7 +57,7 @@ Check these:
 | Simplicity doctrine | `docs/setup/simplicity.md` present, and CLAUDE.md references it (all projects — not gated). A legacy inlined `## Simplicity & Anti-Over-Engineering` block in CLAUDE.md counts as missing — see **Missing stubs** below |
 | Swift guardrails block | `## Swift/SwiftUI Guardrails` in CLAUDE.md (only if `is_apple`), **and** the block carries the current `<!-- leanwheel:guardrails swift vN -->` marker. A block with an older `vN`, or with no marker at all, is a **stale inlined copy** — see *Re-syncing the guardrails block* below |
 | Web guardrails block | `## Web Guardrails` in CLAUDE.md (only if `is_web`) |
-| Commit script | `scripts/commit-push.sh` present + executable; `## Git Workflow` in CLAUDE.md |
+| Commit script | `scripts/commit-push.sh` present + executable; `## Git Workflow` in CLAUDE.md **carrying the current `<!-- leanwheel:git-workflow vN -->` marker** — an older `vN` or no marker is stale; see *Re-syncing the git-workflow block* |
 | Tracking script | `scripts/gh-track.sh` present + executable |
 | Sabotage script | `scripts/sabotage.sh` present + executable |
 | Ledger script | `scripts/ledger.sh` present + executable |
@@ -122,7 +122,8 @@ In dependency order, applying only ADD and REFRESH items:
    Leave CONFLICTs untouched.
 5. **Scripts:** if `scripts/commit-push.sh` is missing, copy from
    `{skills_path}/scripts/commit-push.sh` and `chmod +x`. If `## Git Workflow` is
-   missing from CLAUDE.md, append `---` + `stubs/commit-workflow.md`. Likewise copy
+   missing from CLAUDE.md, append `---` + `stubs/commit-workflow.md`; if present but stale,
+   re-sync it per *Re-syncing the git-workflow block* (item 6). Likewise copy
    `{skills_path}/scripts/gh-track.sh` if `scripts/gh-track.sh` is missing and `chmod +x`,
    `{skills_path}/scripts/sabotage.sh` if `scripts/sabotage.sh` is missing and `chmod +x`,
    and `{skills_path}/scripts/ledger.sh` if `scripts/ledger.sh` is missing and `chmod +x`.
@@ -154,6 +155,16 @@ In dependency order, applying only ADD and REFRESH items:
      confirmation.
    - Project-specific rules must never live inside the managed block. If the re-sync finds any,
      surface them by name rather than silently discarding them.
+
+   **Re-syncing the git-workflow block** (all projects). `stubs/commit-workflow.md` is a managed
+   block delimited by `<!-- leanwheel:git-workflow vN -->` … `<!-- /leanwheel:git-workflow vN -->`.
+   - **Marker matches** → nothing to do. **Older `vN`** → replace between the markers, report REFRESH.
+   - **`## Git Workflow` with no marker** (v1, scaffolded before DD-70) → take the section from its
+     heading up to the next `---` or `## ` line. If it is the original v1 text (the
+     `scripts/commit-push.sh` usage block ending "Do not fall back to the multi-command git
+     workflow in this repo.", ignoring whitespace), replace it with the current stub and report
+     REFRESH. If it carries anything else, it is a **CONFLICT**: show the diff, name the extra lines,
+     and offer to move them *below* the managed block before replacing. Proceed only on confirmation.
    The simplicity doctrine is unconditional but is **not** a CLAUDE.md block: write
    `stubs/simplicity.md` to `docs/setup/simplicity.md` (skip if present) and ensure CLAUDE.md
    carries a one-line pointer to it (check-then-add). If a legacy project has the doctrine
