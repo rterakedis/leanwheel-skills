@@ -4,7 +4,7 @@ tags: [epic-flywheel, test-plan, contract]
 runs: 1
 max_turns: 15
 ---
-You are the epic-flywheel orchestrator at Epic 1's boundary for the sampleapp fixture. Execute ONLY step 5 (rolled-up, deduplicated, subtracted test plan) from the epic-flywheel skill. The stashed per-story plans are:
+You are the epic-flywheel orchestrator at Epic 1's boundary for the project in the current working directory. Execute ONLY step 5 (rolled-up, deduplicated, subtracted test plan) from the epic-flywheel skill. The stashed per-story plans are:
 
 ## 1.1 — Customer limit service
 AUTOMATED: CustomerLimitServiceTests, E1-01
@@ -19,4 +19,4 @@ MANUAL:
   - Restore Purchases with a sandbox account [sandbox-only]
   - Price line at Dynamic Type XL doesn't truncate [visual-judgment]
 
-Write docs/epics/epic-1-test-plan-new.md (use that filename so the fixture's existing plan is untouched). Grep the fixture's SampleAppUITests and docs/evals as the skill says.
+Write docs/epics/epic-1-test-plan-new.md (use that filename so the project's existing plan is untouched). Grep the project's SampleAppUITests and docs/evals as the skill says.

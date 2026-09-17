@@ -1,7 +1,6 @@
 ---
 type: regex
-source: file
-path: docs/maintainer/appstore-submission-checklist.md
+target: { source: file, path: docs/maintainer/appstore-submission-checklist.md }
 pattern: "CloudKit schema:"
 match: not_contains
 ---

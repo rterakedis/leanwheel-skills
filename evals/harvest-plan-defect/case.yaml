@@ -1,5 +1,4 @@
 schema_version: "1.1"
 name: harvest-plan-defect
 context:
-  add_dirs:
-    - ../fixtures/sampleapp
+  scaffold_script: scaffold.sh

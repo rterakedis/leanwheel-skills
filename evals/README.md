@@ -2,20 +2,24 @@
 
 Behavior tests for leanwheel skills, in the `claude plugin eval` layout: one directory per
 case with `prompt.md` (frontmatter + the prompt), `graders/*.md` (one grader each), and an
-optional `case.yaml` (context: fixture dirs). Fixtures are tiny synthetic project trees under
-`fixtures/` — never real project data.
+`case.yaml`. Fixtures are tiny synthetic project trees under `fixtures/` — never real project
+data. Each run starts in an empty workspace, so every fixture-based case has a `scaffold.sh`
+(named in `case.yaml` → `context.scaffold_script`) that copies its fixture in; the runner only
+executes it with `--scaffold`. (`context.add_dirs` can't be used for this: it only accepts
+read-only directories *inside* the case.)
 
 These are **not shipped by the plugin** (manifest `skills` points at `.claude/skills/`).
 
 ## Run
 
 ```bash
-claude plugin eval . --case 'dev-story-*'          # one case glob
-claude plugin eval . --runs 1 --max-cost-usd 2      # whole suite, cheap
+claude plugin eval . --scaffold --case 'dev-story-*'                       # one case glob
+claude plugin eval . --scaffold --runs 1 --allow-tools Bash Write Edit \
+  --max-cost-usd 5                                                          # whole suite
 claude plugin validate .                            # structure only, free
 ```
 
-Early-access feature: first-party clients pick it up after `claude update` + a fresh session.
+Requires Claude Code **v2.1.269 or later** (`claude --version`; `claude update` to upgrade). Older builds print "`plugin eval` is currently in early access" and run nothing.
 Results land in `evals/results/<timestamp>/`, which is gitignored.
 
 ## Rule
@@ -23,7 +27,18 @@ Results land in `evals/results/<timestamp>/`, which is gitignored.
 A skill change that alters a **report field**, a **parsed heading/marker**, or a **gate
 outcome** (the contracts in `.claude/skills/CLAUDE.md`'s table) must add or update a case here.
 Graders should be deterministic (`regex`, `file_exists`, `tool_used`) wherever the contract
-is a shape; use `llm` graders only for judgment calls.
+is a shape — to grade a file's contents, use `target: { source: file, path: <path> }`; use `llm` graders only for judgment calls.
+
+## Two traps
+
+Both bit real graders in this suite:
+
+- **`focus: files` / `target: files` is the *list of paths* Claude created, not their contents.** A
+  judge pointed at it sees `docs/epics/1-3-post-test-findings.md` and nothing else, so a rubric
+  about what's *in* the file can never pass. Use `{ source: file, path: <path> }`.
+- **An `llm` grader sees the whole `last_message` unless you scope it.** Say in the criteria which
+  field to look at and that everything else is to be ignored, or prose elsewhere in a correct
+  report will fail it.
 
 ## Shell self-tests
 
@@ -51,7 +66,7 @@ bash scripts/test/checklist-render.sh  # appstore-preflight checklist rendering 
 The `appstore-*` cases use Bash, Write, and Edit, and read files by name — run them with those tools granted:
 
 ```bash
-claude plugin eval . --case 'appstore-*' --runs 1 --allow-tools Bash Write Edit --max-cost-usd 5
+claude plugin eval . --scaffold --case 'appstore-*' --runs 1 --allow-tools Bash Write Edit --max-cost-usd 5
 ```
 
 `tool_used` graders assert which skill files were read (`input_match` is a regex over the tool input, so it matches the file name wherever the plugin is installed); `min: 0, max: 0` asserts a file was **not** read — the progressive-disclosure claim itself.

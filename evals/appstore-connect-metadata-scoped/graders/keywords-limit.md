@@ -1,7 +1,6 @@
 ---
 type: regex
-source: file
-path: docs/store/metadata/en-US/keywords.txt
+target: { source: file, path: docs/store/metadata/en-US/keywords.txt }
 pattern: "^[^ ]{1,100}\\s*$"
 match: contains
 ---
