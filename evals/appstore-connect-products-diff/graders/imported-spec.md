@@ -1,7 +1,6 @@
 ---
 type: regex
-source: file
-path: docs/store/products.md
+target: { source: file, path: docs/store/products.md }
 pattern: "code-only"
 match: contains
 ---

@@ -1,7 +1,6 @@
 ---
 type: regex
-source: file
-path: docs/epics.md
+target: { source: file, path: docs/epics.md }
 pattern: "wraps mid-word.*\\*\\*(tweak|bug)\\*\\*"
 match: contains
 ---

@@ -1,7 +1,6 @@
 ---
 type: regex
-source: file
-path: docs/epics.md
+target: { source: file, path: docs/epics.md }
 pattern: "- \\[x\\] .*already automated.*\\*\\*plan-defect\\*\\*"
 match: contains
 ---

@@ -1,5 +1,4 @@
 schema_version: "1.1"
 name: appstore-preflight-branch-scoped
 context:
-  add_dirs:
-    - ../fixtures/storeapp
+  scaffold_script: scaffold.sh

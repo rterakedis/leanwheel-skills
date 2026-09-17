@@ -1,7 +1,6 @@
 ---
 type: regex
-source: file
-path: docs/epics/epic-1-test-plan-new.md
+target: { source: file, path: docs/epics/epic-1-test-plan-new.md }
 pattern: "## B\\.[\\s\\S]*Restore Purchases"
 match: contains
 ---

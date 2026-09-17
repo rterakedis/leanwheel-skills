@@ -1,7 +1,6 @@
 ---
 type: regex
-source: file
-path: docs/maintainer/appstore-submission-checklist.md
+target: { source: file, path: docs/maintainer/appstore-submission-checklist.md }
 pattern: "\\{omit if|if universal\\}"
 match: not_contains
 ---
