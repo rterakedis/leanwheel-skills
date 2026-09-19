@@ -34,3 +34,15 @@ expect: whatever-nonsense
 type: command
 enabled: true
 expect: exit-0
+
+### EVAL 9.1-7 — escaped-quote needle that is absent still fails (matcher stays strict)
+type: command
+enabled: true
+run: echo '✔ Suite "SomeOtherSuite" passed after 0.1 seconds.'
+expect: output-contains:"CapacityBar target floor\" passed"
+
+### EVAL 9.1-8 — vacuous -only-testing: target: 0 tests, exit 0, plenty of output
+type: command
+enabled: true
+run: echo 'xcodebuild -only-testing:AppTests/NoSuchType build-for-testing'; echo 'Executed 0 tests, with 0 failures'
+expect: exit-0

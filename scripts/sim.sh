@@ -805,7 +805,6 @@ cmd_launch() {
       --assetcapture) ASSET_CAPTURE=1; shift ;;
       --uitest) uitest=1; shift ;;
       --reset)  reset=1; shift ;;
-      --assetcapture) ASSET_CAPTURE=1; shift ;;
       *) die "unknown option for launch: $1" ;;
     esac
   done
@@ -839,6 +838,7 @@ cmd_shots() {
       --orientation) orientation=$(normalize_orientation "$2"); shift 2 ;;
       --locale)      locale="$2"; shift 2 ;;
       --store)       store=1; shift ;;
+      --assetcapture) ASSET_CAPTURE=1; shift ;;
       *) die "unknown option for shots: $1" ;;
     esac
   done

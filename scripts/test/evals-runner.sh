@@ -37,19 +37,25 @@ run_in() {  # run_in <dir> <args...> — sets OUT and CODE
 run_in "$FIX/green"
 check "green: exits 0"                          eq "$CODE" 0
 check "green: report line is exact" \
-  last_is "$OUT" "RUN all: 6/6 command pass, 1 judge skipped. Regressions: none"
-check "green: batching — 6 cases scored by 5 invocations" \
-  eq "$(printf '%s\n' "$OUT" | grep -c '^-- run: ')" 5
+  last_is "$OUT" "RUN all: 8/8 command pass, 1 judge skipped. Regressions: none"
+check "green: batching — 8 cases scored by 7 invocations" \
+  eq "$(printf '%s\n' "$OUT" | grep -c '^-- run: ')" 7
 check "green: README format example never parsed"   lacks "$OUT" "should-never-run"
 check "green: disabled case skipped, not run"       has "$OUT" "1 disabled case(s) skipped"
 check "green: fenced case parsed"                   has "$OUT" "PASS e2e.checkout-1"
 check "green: trailing comment stripped from type:" has "$OUT" "PASS 1.1-1"
 check "green: '#' inside a needle kept verbatim"    has "$OUT" "PASS 1.2-3"
+# A Swift Testing suite line is `✔ Suite "Name" passed`, so an expectation pinning it must
+# escape the inner quote. Before the unescape fix the backslash survived into the needle and
+# grep -F could never match — every such case failed at exit 0, reporting a green suite as a
+# regression. 9.1-7 is its twin: the fix must not make the matcher permissive.
+check "green: escaped quote in needle matches"      has "$OUT" "PASS 1.4-1"
+check "green: -only-testing: that runs tests is unaffected" has "$OUT" "PASS 1.4-2"
 
 run_in "$FIX/green" --list
 check "list: runs nothing"                          lacks "$OUT" "PASS"
-check "list: 8 cases from 2 files (README excluded)" \
-  has "$OUT" "8 case(s) parsed from 2 file(s)"
+check "list: 10 cases from 2 files (README excluded)" \
+  has "$OUT" "10 case(s) parsed from 2 file(s)"
 
 run_in "$FIX/green" --epic 1 --case 1.1 --quiet
 check "scope: --epic + --case narrows to 2 cases" \
@@ -59,7 +65,7 @@ check "scope: --quiet suppresses PASS lines"        lacks "$OUT" "PASS"
 # ---- negative: every failure mode fails, each named, each for its own reason --------
 run_in "$FIX/neg"
 check "neg: exits 1"                                eq "$CODE" 1
-check "neg: 0 of 6 pass"                            has "$OUT" "RUN all: 0/6 command pass"
+check "neg: 0 of 8 pass"                            has "$OUT" "RUN all: 0/8 command pass"
 check "neg: red exit code"          has "$OUT" "FAIL 9.1-1 — exit 1, expected 0"
 check "neg: absent needle"          has "$OUT" "FAIL 9.1-2 — output does not contain"
 check "neg: empty output never passes vacuously" \
@@ -68,6 +74,10 @@ check "neg: regex miss"             has "$OUT" "FAIL 9.1-4 — output does not m
 check "neg: unparseable expect"     has "$OUT" "FAIL 9.1-5 — unparseable expect"
 check "neg: missing run: is a failure, not a shifted field" \
   has "$OUT" "FAIL 9.1-6 — enabled command case has no run: field"
+check "neg: escaped-quote needle still discriminates" \
+  has "$OUT" "FAIL 9.1-7 — output does not contain"
+check "neg: -only-testing: matching nothing never passes vacuously" \
+  has "$OUT" "FAIL 9.1-8 — 0 tests executed — gate cannot discriminate"
 
 # ---- usage errors ------------------------------------------------------------------
 run_in "$FIX/empty"

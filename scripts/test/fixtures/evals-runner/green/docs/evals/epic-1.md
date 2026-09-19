@@ -44,3 +44,15 @@ enabled: true
 target: git diff -- Sources/Cart.swift
 rubric: |
   - copy reads naturally
+
+### EVAL 1.4-1 — escaped quote inside the needle (Swift Testing suite line)
+type: command
+enabled: true
+run: echo '✔ Suite "CapacityBar target floor" passed after 0.1 seconds.'
+expect: output-contains:"CapacityBar target floor\" passed"
+
+### EVAL 1.4-2 — a -only-testing: command that DOES run tests is untouched
+type: command
+enabled: true
+run: echo 'xcodebuild -only-testing:AppTests/CapacityBarTests'; echo 'Executed 3 tests, with 0 failures'
+expect: exit-0

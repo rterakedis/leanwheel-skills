@@ -129,7 +129,18 @@ fi
 # ---- assertion ---------------------------------------------------------------------
 # check_expect <expect> <exit_code> <output_file> -> prints reason on failure, returns 1
 check_expect() {
-  local expect="$1" code="$2" out="$3" needle re
+  local expect="$1" code="$2" out="$3" cmd="${4:-}" needle re
+  # Vacuous-target guard. An `xcodebuild -only-testing:` target that matches nothing runs
+  # 0 tests and exits 0 while producing plenty of build output, so neither the exit-code
+  # nor the empty-output guard catches it — the gate could never fail. Easy to hit with
+  # Swift Testing, where @Suite("Display Name") and the type name differ and -only-testing:
+  # needs the type. Fail it regardless of the declared expectation.
+  case "$cmd" in
+    *-only-testing:*)
+      if grep -qE '(Executed 0 tests|Test run with 0 tests)' "$out"; then
+        echo "0 tests executed — gate cannot discriminate"; return 1
+      fi;;
+  esac
   case "$expect" in
     exit-0)
       [ "$code" -eq 0 ] && return 0
@@ -137,6 +148,12 @@ check_expect() {
     output-contains:*)
       needle="${expect#output-contains:}"
       needle="${needle%\"}"; needle="${needle#\"}"
+      # Unescape \" inside the quoted needle. Swift Testing prints `Suite "Name" passed`,
+      # so any expectation pinning a suite result MUST carry the inner quote as \" to
+      # survive the outer quoting. Without this the backslash stays literal, grep -F never
+      # matches, and every such case fails at exit 0 — a green suite reported as a
+      # regression. (${var//p/r} is available in macOS /bin/bash 3.2.)
+      needle="${needle//\\\"/\"}"
       if [ ! -s "$out" ]; then echo "empty output — gate cannot discriminate"; return 1; fi
       grep -qF -- "$needle" "$out" && return 0
       echo "output does not contain \"$needle\" (exit $code)"; return 1;;
@@ -180,7 +197,7 @@ while IFS= read -r cmd; do
     [ "$run" = "$cmd" ] || continue
     [ -n "$CASE_FILTER" ] && case "$id" in "$CASE_FILTER"*) ;; *) continue;; esac
     TOTAL=$((TOTAL + 1))
-    if reason="$(check_expect "$expect" "$code" "$OUT")"; then
+    if reason="$(check_expect "$expect" "$code" "$OUT" "$cmd")"; then
       PASSED=$((PASSED + 1))
       [ "$QUIET" -eq 1 ] || echo "   PASS $id"
     else
