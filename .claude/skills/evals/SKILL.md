@@ -67,6 +67,13 @@ Input: a story file path (and its `{epic}.{story}`).
      launch each and exhaust it on a long run.
    - If the AC is an HTTP/CLI behavior, a `curl`/CLI invocation with
      `output-contains:` is fine.
+   - **A needle containing a quote must escape it as `\"`.** Swift Testing prints
+     `✔ Suite "Name" passed after N seconds.`, so any case pinning a suite result
+     carries an inner quote:
+     `expect: output-contains:"CapacityBar target floor\" passed"`.
+   - **`-only-testing:` takes the type name, not `@Suite("Display Name")`.** A target
+     that matches nothing runs 0 tests and exits 0; RUN fails such a case outright
+     (`0 tests executed — gate cannot discriminate`), but pin the right name anyway.
    - `expect: exit-0` unless a specific output assertion is needed.
 2b. **A case that enumerates must assert it enumerated.** If the check walks a
    source tree, globs files, or greps the codebase, the underlying test must
@@ -116,6 +123,11 @@ What the script guarantees, so no skill has to restate it:
   enumerates must assert it enumerated".
 - An `enabled: true` command case with no `run:`, or an unparseable `expect:`, is a
   **failure**, never a silent skip.
+- A `run:` containing `-only-testing:` whose output reports **0 tests executed** fails
+  regardless of the declared `expect:` (`0 tests executed — gate cannot discriminate`) —
+  the second vacuous-gate shape, which produces plenty of output and exits 0. (DD-77)
+- `\"` inside an `output-contains:` needle is unescaped before matching, so expectations
+  can pin output that itself contains quotes.
 - `enabled: false` cases are skipped and counted; `docs/evals/README.md` is excluded (its
   format example would otherwise parse as a case).
 

@@ -104,6 +104,19 @@ Report as, e.g.: `scripts/sim.sh CONFLICT (locally modified) — shipped version
 present locally but not upstream are project-local features, not skew — do not report those
 as missing. This is a **signal only**: no behavior changes, nothing is overwritten.
 
+Two limits of that diff, both real misses:
+
+- **A CONFLICT copy can be *ahead* of the shipped one, not just behind.** A project that
+  fixed a bug locally shows no missing flags, so the skew report reads clean while the
+  shipped script still carries the defect. When merging a CONFLICT by hand, read the
+  local changes as *candidate upstream fixes* and report them back, rather than
+  overwriting them away.
+- **A flag in the vocabulary is not a flag that works.** `grep -o -- '--[a-z-]+'` matches
+  the usage string as readily as the `case` branch, so a flag advertised in usage but
+  missing a branch in that subcommand's parser looks present and dies at runtime. For any
+  flag the upgrade *depends on*, check it is handled in the subcommand you will call:
+  `grep -n -- '--assetcapture)' scripts/sim.sh`.
+
 Present the plan as a table: `ADD / REFRESH / CONFLICT / OK` per item. Summarize:
 "Will add N, refresh M, skip K conflicts (need manual merge). Proceed? (y/n)"
 

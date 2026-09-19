@@ -844,3 +844,41 @@ If those appear, the first step is a **conditional** pass, not a universal one: 
 `**Shape:** migration` stories and `/discover`-based projects, where the gap between documents and
 code is structurally widest.
 
+
+---
+
+### DD-77 — A gate that cannot fail is a regression, even when it is green
+
+**Context.** A project running its 192-case eval set on a Swift codebase reported 97 regressions
+while every test was green, and separately carried four eval targets that had never been able to
+fail. Both were failures of the *matcher*, not of the code under test, and both were invisible
+from `--list`.
+
+Two distinct defects, one class:
+
+1. `output-contains:` stripped the needle's outer quotes but left inner `\"` escaped, so
+   `grep -F` could never match. Swift Testing prints `✔ Suite "Name" passed after N seconds.`,
+   so **every** expectation pinning a suite result must embed a quote — this is the common case
+   on Apple projects, not an edge case. A green suite was reported as a regression, at exit 0.
+2. An `xcodebuild -only-testing:` target that matches nothing runs 0 tests and exits 0 while
+   producing plenty of build output, so neither the exit-code check nor the existing
+   `empty output — gate cannot discriminate` guard caught it. Easy to hit with Swift Testing,
+   where `@Suite("Display Name")` and the type name differ and `-only-testing:` needs the type.
+
+**Decision.** `scripts/evals.sh` unescapes `\"` in an `output-contains:` needle, and fails any
+case whose `run:` contains `-only-testing:` and whose output reports 0 tests executed —
+`0 tests executed — gate cannot discriminate` — regardless of the declared `expect:`. The second
+rule overrides the expectation deliberately: a gate that cannot discriminate is worse than a red
+one, because it is silent.
+
+**Why the guard lives in the script, not in skill prose.** Same reasoning as DD-71. Five skills
+consume the RUN report; a prose instruction to "pin the type name, not the display name" is a
+rule a human or a model must remember every time, which has the failure mode it is meant to
+prevent. `scripts/test/evals-runner.sh` pins all of it — positive, negative, and unchanged
+plain-needle cases — so a future edit to the matcher cannot re-weaken it.
+
+**Corollary for `/upgrade-project`.** Both `sim.sh` defects fixed alongside this were found by
+*hand-merging* a locally-modified script rather than overwriting it, and the project's copy was
+already **ahead** of upstream on one of them. The capability-skew report now says so: a CONFLICT
+copy can be ahead, not only behind, and a flag matched by the vocabulary grep may be present in
+the usage string while missing its `case` branch in the subcommand that needs it.
