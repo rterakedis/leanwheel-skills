@@ -139,6 +139,21 @@ grep -rn "userInterfaceIdiom" \
   --include="*.swift" \
   --exclude-dir="{DerivedData,.build,Pods,Packages}" .
 
+# Screen-dimension layout math (breaks on iPhone Duo / Split View — use container bounds)
+grep -rn "UIScreen.main\|UIScreen.screens" \
+  --include="*.swift" \
+  --exclude-dir="{DerivedData,.build,Pods,Packages}" .
+
+# Fixed-width frames (size relative to the container, not to device dimensions)
+grep -rn "\.frame(width: [0-9]" \
+  --include="*.swift" \
+  --exclude-dir="{DerivedData,.build,Pods,Packages}" .
+
+# Hand-rolled bars — opt the app out of vertical bar presentation on iPhone Duo
+grep -rn "UIToolbar(\|UINavigationBar(\|UITabBar(" \
+  --include="*.swift" \
+  --exclude-dir="{DerivedData,.build,Pods,Packages}" .
+
 # Index-based ForEach on mutable data
 grep -rn "ForEach(0\.\.<\|ForEach(.*\.indices" \
   --include="*.swift" \

@@ -231,7 +231,7 @@ iPad toolbars have more placement options than iPhone. Use them to put controls 
 
 ## Size Class Awareness
 
-Read `horizontalSizeClass` to adapt layout between compact (iPhone, iPad slide-over) and regular (full-width iPad) environments. Do not hard-code device checks.
+Read `horizontalSizeClass` to adapt layout between compact and regular environments. Compact/regular is a **size** distinction, not a device one: an iPhone Duo is compact-width on its outer display and regular-width on its inner display, and iPad slide-over is compact. Do not hard-code device checks. See `iphone-duo.md` for the foldable case.
 
 ```swift
 // ✅ Adapt to size class, not device
@@ -245,7 +245,7 @@ var body: some View {
     }
 }
 
-// ❌ Device check — breaks for Catalyst, slide-over, and future form factors
+// ❌ Device check — breaks for Catalyst, slide-over, and foldables
 if UIDevice.current.userInterfaceIdiom == .pad { ... }
 ```
 
