@@ -44,6 +44,7 @@ Use WebSearch and WebFetch to pull current content from the gold-standard source
 - **Hacking with Swift** — hackingwithswift.com (Paul Hudson)
 - **Swift with Majid** — swiftwithmajid.com (Majid Jabrayilov)
 - **SwiftLee** — swiftlee.com (Antoine van der Lee)
+- **Apple Human Interface Guidelines** — developer.apple.com/design/human-interface-guidelines (check the per-page change log; new device form factors land here first)
 - **Apple Developer Documentation** — developer.apple.com/documentation
 - **Apple WWDC sample apps** — developer.apple.com/documentation/SampleCode
 - **Apple Swift updates** — developer.apple.com/documentation/updates/swift
@@ -111,6 +112,13 @@ Research each section in turn. For each: compare findings against the existing f
 - New patterns AI tools commonly generate that should be added to the rejection list?
 - Any anti-patterns that are now acceptable (rare — document the reason)?
 - Newly deprecated/superseded APIs for the #13 modernization table?
+
+**`iphone-duo.md`** (if present in `docs/setup/swift/` or stubs)
+- `ArrangementView` / `UIArrangementViewController` — still beta, or shipped? Any new styles or sizing modifiers?
+- `ReservedRegion` — any new `Kind` values or query options beyond `occlusion` / `division`?
+- Toolbar vertical-axis APIs (`axisBehavior`, `visibilityPriority`, `toolbarVerticalBehavior`, `toolbarVerticalEdge`) — renamed or extended?
+- Minimum SDK for the full-screen experience — still Xcode 27.1 / iOS 27.1?
+- Any new pose, display, or camera APIs since the file's Updated date?
 
 **`ipados-specific.md`** (if present in `docs/setup/swift/` or stubs)
 - `NavigationSplitView` — any new column options or behaviors in iPadOS 18+?

@@ -100,6 +100,7 @@ If {is_apple_platform} is true:
   - `xcode-footguns.md`
   - `demo-data-and-copy.md`
   - `PROVENANCE.md` (how research knowledge and field knowledge are kept apart — read by `/refresh-swift`)
+- If {platforms} includes **iOS**: also copy `iphone-duo.md` (foldable iPhone — reserved regions, arrangement views, vertical bars).
 - If {platforms} includes **iPadOS**: also copy `ipados-specific.md`.
 - If {platforms} includes **macOS**: also copy `macos-specific.md`.
 

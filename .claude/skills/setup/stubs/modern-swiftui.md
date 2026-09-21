@@ -68,6 +68,10 @@ file because they must be known **before** a plan is formed.
   an entire target — score the teed unfiltered log. → `simulator.md`
 - **`isHittable` lies under translucent bars** — scroll clear of the nav and tab bars first. It
   is not a timing flake and retries cannot fix it. → `simulator.md`
+- **Fixed widths and hand-rolled bars break the foldable iPhone** — size views to their container,
+  never to device dimensions or a hardcoded breakpoint, and get bars from `toolbar(content:)` on a
+  navigation container rather than a custom `UIToolbar`/`UITabBar`, which opts out of the vertical
+  bar layout entirely (`iphone-duo.md`).
 - **`EXCLUDED_SOURCE_FILE_NAMES = "CLAUDE.md"`** at project level, in both configurations, before
   a second nested `CLAUDE.md` exists — otherwise the build fails with "Multiple commands produce".
   → `xcode-footguns.md`

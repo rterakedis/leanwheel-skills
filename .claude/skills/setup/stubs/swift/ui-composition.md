@@ -1,6 +1,8 @@
 # UI Composition & Layout Rules
 
 > Updated: 2026-07-19 — iOS 18+ (iOS 26 features flagged)
+>
+> Layout that must survive a resizing device (foldable iPhone, Split View) is in `iphone-duo.md`.
 > Preventing massive views, subview extraction, layout decisions, HIG conventions, and new container APIs.
 
 ---
