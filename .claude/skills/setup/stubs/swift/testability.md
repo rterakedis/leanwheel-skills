@@ -190,6 +190,25 @@ than its exact code:
 
 Source files are not compiled into the test bundle — resolve the tree from `#file`.
 
+### Permission pre-prompts are invisible to automation
+
+<!-- FIELD: DD-78 — a Guideline 5.1.1(iv) rejection landed on a screen that no capture, UI test, or design-verify pass could ever render. -->
+
+Suppressing permission UI on automated runs (so an alert doesn't dim a capture) is correct for
+captures — and it means **no flow can render the pre-prompt**, so every automated check, every
+`design-verify` pass, and every eval has never seen it. App Review sees it first.
+
+Give it the same treatment as onboarding or a paywall: a launch flag that **overrides** the
+suppression for that one screen (`--allow-preprompt`, or one route name per pre-prompt in the
+route table), declared in the same `LaunchArguments` contract, `#if DEBUG`-gated, and never
+folded into `--uitest` or `--seed`. Then a flow can reach the explainer and assert the three
+rules in `appstore-preflight/checks-permissions.md` (neutral button, no exit around the system
+alert, user-action trigger).
+
+The system alert beyond it still can't be driven (no `simctl privacy` service for
+notifications, camera, Face ID, Bluetooth, ATT), so the pre-prompt also needs a **manual pass on
+the submitted build** — a checklist item, not an eval.
+
 ### Core Data — same contract, three extra hazards
 
 ```swift

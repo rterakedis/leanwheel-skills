@@ -33,6 +33,7 @@
 - [ ] Review notes answer Apple's eight Guideline 2.1 items, numbered (Step 7b) — {`[x] verified — asc-lint clean, 0 UNVERIFIED claims ({date})` or `[ ] {N} UNVERIFIED claims in docs/store/review-claims.md`}
 - [ ] Physical-device screen recording (Release build; launch, core flow, every permission prompt, IAP flow) + PDF guide zipped as ONE `.mp4`+`.pdf` attachment, ready for the 2.1 reply
 - [ ] Contact name/phone/email current
+- [ ] Permission pre-prompts walked by hand on the submitted build: neutral button, no way around the system alert, shown only after a user action on the feature (`checks-permissions.md` — automation can't reach them)
 
 ## TestFlight
 - [ ] Beta App Description + feedback email + beta privacy policy filled in before external testing
@@ -47,12 +48,14 @@
 - [ ] Subscription group has ≥1 localization; review screenshot per product
 - [ ] `docs/store/products.md` reconciled — PRODUCTS DIFF: {n mismatches, m recommendations — or "not run: no .storekit"}; create products in ASC from that spec (`/appstore-connect products`)
 - [ ] Paywall shows price/period/auto-renew terms + Privacy & Terms links + Restore Purchases (verified in Step 5: {result})
+- [ ] Paywall's **billed amount** is the most prominent price (size and position); per-month equivalent, trial, and savings badge are subordinate (Guideline 3.1.2(c); `checks-storekit.md` — verified in Step 5: {result})
 
 ## Signing (verify in Apple Developer portal — not visible in repo)
 - [ ] Every entitlement in {detected .entitlements list} has its capability enabled on the App ID and distribution profile
 - [ ] Distribution archive uses Release config (get-task-allow=false)
 
 ## Submission
+- [ ] Build number unique and identical on the app **and every extension** target; resubmission after rejection keeps the marketing version (`review-packet.md`)
 - [ ] Version release option chosen (manual release recommended for coordinated launches)
 - [ ] Phased release decision (updates only)
 - [ ] Final pass on developer.apple.com/news/upcoming-requirements/ for anything newer than this skill's July 2026 data

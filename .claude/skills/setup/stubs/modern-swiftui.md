@@ -1,6 +1,6 @@
 ## Swift/SwiftUI Guardrails (iOS 18+)
 
-<!-- leanwheel:guardrails swift v2 — MANAGED BLOCK.
+<!-- leanwheel:guardrails swift v3 — MANAGED BLOCK.
      Everything between this marker and the next `---` is re-synced by /upgrade-project.
      Do not add project-specific rules here; they belong in `## Critical Rules` above.
      This block is a POINTER plus tripwires: full patterns live in docs/setup/swift/ and are
@@ -72,6 +72,10 @@ file because they must be known **before** a plan is formed.
   never to device dimensions or a hardcoded breakpoint, and get bars from `toolbar(content:)` on a
   navigation container rather than a custom `UIToolbar`/`UITabBar`, which opts out of the vertical
   bar layout entirely (`iphone-duo.md`).
+- **Pre-prompts and paywalls are App Review surfaces.** A permission pre-prompt: `Continue`/`Next`
+  button, no control that skips the system alert, shown only from a user action. A paywall: the
+  billed `displayPrice` is the most prominent price. Automation can't reach either — walk both
+  by hand. → `anti-patterns.md` #18, #19
 - **`EXCLUDED_SOURCE_FILE_NAMES = "CLAUDE.md"`** at project level, in both configurations, before
   a second nested `CLAUDE.md` exists — otherwise the build fails with "Multiple commands produce".
   → `xcode-footguns.md`
@@ -87,4 +91,4 @@ Before marking any story done, verify:
 - [ ] New unit tests use `import Testing`; every new gate has been watched failing
 - [ ] Build is at **zero warnings** and the test log was scored, not eyeballed
 
-<!-- /leanwheel:guardrails swift v2 -->
+<!-- /leanwheel:guardrails swift v3 -->
