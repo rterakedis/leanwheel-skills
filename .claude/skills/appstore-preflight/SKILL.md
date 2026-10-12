@@ -111,7 +111,7 @@ Check each; both plist and `INFOPLIST_KEY_*` locations.
 |---|---|---|
 | `ITSAppUsesNonExemptEncryption` | Absent → every TestFlight build stuck "Missing Compliance" until manually answered. HTTPS/OS-crypto-only apps: set `false` | **HIGH** (TF friction; one-line fix) |
 | `CFBundleShortVersionString` / `MARKETING_VERSION` | ≤3 period-separated integers, numeric only, higher than last approved version. `1.0-beta` → upload error | **BLOCKER** if malformed |
-| `CFBundleVersion` / `CURRENT_PROJECT_VERSION` | Numeric; must increment per upload (redundant-binary rejection) | **MEDIUM** (advisory — CI often manages) |
+| `CFBundleVersion` / `CURRENT_PROJECT_VERSION` | Numeric; increments per upload (redundant-binary rejection). Same value on the app **and every extension** target (Xcode bumps only the app; mismatch fails upload) — Step 1's `sort -u` must show one value outside test targets. A rejected version keeps its `MARKETING_VERSION`; only the build number changes. See `review-packet.md` | **BLOCKER** if app/extension differ; MEDIUM otherwise |
 | App icon | Asset catalog needs 1024×1024 marketing icon, **no alpha channel** (ITMS-90022/90717). Single-size icon: the one PNG must be 1024², opaque. iOS 18 dark/tinted + iOS 26 `.icon` variants optional | **BLOCKER** if missing/alpha |
 | Launch screen | `UILaunchScreen` dict (even empty, or `INFOPLIST_KEY_UILaunchScreen_Generation=YES`) or `UILaunchStoryboardName` required — ITMS-90475 with iPad multitasking; outright mandatory from iOS 27 SDKs | **BLOCKER** |
 | iPad orientations | `TARGETED_DEVICE_FAMILY` includes 2 → all four orientations in `~ipad` set unless `UIRequiresFullScreen=YES` (ITMS-90474). ⚠️VOLATILE: `UIRequiresFullScreen` deprecated on iPadOS 26 (will be ignored) — flag its presence; durable answer is all-four + resizable scenes | **BLOCKER** / MEDIUM for the deprecated key |
@@ -141,13 +141,14 @@ These need judgment, not just grep. Read the relevant source (auth flows, paywal
 1. **Account deletion — 5.1.1(v).** If the app has account *creation* (any sign-up, including Sign in with Apple/Google as the only login): there must be an **in-app entry point that initiates full account deletion** (not deactivation, not "email us"). SIWA apps must also call the token-revocation endpoint on delete. Missing → **HIGH**.
 2. **Login services — 4.8.** Third-party login SDK present (`GoogleSignIn`, `FBSDKLoginKit`, social OAuth via `ASWebAuthenticationSession`) → an equally-prominent privacy-protective option is required (SIWA is the safe choice; email/password meeting the data-minimization criteria can qualify). Missing → **HIGH**.
 3. **ATT — 5.1.2.** Ad/attribution SDKs or IDFA reads → `requestTrackingAuthorization` flow + usage-description key + manifest tracking flags, and functionality must not be gated on consent. Fingerprinting is never allowed, even with consent. Violation → **HIGH**.
-4. **Subscriptions/IAP — 3.1.1/3.1.2.** StoreKit in use (Step 1) → apply [checks-storekit.md](checks-storekit.md), which includes the PRODUCTS DIFF reconciliation. No StoreKit → skip.
+4. **Subscriptions/IAP — 3.1.1/3.1.2.** StoreKit in use (Step 1) → apply [checks-storekit.md](checks-storekit.md): PRODUCTS DIFF reconciliation **and** the 3.1.2(c) paywall hierarchy check (billed amount dominates). No StoreKit → skip.
 5. **Third-party AI data sharing — 5.1.2(i), since Nov 2025.** App sends user data to an external AI API (OpenAI/Gemini/Claude endpoints in networking code) → needs explicit, provider-named consent before first send, reflected in the privacy label. Missing → **HIGH**.
 6. **In-app privacy policy access — 5.1.1.** A privacy-policy link must be reachable inside the app (settings screen is fine). Missing → **MEDIUM**.
 7. **iPad compatibility — 2.4.1.** Every app is reviewed on iPad, **even iPhone-only apps** (compatibility mode). Note as a checklist test item; flag obvious fixed-width/fixed-orientation layouts in a universal app → **MEDIUM**.
 8. **Hidden features — 2.3.1.** Remote feature flags that can reveal review-unseen functionality → **HIGH** (account-level enforcement risk). Disclose flag-gated features in review notes instead.
 9. **Web-wrapper smell — 4.2.** If the primary UI is a `WKWebView` of a website, the app must do something Safari can't (native nav, push, offline, widgets) → **HIGH**.
 10. **Kids/age signals.** UGC or chat without moderation/report/block (1.2), unfiltered web view forcing 17+/18+, Kids Category without parental gates → **HIGH** where applicable.
+11. **Permission pre-prompts — 5.1.1(iv).** Any `request*Authorization` / `requestAccess` call site (grep in [checks-permissions.md](checks-permissions.md)) → apply that file: neutral button copy, no exit around the system alert, user-action trigger. Pre-prompts are invisible to automation, so an unwalked one is a MEDIUM finding.
 
 ---
 

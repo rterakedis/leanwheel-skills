@@ -882,3 +882,54 @@ plain-needle cases — so a future edit to the matcher cannot re-weaken it.
 already **ahead** of upstream on one of them. The capability-skew report now says so: a CONFLICT
 copy can be ahead, not only behind, and a flag matched by the vocabulary grep may be present in
 the usage string while missing its `case` branch in the subcommand that needs it.
+
+
+---
+
+### DD-78 — Two more rejection classes become preflight checks, and the App Store skills are field-protected
+
+**Context.** The same first submission that produced DD-70 was rejected twice more, under two
+different guidelines, after the 2.1 answer was in. Both were mechanical, both were on screens the
+audit never inspected, and both were invisible to every automated check the harness runs.
+
+- **3.1.2(c) — billed amount must dominate.** A paywall plan card rendered the *calculated*
+  per-month equivalent at `.title`/bold and the amount actually charged at `.caption`/secondary.
+  Preflight audited keys, entitlements, manifests and purpose strings. It never looked at the one
+  screen where layout is a guideline matter rather than a design preference.
+- **5.1.1(iv) — permission pre-prompts.** One sheet carried three faults: persuasive button copy
+  ("Enable …"), a "Not Now" that dismissed without reaching the system alert, and an
+  auto-presentation from a lifecycle hook. Apple cited the first two; the third was found
+  afterwards and, once the exit was removed, would have been a modal trap.
+
+**Decision.**
+- `appstore-preflight/checks-storekit.md` gains the 3.1.2(c) check (locate `displayPrice` and any
+  derived price, compare font role and position) and the doctrine that a per-month equivalent and a
+  savings badge are *allowed but subordinate* — projects must demote them, not strip them.
+- New `appstore-preflight/checks-permissions.md`, read only when Step 5 item 11 finds a
+  `request*Authorization` call site: neutral button copy, every control reaches the system alert,
+  user-action trigger. Same branch-file pattern as DD-74; `SKILL.md` carries one item and a pointer.
+- Dev-time copies in the Swift stubs (`anti-patterns.md` #18/#19, a `testability.md` section, one
+  guardrails tripwire, block `v2` → `v3`), because a rule that only fires at preflight is found
+  after the screen is built.
+- `review-packet.md` and the checklist gain the §9 mechanics: build number on every extension,
+  a rejected version keeps its marketing version, superseded recording beats, simulator-OK
+  product screenshots vs device-only recordings, review metadata locking in review.
+
+**The conflict this resolves.** The harness suppresses permission modals on automated runs so
+alerts don't dim captures. That is correct, and it makes the pre-prompt *unreachable* by any flow,
+`design-verify` pass or eval. The answer is both halves: an opt-in launch flag/route that overrides
+the suppression for that one screen, **and** a manual pass on the submitted build, recorded as a
+checklist item. An unreachable pre-prompt is *unverified*, not compliant.
+
+**Why the protection is the point.** `/refresh-swift` Step 4 edits `appstore-preflight/` and
+`appstore-connect/`, but its `<!-- FIELD -->` grep covered only `docs/setup/swift/` and the Swift
+stubs — so the one place rejection-earned rules had been written was the one place a refresh pass
+was not told to protect. Each new block is `<!-- FIELD: DD-78 … -->`-marked, Step 3's grep now
+covers both skill directories, Step 4 states that facts (dates, limits, ITMS codes) refresh while
+rejection-earned rules do not, and a guideline-text change that touches one is reported as a
+conflict. Same shape as DD-66: a cheap mechanical marker plus one rule about it.
+
+**Not carried over as skill content.** The §5 squash-merge and §6 shell pitfalls were already
+shipped with DD-70 (`commit-workflow.md`, managed block `v2`); the TestFlight/Sandbox-Account
+and recording items already live in `review-packet.md`; Issue Navigator caching is in
+`xcode-footguns.md`.

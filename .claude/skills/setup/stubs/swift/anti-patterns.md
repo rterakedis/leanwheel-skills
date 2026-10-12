@@ -355,3 +355,55 @@ TextField("Customer", text: $customer).focused($focus, equals: .customer)
 **Why it's wrong:** Twice over — a destructive prompt whose only visible action is destructive is a UX bug, and the flow driving it is undrivable.
 
 ✅ Use `.alert` for destructive confirmations: both buttons render and are queryable.
+
+---
+
+## 18. Permission Pre-Prompt That Persuades, Skips, or Self-Presents
+
+<!-- FIELD: DD-78 — rejected under Guideline 5.1.1(iv); a primary source states the rule but not that all three faults ship together. See PROVENANCE.md -->
+
+**Symptom:** App Review rejects with "use words like 'Continue' or 'Next' on the button" and "the user should always proceed to the permission request after the message."
+
+**Why it's wrong:** Three independent faults on one sheet, and fixing one exposes the next. (1) The button sells the permission ("Enable Trip Tracking"). (2) A "Not Now" / close control dismisses the sheet without reaching the system alert. (3) The sheet presents itself from `.task`/`.onAppear`/a tab's first appearance, before the user touched the feature. Remove the exit and an auto-presented sheet becomes a modal trap.
+
+```swift
+// ❌ presents on appear, persuasive copy, escape hatch
+.task { showPrePrompt = true }
+Button("Enable Trip Tracking") { requestLocation() }
+Button("Not Now") { dismiss() }
+
+// ✅ shown from the feature's own action; one neutral control that always reaches the system alert
+Button("Start trip") {            // the user action that needs location
+    showPrePrompt = true
+}
+.sheet(isPresented: $showPrePrompt) {
+    PermissionExplainer { Button("Continue") { manager.requestWhenInUseAuthorization() } }
+        .interactiveDismissDisabled()
+}
+```
+
+Pre-prompt screens are suppressed under automated runs, so no automated check sees them — give them an opt-in route (`testability.md`) and walk them by hand before submitting. Preflight: `appstore-preflight/checks-permissions.md`.
+
+---
+
+## 19. Calculated Price Outranking the Billed Amount
+
+<!-- FIELD: DD-78 — rejected under Guideline 3.1.2(c); layout is a guideline matter on exactly this one screen. See PROVENANCE.md -->
+
+**Symptom:** App Review rejects a subscription paywall: "displays the yearly calculated pricing … more clearly and conspicuously than the billed amount."
+
+**Why it's wrong:** The billed amount (`product.displayPrice`, the amount actually charged) must be the most prominent price. A per-month equivalent, free trial, intro price or savings badge is allowed but must be subordinate in **size and position** — font role, weight, colour and placement all count.
+
+```swift
+// ❌ derived figure is the headline; the charge is a grey caption
+Text(monthlyEquivalent).font(.title.bold())
+Text("Billed \(product.displayPrice) once a year").font(.caption).foregroundStyle(.secondary)
+
+// ✅ billed amount leads; the equivalent and badge are visibly secondary
+Text(product.displayPrice).font(.title2.bold())
+Text("billed once a year").font(.footnote)
+Text("\(monthlyEquivalent)/mo equivalent").font(.caption).foregroundStyle(.secondary)
+```
+
+Don't delete the per-month line or the badge to be safe — demote them. Preflight: `appstore-preflight/checks-storekit.md`.
+

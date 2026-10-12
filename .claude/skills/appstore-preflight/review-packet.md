@@ -60,3 +60,33 @@ This is *verify reachability, not presence* applied to copy that goes to Apple. 
 - So **Clear Purchase History** in App Store Connect can't reset a TestFlight purchase. It works only for sandbox tester accounts.
 - **An introductory free trial is used up once per subscription group per account.** After one test purchase, that account never sees the trial offer again.
 - Therefore: **record the paywall before any test purchase**, and build from Xcode with a sandbox tester (or a `.storekit` configuration) when you need a purchase state you can reset.
+
+## Resubmission and reply mechanics
+
+<!-- FIELD: DD-78 — learned across three consecutive rejections of one first submission (2.1, 3.1.2(c), 5.1.1(iv)), Sept–Oct 2026. Protected from refresh passes (DD-66). -->
+
+- **Bump `CURRENT_PROJECT_VERSION` on the app *and every extension target*.** Xcode bumps only the
+  app. The mismatch warns at build ("The CFBundleVersion of an app extension ('1') must match
+  that of its containing parent app ('3')") and **fails at upload**. Test targets don't matter.
+- **A rejected version keeps its marketing version.** Only the build number must be unique:
+  `1.0 (1)` → `1.0 (2)`, not `1.0.1`.
+- **A build that invalidates one beat of the recording doesn't need a re-record.** Ship the
+  original plus a short clip of the changed beat, and say in the notes which beat is superseded.
+  The bundle script should take any number of videos.
+- **Accepted video is `.mp4` / `.avi`**; a zip doesn't launder `.mov`.
+- **Product review screenshots may be simulator captures; the 2.1 demo recording may not.** It
+  has to be a physical device.
+- **Subscription review metadata locks while the product is in review**, so a stale paywall
+  screenshot can't be replaced mid-cycle. Attach the corrected image to the Resolution Center
+  reply instead and say why.
+- **Reply to every cited guideline.** Fix the whole screen, not the sentence Apple quoted: a
+  rejection usually cites the visible faults and leaves related ones. Re-run
+  `/appstore-preflight` on the touched screen before resubmitting.
+
+## Screens automation can't reach need a manual pass
+
+Permission pre-prompts (`checks-permissions.md`) and any paywall behind a purchase or
+onboarding gate are suppressed or unreachable under UI-test and capture runs, so no automated
+check, `design-verify` pass, or eval has ever seen them. Both rejections of this kind on the
+source project were on screens exactly like that. Walk each on the submitted build, on a device,
+before submitting; record the result in `review-claims.md` alongside the notes claims.
