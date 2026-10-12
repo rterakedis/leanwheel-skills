@@ -50,6 +50,7 @@ zero tokens:
 bash scripts/test/evals-runner.sh   # scripts/evals.sh against committed fixtures (DD-71)
 bash scripts/test/budget.sh         # per-file byte budget ratchet (DD-72)
 bash scripts/test/checklist-render.sh  # appstore-preflight checklist rendering (DD-74)
+bash scripts/test/preflight-scan.sh  # appstore-preflight Steps 1–4 scan + facts file (DD-79)
 ```
 
 ## Cases
@@ -61,7 +62,7 @@ bash scripts/test/checklist-render.sh  # appstore-preflight checklist rendering 
 | `epic-boundary-subtract` | epic-flywheel (step 5) | a rolled-up plan never re-lists a step covered by a flow/eval; every section-A flow opens with `Automated — do not re-test:` and a full-flag setup command |
 | `appstore-connect-metadata-scoped` | appstore-connect | a METADATA run reads `op-metadata.md` and never `op-assets.md` / `op-products.md` (Read or shell); writes a ≤ 100-char, space-free `keywords.txt`; ends with the `METADATA:` return line |
 | `appstore-connect-products-diff` | appstore-connect | IMPORT seeds `products.md` marking the code-only product; DIFF emits `PRODUCTS DIFF: n mismatches, m recommendations` naming it; `op-assets.md` stays unread |
-| `appstore-preflight-branch-scoped` | appstore-preflight | on a StoreKit-but-no-CloudKit project: `checks-storekit.md` read, `checks-cloudkit.md` and the checklist template never read, `render-checklist.sh` run; the written checklist keeps the IAP section, drops the CloudKit line, and carries no unresolved markers |
+| `appstore-preflight-branch-scoped` | appstore-preflight | on a StoreKit-but-no-CloudKit project: `preflight-scan.sh` run and neither it nor `preflight-facts.tsv` read; `checks-storekit.md` read, `checks-cloudkit.md`, the other Step 5 branch files and the checklist template never read, `render-checklist.sh` run; the written checklist keeps the IAP section, drops the CloudKit line, and carries no unresolved markers |
 
 The `appstore-*` cases use Bash, Write, and Edit, and read files by name — run them with those tools granted:
 

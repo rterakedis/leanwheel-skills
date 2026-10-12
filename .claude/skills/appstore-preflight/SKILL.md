@@ -7,147 +7,59 @@ description: Audit an iOS/iPadOS SwiftUI project's configuration, privacy declar
 
 **Goal:** Scan the Xcode project — Info.plist / build settings, entitlements, privacy manifests, assets, dependencies, and source — for the configuration gaps and guideline footguns that cause upload failures (ITMS errors), TestFlight blocks, and App Store review rejections. Collate findings into a `/dev-story`-ready remediation story, and generate the **non-code submission checklist** (App Store Connect metadata, legal/business items) the developer must complete by hand.
 
-**Requires:** An Apple app project (`.xcodeproj`, `.xcworkspace`, or an app-target `Package.swift`). If absent, stop: "No Apple app project found — nothing to preflight."
+**Requires:** An Apple app project (`.xcodeproj`, `.xcworkspace`, or an app-target `Package.swift`). If absent, the scan exits 2 with "No Apple app project found — nothing to preflight." — stop there.
 
-**Currency note:** Requirement facts in this file and its sibling `checks-*.md` / `submission-checklist.template.md` are current as of **July 19, 2026**. Items marked ⚠️VOLATILE change frequently (litigation, annual SDK mandates) — re-verify against https://developer.apple.com/news/upcoming-requirements/ at submission time rather than trusting this file.
+**Currency note:** Requirement facts are dated by the `currency` row of `preflight-facts.tsv` (printed as `INVENTORY|facts`); that date covers every file of this skill. Items marked ⚠️VOLATILE change frequently (litigation, annual SDK mandates) — re-verify against https://developer.apple.com/news/upcoming-requirements/ at submission time rather than trusting these files.
 
 ---
 
-## Step 1 — Inventory (zero-token)
+## Step 1 — Scan (zero-token)
 
 ```bash
-# Project + config surfaces
-find . -maxdepth 3 \( -name "*.xcodeproj" -o -name "*.xcworkspace" \) ! -path "*/DerivedData/*"
-find . \( -name "Info.plist" -o -name "*.entitlements" -o -name "PrivacyInfo.xcprivacy" \) \
-  ! -path "*/DerivedData/*" ! -path "*/.build/*" ! -path "*/Pods/*"
-find . -name "Contents.json" -path "*AppIcon*" ! -path "*/DerivedData/*"
-find . \( -name "Package.resolved" -o -name "Podfile.lock" \) ! -path "*/DerivedData/*" ! -path "*/.build/*"
-
-# Generated-Info.plist mode? (SwiftUI templates put plist keys in build settings)
-grep -l "GENERATE_INFOPLIST_FILE = YES" */project.pbxproj **/project.pbxproj 2>/dev/null
-grep -o "INFOPLIST_KEY_[A-Za-z]*" */project.pbxproj **/project.pbxproj 2>/dev/null | sort -u
-
-# Device family + versioning + deployment target
-grep -h "TARGETED_DEVICE_FAMILY\|MARKETING_VERSION\|CURRENT_PROJECT_VERSION\|IPHONEOS_DEPLOYMENT_TARGET" \
-  */project.pbxproj **/project.pbxproj 2>/dev/null | sort -u
-
-# CloudKit sync in use? (schema-deployment check, Step 4)
-grep -rn "NSPersistentCloudKitContainer\|cloudKitContainerOptions\|\.modelContainer(\|CKContainer" \
-  --include="*.swift" . 2>/dev/null | grep -v "/DerivedData/\|/.build/\|/Pods/"
-grep -rn "initializeCloudKitSchema" --include="*.swift" . 2>/dev/null | grep -v "/DerivedData/"
-
-# StoreKit in use? (Step 5 item 4, Step 7 IAP section)
-grep -rl "import StoreKit" --include="*.swift" . 2>/dev/null | grep -v "/DerivedData/\|/.build/\|/Pods/" | head -3
-find . -name "*.storekit" ! -path "*/DerivedData/*" ! -path "*/.build/*"
+bash {skills_path}/.claude/skills/appstore-preflight/preflight-scan.sh .
 ```
 
-**Critical:** most SwiftUI projects use the generated Info.plist — every plist check below must look in **both** the Info.plist file(s) **and** `INFOPLIST_KEY_*` build settings in `project.pbxproj`. A key present in neither is missing.
+**Execute it; never read it or `preflight-facts.tsv`** (owned by `/refresh-swift`, pinned by `scripts/test/preflight-scan.sh`). Plist checks cover Info.plist files and `INFOPLIST_KEY_*` build settings; test targets, `Pods/`, `.build/` and `#if DEBUG` code are excluded.
 
-Record three flags for later steps: **cloudkit**, **storekit**, and **universal** (`TARGETED_DEVICE_FAMILY` includes 2). Note what exists. `docs/ux/`, `docs/prd.md` (feature intel for Step 5), and `.leanwheel/manifest.json` are read only if present.
+**Output contract (canonical here; the script header mirrors it).** One record per line; the last field is free text:
 
----
-
-## Step 2 — Purpose Strings (crash + 5.1.1)
-
-The #1 mechanical footgun. A protected API accessed with **no** matching `NS*UsageDescription` = instant runtime kill (→ Guideline 2.1 crash rejection) or ITMS-90683 at upload. A **vague** string ("This app needs camera") = Guideline 5.1.1 rejection. A key present for a capability the app never uses = 5.1.1 over-requesting flag.
-
-Grep source (and note SDKs that link these APIs — Stripe card-scan, Twilio, Firebase ML trip the upload scanner even if the app never calls them):
-
-| Grep pattern (`.swift`) | Required key |
+| Line | Meaning |
 |---|---|
-| `AVCaptureDevice\|AVCaptureSession` | NSCameraUsageDescription (+ Microphone if audio capture) |
-| `CLLocationManager\|CoreLocation` | NSLocationWhenInUseUsageDescription (Always use → also NSLocationAlwaysAndWhenInUseUsageDescription) |
-| `PHPhotoLibrary\|PHAsset` | NSPhotoLibraryUsageDescription (save-only paths → NSPhotoLibraryAddUsageDescription). `PhotosPicker`/`PHPickerViewController` alone needs **no** key |
-| `CNContactStore` | NSContactsUsageDescription |
-| `EKEventStore` | NSCalendarsFullAccessUsageDescription / NSRemindersFullAccessUsageDescription (iOS 17+ keys; legacy NSCalendars/NSReminders keys only satisfy older targets) |
-| `CBCentralManager\|CBPeripheralManager` | NSBluetoothAlwaysUsageDescription |
-| `LAContext` + biometrics | NSFaceIDUsageDescription (missing = silent failure, not crash — still flag) |
-| `SFSpeechRecognizer` | NSSpeechRecognitionUsageDescription |
-| `CMMotionActivityManager\|CMPedometer` | NSMotionUsageDescription |
-| `HKHealthStore` | NSHealthShareUsageDescription / NSHealthUpdateUsageDescription |
-| `HMHomeManager` | NSHomeKitUsageDescription |
-| `NFCTagReaderSession\|NFCNDEFReaderSession` | NFCReaderUsageDescription (no `NS` prefix) |
-| `MPMediaLibrary` | NSAppleMusicUsageDescription |
-| `ATTrackingManager\|advertisingIdentifier` | NSUserTrackingUsageDescription (see Step 5 ATT) |
-| `NWBrowser\|NetService\|Bonjour` | NSLocalNetworkUsageDescription + NSBonjourServices array |
-| `AVAudioRecorder\|AVAudioEngine` (input) | NSMicrophoneUsageDescription |
+| `INVENTORY\|<topic>\|<value>` | what exists (targets, plists, manifests, entitlements, deps, keys, versions, toolchain) |
+| `FINDING\|<SEV>\|<SCOPE>\|<rule-id>\|<file[:line]>\|<message>` | a mechanical verdict, BLOCKER first. SEV and SCOPE are Step 6's |
+| `JUDGE\|<topic>\|<file[:line]>\|<excerpt>` | found mechanically; you decide. Each topic opens with one line at location `-` carrying the question and its severity/guideline |
+| `VERIFY-BY-HAND\|<id>\|<text>` | not visible in the repo → a Step 7 checklist item, never a story AC |
+| `FLAGS\|<key>=yes\|no…` | keys `cloudkit storekit universal permission-requests account-creation third-party-login att ai-endpoint webview-primary ugc remote-config`; routes Step 5 and Step 7 |
+| `SCAN: <n> findings — B/H/M/L; <j> judge, <v> verify-by-hand; flags <yes-list>` | last line |
 
-For each finding:
-- API used, key missing → **BLOCKER**
-- Key present, string < 20 chars or generic (no user-visible reason like "to scan barcodes for price lookup") → **MEDIUM**
-- Key present, no matching API usage anywhere → **MEDIUM** (remove it)
+Exit 0 = complete (findings are data); 1 = facts file malformed or out of step with the script — report the stderr line and stop, never fall back to hand-grepping; 2 = usage or no project.
+
+**FINDING lines are verdicts:** carry each into Step 6 as-is. A false positive (e.g. a pattern hit in a string literal) stays out of the story and is named, with the reason, in the Step 8 report. `docs/ux/`, `docs/prd.md` (feature intel for Step 5), and `.leanwheel/manifest.json` are read only if present.
 
 ---
 
-## Step 3 — Privacy Manifest (`PrivacyInfo.xcprivacy`)
+## Steps 2–4 — Judgment on the residue (purpose strings, manifest, configuration)
 
-Enforced at upload since May 2024 (ITMS-91053) / Feb 2025 for listed SDKs (ITMS-91061).
+Answer each `JUDGE` topic's question for each of its hits: a real problem becomes a finding with the question's guideline/ITMS code and scope, severity per Step 6; anything else is dropped. Then the two checks the scan has no trigger for:
 
-**3a. App manifest exists?** `UserDefaults`/`@AppStorage` alone makes it mandatory for virtually every app. No `PrivacyInfo.xcprivacy` in the app target → **BLOCKER**.
-
-**3b. Required-reason APIs declared?** Grep source; each hit needs a matching `NSPrivacyAccessedAPITypes` entry with an approved reason code:
-
-| Grep | Category | Common reason code |
-|---|---|---|
-| `UserDefaults\|@AppStorage` | `...CategoryUserDefaults` | CA92.1 (own defaults), 1C8F.1 (app group) |
-| `creationDate\|modificationDate\|\.stat\b\|fstat\|getattrlist` | `...CategoryFileTimestamp` | C617.1 (in-container files), DDA9.1 (shown to user) |
-| `systemUptime\|mach_absolute_time` | `...CategorySystemBootTime` | 35F9.1 (elapsed time) |
-| `volumeAvailableCapacity\|systemFreeSize\|statfs` | `...CategoryDiskSpace` | E174.1 (check before write), 85F4.1 (shown to user) |
-| `activeInputModes` | `...CategoryActiveKeyboards` | 54BD.1 |
-
-Used-but-undeclared → **BLOCKER** (ITMS-91053 upload rejection).
-
-**3c. Listed SDKs.** Intersect `Package.resolved` / `Podfile.lock` names with Apple's commonly-used-SDK list (Firebase*, Alamofire, Kingfisher, SDWebImage, SnapKit, Lottie, Realm, RxSwift, Charts, GoogleSignIn, FBSDK*, OneSignal, Sentry, Braze, Adjust, AppsFlyer — full list: developer.apple.com/support/third-party-SDK-requirements/). Each match must ship its own manifest (upgrade the dependency — you cannot declare on its behalf) and, if binary-distributed, a code signature → missing = **BLOCKER** (ITMS-91061).
-
-**3d. Tracking consistency.** `NSPrivacyTracking=true` requires `NSPrivacyTrackingDomains`; tracking SDKs present with `NSPrivacyTracking=false` (or no ATT flow) → **HIGH** (5.1.2). iOS blocks requests to declared tracking domains until ATT consent — an app that "works anyway" may be tracking via undeclared domains.
-
----
-
-## Step 4 — Configuration & Assets
-
-Check each; both plist and `INFOPLIST_KEY_*` locations.
-
-| Check | Rule | Severity if wrong |
-|---|---|---|
-| `ITSAppUsesNonExemptEncryption` | Absent → every TestFlight build stuck "Missing Compliance" until manually answered. HTTPS/OS-crypto-only apps: set `false` | **HIGH** (TF friction; one-line fix) |
-| `CFBundleShortVersionString` / `MARKETING_VERSION` | ≤3 period-separated integers, numeric only, higher than last approved version. `1.0-beta` → upload error | **BLOCKER** if malformed |
-| `CFBundleVersion` / `CURRENT_PROJECT_VERSION` | Numeric; increments per upload (redundant-binary rejection). Same value on the app **and every extension** target (Xcode bumps only the app; mismatch fails upload) — Step 1's `sort -u` must show one value outside test targets. A rejected version keeps its `MARKETING_VERSION`; only the build number changes. See `review-packet.md` | **BLOCKER** if app/extension differ; MEDIUM otherwise |
-| App icon | Asset catalog needs 1024×1024 marketing icon, **no alpha channel** (ITMS-90022/90717). Single-size icon: the one PNG must be 1024², opaque. iOS 18 dark/tinted + iOS 26 `.icon` variants optional | **BLOCKER** if missing/alpha |
-| Launch screen | `UILaunchScreen` dict (even empty, or `INFOPLIST_KEY_UILaunchScreen_Generation=YES`) or `UILaunchStoryboardName` required — ITMS-90475 with iPad multitasking; outright mandatory from iOS 27 SDKs | **BLOCKER** |
-| iPad orientations | `TARGETED_DEVICE_FAMILY` includes 2 → all four orientations in `~ipad` set unless `UIRequiresFullScreen=YES` (ITMS-90474). ⚠️VOLATILE: `UIRequiresFullScreen` deprecated on iPadOS 26 (will be ignored) — flag its presence; durable answer is all-four + resizable scenes | **BLOCKER** / MEDIUM for the deprecated key |
-| `UIRequiredDeviceCapabilities` | Only truly-required values; adding one in an update can never narrow device support (ITMS-90109). Safest: absent or `[arm64]` | **MEDIUM** |
-| Entitlements ↔ capabilities | Parse `.entitlements`: `aps-environment`, iCloud containers, app groups, HealthKit, `applesignin`, associated domains each need the capability on the App ID / in the distribution profile (ITMS-90164). `get-task-allow=true` in a distribution archive → upload fail. Push registered in code (or Firebase present) without `aps-environment` → ITMS-90078 warning | **HIGH** (verify-by-hand item — profile state isn't in the repo) |
-| CloudKit schema deployed | CloudKit in use (Step 1) → apply [checks-cloudkit.md](checks-cloudkit.md); otherwise skip | **HIGH** |
-| ATS | `NSAllowsArbitraryLoads=true` without per-domain exceptions draws review questions and is a security smell | **MEDIUM** |
-| Xcode/SDK floor | ⚠️VOLATILE: uploads must be built with iOS 26 SDK / Xcode 26+ (since Apr 28, 2026; re-check annually). Verify local + CI toolchain | **BLOCKER** if toolchain is older |
-
-**Banned / rejection-magnet code (grep, exclude DerivedData/.build/Pods):**
-
-```bash
-grep -rn "UIWebView" --include="*.swift" .                       # ITMS-90809 upload fail — also check vendored binaries
-grep -rn "dlopen(\|dlsym(\|PrivateFrameworks" --include="*.swift" .  # 2.5.1 private-API patterns (dynamic selectors = flag; static = fine)
-grep -rni "lorem ipsum\|coming soon\|placeholder" --include="*.swift" -r Resources/ 2>/dev/null  # 2.1 completeness
-grep -rni "beta\|demo\|trial" — check CFBundleDisplayName / INFOPLIST_KEY_CFBundleDisplayName only  # 2.2/2.3 naming
-```
-
-Also flag: debug menus reachable in release (`#if DEBUG` gaps around shake/secret-tap handlers), `print`/`NSLog` of tokens or PII (reviewers watch console logs).
+- **SDK-linked APIs.** SDKs that link protected APIs trip the upload scanner even if the app never calls them (Stripe card-scan, Twilio, Firebase ML). Check `INVENTORY|dependencies` against `INVENTORY|purpose-keys`; a missing key → **BLOCKER** `[PLIST]` (ITMS-90683).
+- **CloudKit** (`cloudkit=yes`) → apply [checks-cloudkit.md](checks-cloudkit.md); the scan has already emitted its mechanical half (`cloudkit-schema-init`, `VERIFY-BY-HAND|cloudkit-deploy`).
 
 ---
 
 ## Step 5 — Review-Behavior Audit (guideline semantics)
 
-These need judgment, not just grep. Read the relevant source (auth flows, paywall, settings) selectively — do not read the whole codebase.
+These need judgment, not just grep. Read the relevant source (auth flows, paywall, settings) selectively — do not read the whole codebase. Read a branch file only when its `FLAGS` trigger is `yes` (item 4: `storekit`, item 11: `permission-requests`); items 6 and 7 always run.
 
-1. **Account deletion — 5.1.1(v).** If the app has account *creation* (any sign-up, including Sign in with Apple/Google as the only login): there must be an **in-app entry point that initiates full account deletion** (not deactivation, not "email us"). SIWA apps must also call the token-revocation endpoint on delete. Missing → **HIGH**.
-2. **Login services — 4.8.** Third-party login SDK present (`GoogleSignIn`, `FBSDKLoginKit`, social OAuth via `ASWebAuthenticationSession`) → an equally-prominent privacy-protective option is required (SIWA is the safe choice; email/password meeting the data-minimization criteria can qualify). Missing → **HIGH**.
-3. **ATT — 5.1.2.** Ad/attribution SDKs or IDFA reads → `requestTrackingAuthorization` flow + usage-description key + manifest tracking flags, and functionality must not be gated on consent. Fingerprinting is never allowed, even with consent. Violation → **HIGH**.
+| Items | Trigger | Read |
+|---|---|---|
+| 1–2 account deletion 5.1.1(v), login services 4.8 | `account-creation` or `third-party-login` | [checks-accounts.md](checks-accounts.md) |
+| 3, 5 ATT 5.1.2, third-party AI 5.1.2(i) | `att` or `ai-endpoint` | [checks-data-sharing.md](checks-data-sharing.md) |
+| 8–10 hidden features 2.3.1, web wrapper 4.2, kids/age 1.2 | `remote-config`, `webview-primary`, `ugc`, or a Kids Category PRD | [checks-content.md](checks-content.md) |
+
 4. **Subscriptions/IAP — 3.1.1/3.1.2.** StoreKit in use (Step 1) → apply [checks-storekit.md](checks-storekit.md): PRODUCTS DIFF reconciliation **and** the 3.1.2(c) paywall hierarchy check (billed amount dominates). No StoreKit → skip.
-5. **Third-party AI data sharing — 5.1.2(i), since Nov 2025.** App sends user data to an external AI API (OpenAI/Gemini/Claude endpoints in networking code) → needs explicit, provider-named consent before first send, reflected in the privacy label. Missing → **HIGH**.
 6. **In-app privacy policy access — 5.1.1.** A privacy-policy link must be reachable inside the app (settings screen is fine). Missing → **MEDIUM**.
 7. **iPad compatibility — 2.4.1.** Every app is reviewed on iPad, **even iPhone-only apps** (compatibility mode). Note as a checklist test item; flag obvious fixed-width/fixed-orientation layouts in a universal app → **MEDIUM**.
-8. **Hidden features — 2.3.1.** Remote feature flags that can reveal review-unseen functionality → **HIGH** (account-level enforcement risk). Disclose flag-gated features in review notes instead.
-9. **Web-wrapper smell — 4.2.** If the primary UI is a `WKWebView` of a website, the app must do something Safari can't (native nav, push, offline, widgets) → **HIGH**.
-10. **Kids/age signals.** UGC or chat without moderation/report/block (1.2), unfiltered web view forcing 17+/18+, Kids Category without parental gates → **HIGH** where applicable.
 11. **Permission pre-prompts — 5.1.1(iv).** Any `request*Authorization` / `requestAccess` call site (grep in [checks-permissions.md](checks-permissions.md)) → apply that file: neutral button copy, no exit around the system alert, user-action trigger. Pre-prompts are invisible to automation, so an unwalked one is a MEDIUM finding.
 
 ---
@@ -199,14 +111,14 @@ Generated: {date}
 
 Write `docs/maintainer/appstore-submission-checklist.md` (overwrite on re-runs — it's a living gate, not a log) in two moves:
 
-1. **Render (zero-token)** from [submission-checklist.template.md](submission-checklist.template.md) using the Step 1 flags. Run the script; don't read the template:
+1. **Render (zero-token)** from [submission-checklist.template.md](submission-checklist.template.md) using the Step 1 `FLAGS` values for `storekit`, `cloudkit`, and `universal`. Run the script; don't read the template:
    ```bash
    bash {skills_path}/.claude/skills/appstore-preflight/render-checklist.sh \
      --storekit yes|no --cloudkit yes|no --universal yes|no --date {YYYY-MM-DD} \
      --out docs/maintainer/appstore-submission-checklist.md
    ```
    It drops the sections and lines that don't apply, notes each omission at the top, and reports how many `{…}` placeholders remain.
-2. **Fill** — read the rendered file and replace every remaining placeholder. Pre-fill every item the audit can infer as `[x] verified — {evidence}`; leave `[ ]` for human-required items.
+2. **Fill** — read the rendered file and replace every remaining placeholder. Pre-fill every item the audit can infer as `[x] verified — {evidence}`; leave `[ ]` for human-required items. Each `VERIFY-BY-HAND` line lands on its matching item (the `entitlement:*` lines fill `{detected .entitlements list}`; `INVENTORY|dependencies` fills `{detected SDK list}`).
 
 **`docs/store/` hand-off (zero-token):** if `docs/store/metadata/` exists, run the lint — `bash .claude/hooks/asc-lint.sh docs/store` (or `{skills_path}/.claude/skills/appstore-connect/asc-lint.sh`) — and stamp the App Record name/subtitle line, the Required URLs lines, and the Media screenshot line `[x] verified — asc-lint passed ({date}, {locales})` when it exits 0; on errors leave `[ ]` and append `— asc-lint: {N} errors, run /appstore-connect metadata`. If `docs/store/metadata/` is absent (Step 5's IMPORT may already have created `docs/store/` for `products.md`), the Media / App Record `[ ]` lines gain the pointer `→ /appstore-connect {assets|metadata}` so the human knows the authoring lane exists. The IAP section embeds the PRODUCTS DIFF summary from Step 5.
 

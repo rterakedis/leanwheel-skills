@@ -1,0 +1,9 @@
+name: ci
+on: [push]
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.4'
