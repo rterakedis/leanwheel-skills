@@ -1,0 +1,24 @@
+{
+  "originHash" : "0000000000000000000000000000000000000000000000000000000000000000",
+  "pins" : [
+    {
+      "identity" : "firebase-ios-sdk",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/firebase/firebase-ios-sdk",
+      "state" : {
+        "revision" : "1111111111111111111111111111111111111111",
+        "version" : "10.0.0"
+      }
+    },
+    {
+      "identity" : "ios_sdk",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/adjust/ios_sdk",
+      "state" : {
+        "revision" : "2222222222222222222222222222222222222222",
+        "version" : "4.38.0"
+      }
+    }
+  ],
+  "version" : 3
+}

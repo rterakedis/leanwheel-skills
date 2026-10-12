@@ -1,0 +1,97 @@
+// !$*UTF8*$!
+// Synthetic fixture for scripts/test/preflight-scan.sh — generated-Info.plist mode, nothing wrong.
+// The Widget inherits CURRENT_PROJECT_VERSION from the project level (7, same as the app); the
+// test target's 99 must never count as a mismatch.
+{
+	objects = {
+		T1 /* App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = L1 /* Build configuration list for PBXNativeTarget "App" */;
+			name = App;
+			productType = "com.apple.product-type.application";
+		};
+		T2 /* Widget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = L2 /* Build configuration list for PBXNativeTarget "Widget" */;
+			name = Widget;
+			productType = "com.apple.product-type.app-extension";
+		};
+		T3 /* AppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = L3 /* Build configuration list for PBXNativeTarget "AppTests" */;
+			name = AppTests;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		P0 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = L0 /* Build configuration list for PBXProject "Clean" */;
+		};
+		C0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 7;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+			};
+			name = Release;
+		};
+		C1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Receipts;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Scans the barcode on a receipt to look up its price.";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				MARKETING_VERSION = 1.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.receipts;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		C2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.receipts.widget;
+			};
+			name = Release;
+		};
+		C3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CURRENT_PROJECT_VERSION = 99;
+				MARKETING_VERSION = 9.9-test;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.receipts.tests;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/App.app/App";
+			};
+			name = Release;
+		};
+		L0 /* Build configuration list for PBXProject "Clean" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C0 /* Release */,
+			);
+		};
+		L1 /* Build configuration list for PBXNativeTarget "App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C1 /* Release */,
+			);
+		};
+		L2 /* Build configuration list for PBXNativeTarget "Widget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C2 /* Release */,
+			);
+		};
+		L3 /* Build configuration list for PBXNativeTarget "AppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C3 /* Release */,
+			);
+		};
+	};
+}

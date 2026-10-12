@@ -16,7 +16,7 @@ Not to be confused with a user project's `docs/project/decisions.md` (owned by t
 - Testing & test plans: DD-30 manual pass at the epic boundary · DD-31 TESTING PLAN split + subtract · DD-32 plan-defect kind · DD-33 done stories immutable · DD-34 testability foundation · DD-35 flow tiering · DD-36 e2e backfill
 - Simulator automation: DD-40 sim.sh + route navigation · DD-41 silent-failure guards · DD-42 orientation · DD-43 store preset · DD-44 sim.json committed · DD-45 release parity for store captures · DD-46 vendored-script drift is reported, never silent · DD-47 runtime pin + ambiguity guard
 - Planning & docs: DD-50 planning consolidation · DD-51 pinned story frontmatter · DD-52 design contract decoupled from docs/ux · DD-53 simplicity doctrine placement · DD-54 CLAUDE.md tiers & budget · DD-55 epic archive · DD-56 dark patterns · DD-57 doc-free lane · DD-58 architecture promotion · DD-76 no plan-mode pass before dev-story
-- Packaging: DD-60 hooks for hard rules · DD-72 per-file budget in bytes · DD-61 no project names · DD-62 ledger via ledger.sh · DD-63 quiet toolchain output · DD-68 optional styling via template.json · DD-69 status line over IDE extension · DD-70 App Review 2.1 packet + device-verified claim ledger · DD-74 App Store skills load per op / per branch
+- Packaging: DD-60 hooks for hard rules · DD-72 per-file budget in bytes · DD-61 no project names · DD-62 ledger via ledger.sh · DD-63 quiet toolchain output · DD-68 optional styling via template.json · DD-69 status line over IDE extension · DD-70 App Review 2.1 packet + device-verified claim ledger · DD-74 App Store skills load per op / per branch · DD-79 preflight's deterministic steps are a script, its facts are data
 
 ---
 
@@ -933,3 +933,68 @@ conflict. Same shape as DD-66: a cheap mechanical marker plus one rule about it.
 shipped with DD-70 (`commit-workflow.md`, managed block `v2`); the TestFlight/Sandbox-Account
 and recording items already live in `review-packet.md`; Issue Navigator caching is in
 `xcode-footguns.md`.
+
+---
+
+### DD-79 — Preflight's deterministic steps are a script, and its facts are data
+
+**Context.** `appstore-preflight/SKILL.md` sat at 20,350 of its 20,480-byte budget (DD-72) after
+DD-78, and most of it was not judgment. Steps 1–4 were a dozen `grep`/`find` blocks plus four fact
+tables the model had to run, read, cross-reference (purpose key vs API vs both plist locations;
+required-reason category vs manifest; build number across targets) and then re-type as findings.
+Every run paid for the tables, and two runs over the same tree could disagree — the same
+in-context-parse problem DD-71 removed from evals. The cross-reference that DD-78 added (build
+number identical on the app and every extension, test targets excluded) is exactly the kind a
+model gets wrong by reading one `sort -u` line.
+
+**Decision.**
+- `appstore-preflight/preflight-scan.sh` runs Steps 1–4: inventory, purpose strings, privacy
+  manifest (3a–3d), and every greppable configuration, asset, signing and banned-code row — both
+  Info.plist files and `INFOPLIST_KEY_*` settings, pbxproj targets resolved through their
+  configuration lists with project-level inheritance, test targets / `Pods/` / `.build/` /
+  `#if DEBUG` code excluded, icons through `plutil` + `sips`. Executed, never read; bash 3.2. Its
+  output is the contract, canonical in SKILL.md Step 1: `INVENTORY` / `FINDING` (severity, scope,
+  rule id, location, message) / `JUDGE` / `VERIFY-BY-HAND` / one `FLAGS` line / a `SCAN:` summary.
+  Exit 0 scanned, 1 facts drift (nothing scanned), 2 usage or no project.
+- Where a rule needs judgment the scan emits a `JUDGE` line, not a finding — purpose-string quality
+  beyond the < 20-char heuristic, listed-SDK versions with no local copy, beta/demo naming,
+  placeholder copy, private-API and debug-gate hits, PII logging, CI Xcode pins. Each topic opens
+  with one question line whose text, severity and guideline come from the facts file, so the model
+  sees guidance only for topics that occurred and SKILL.md carries none of it.
+- `FLAGS` routes progressive disclosure: Step 5's behaviour items moved verbatim into
+  `checks-accounts.md` (5.1.1(v), 4.8), `checks-data-sharing.md` (5.1.2, 5.1.2(i)) and
+  `checks-content.md` (2.3.1, 4.2, 1.2), each read only when its flag is `yes`, beside the existing
+  StoreKit, CloudKit and permissions branches. Step 7 feeds the same `FLAGS` into
+  `render-checklist.sh`. Steps 6–8 and their output formats are unchanged.
+
+**Why the facts are a TSV and not a block in the script.** `/refresh-swift` Step 4 edits these
+facts every year; it should never be able to break the scanner while doing so. In a separate
+data file a refresh touches rows, not bash — no quoting, no heredoc to unbalance — and the scan
+validates every row before scanning (field count, so tabs-turned-spaces is named; known severity
+and scope; rule ids exactly the set the script emits, in both directions; every pattern matches
+its own **probe**, a sample line carried on the row as a per-row positive control). The FIELD
+convention needed no new mechanism: a `# <!-- FIELD: … -->` comment protects the rows beneath it,
+and the existing refresh grep over `appstore-preflight/` already finds it.
+
+**Protection moved with the rules.** The CFBundleVersion row (protected by its `review-packet.md`
+citation) became the `build-number-mismatch` / `build-number-shape` rules under an explicit FIELD
+marker that also carries the original row text verbatim. Step 5 items 4 and 11, which cite FIELD
+files, stay in SKILL.md word for word. The `permission-requests` flag pattern is pinned
+byte-identical to the "Find them" grep in `checks-permissions.md` by the self-test, so the routing
+cannot drift from the FIELD file it routes to.
+
+**Gate integrity (DD-11, DD-77).** `scripts/test/preflight-scan.sh` runs three synthetic
+fixtures — clean (every rule's negative state), faulty (every flag on, rules pinned to
+file:line), sparse (no manifest, no icon, an unmanifested Pod, keys only in the file plist) — and
+asserts every rule in the facts file fires on at least one fixture, every flag is seen both on and
+off, and five kinds of facts drift exit 1. It was shown to fail against four deliberately broken
+scanners: test-dir exclusion removed, test targets classified as extensions, `#if DEBUG` ignored,
+alpha never checked.
+
+**Consequence.** SKILL.md went from 20,350 to ~12,100 bytes, and the scan's findings are
+reproducible across runs. Three patterns were sharpened in passing because a mechanical verdict
+cannot rely on the model to discard noise: bare `CoreLocation` (an import for coordinates needs no
+key) and output-only `AVAudioEngine` dropped from the purpose table, and the file-timestamp row
+narrowed from bare `creationDate`/`modificationDate` (which matched every Core Data attribute of
+that name) to the `FileAttributeKey` / `URLResourceKey` / `stat` family. The CloudKit
+no-`initializeCloudKitSchema` check, previously prose in `checks-cloudkit.md`, is now a finding.

@@ -1,0 +1,92 @@
+// !$*UTF8*$!
+// Synthetic fixture for scripts/test/preflight-scan.sh — file-Info.plist mode, everything wrong.
+// The app sets build 3, the Widget inherits the project-level 1 (Xcode bumped only the app),
+// and the test target's 9 must stay out of the mismatch.
+{
+	objects = {
+		T1 /* App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = L1 /* Build configuration list for PBXNativeTarget "App" */;
+			name = App;
+			productType = "com.apple.product-type.application";
+		};
+		T2 /* Widget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = L2 /* Build configuration list for PBXNativeTarget "Widget" */;
+			name = Widget;
+			productType = "com.apple.product-type.app-extension";
+		};
+		T3 /* AppUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = L3 /* Build configuration list for PBXNativeTarget "AppUITests" */;
+			name = AppUITests;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		P0 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = L0 /* Build configuration list for PBXProject "Faulty" */;
+		};
+		C0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 1;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+			};
+			name = Release;
+		};
+		C1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 3;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				MARKETING_VERSION = "1.0-beta";
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.trips;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		C2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INFOPLIST_FILE = Widget/Info.plist;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.trips.widget;
+			};
+			name = Release;
+		};
+		C3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 9;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.trips.uitests;
+				TEST_TARGET_NAME = App;
+			};
+			name = Release;
+		};
+		L0 /* Build configuration list for PBXProject "Faulty" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C0 /* Release */,
+			);
+		};
+		L1 /* Build configuration list for PBXNativeTarget "App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C1 /* Release */,
+			);
+		};
+		L2 /* Build configuration list for PBXNativeTarget "Widget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C2 /* Release */,
+			);
+		};
+		L3 /* Build configuration list for PBXNativeTarget "AppUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C3 /* Release */,
+			);
+		};
+	};
+}

@@ -1,0 +1,23 @@
+// !$*UTF8*$!
+// Synthetic fixture for scripts/test/preflight-scan.sh — generated keys merged with a partial
+// Info.plist file (the location key and the launch screen live only in the file). No target
+// list, so the scan must infer the app config from PRODUCT_BUNDLE_IDENTIFIER.
+{
+	objects = {
+		C1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 12b;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationPortrait;
+				MARKETING_VERSION = 2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.sparse;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+	};
+}

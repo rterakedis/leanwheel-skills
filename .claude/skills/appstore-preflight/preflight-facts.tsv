@@ -1,0 +1,167 @@
+# preflight-facts.tsv — every requirement fact preflight-scan.sh applies. Data only, no logic.
+#
+# Currency: the `meta currency` row is THE date for this skill's facts (SKILL.md, checks-*.md and
+# the checklist template cite it). /refresh-swift Step 4 edits rows here and never touches
+# preflight-scan.sh. ⚠️VOLATILE marks facts that move mid-cycle (litigation, annual SDK
+# mandates) — re-verify at https://developer.apple.com/news/upcoming-requirements/.
+#
+# FIELD rows: a `# <!-- FIELD: … -->` comment protects the rows directly beneath it, up to the
+# next blank line (DD-66, DD-78). Refresh passes may append a dated note, version-scope, or
+# retire with a citation that shows the mechanism changed — never rewrite or delete.
+#
+# Format: TAB-separated, one row per line, `#` comments and blank lines ignored. The scan
+# validates every row before scanning and exits 1 naming the line on any problem — a wrong
+# field count (tabs turned into spaces), an unknown severity/scope, a rule id the script does
+# not emit (or emits but is missing here), or a pattern that does not match its own probe.
+# The probe is the per-row positive control: a sample line the pattern must match (DD-77).
+#
+#   meta     <key>       <value>
+#   rule     <id>        <BLOCKER|HIGH|MEDIUM|LOW>  <PLIST|MANIFEST|SIGNING|ASSET|CODE|BEHAVIOR>  <message>
+#   purpose  <code-ERE>  <required key: A | A/B any-of | A+B all-of>  <optional keys A/B or ->  <probe>
+#   reason   <code-ERE>  <NSPrivacyAccessedAPICategory…>  <common reason codes>  <probe>
+#   sdk      <dep-ERE>   <name>  <probe>        Apple's listed SDKs (ITMS-91061); matched case-insensitively
+#   tracker  <dep-ERE>   <name>  <probe>        ad/attribution SDKs for the 3d tracking check
+#   flag     <name>      <code-ERE>  <probe>    FLAGS routing, from source
+#   depflag  <name>      <dep-ERE>   <probe>    FLAGS routing, from Package.resolved / Podfile.lock
+#   pattern  <id>        <code-ERE>  <probe>
+#   verify   <id>        <text>                 VERIFY-BY-HAND line ({key} / {value} filled by the scan)
+#   judge    <topic>     <question>             printed once above that topic's JUDGE hits, location "-"
+#
+# Messages and questions may use {sdk-floor}; it is filled from the meta row.
+
+meta	currency	2026-07-19
+meta	sdk-floor	26
+
+# ---- Step 2 — purpose strings (crash + 5.1.1) -------------------------------------------
+rule	purpose-key-missing	BLOCKER	PLIST	Protected API used with no matching NS*UsageDescription — instant runtime kill (Guideline 2.1 crash rejection) or ITMS-90683 at upload
+rule	purpose-string-generic	MEDIUM	PLIST	Purpose string < 20 chars or generic (no user-visible reason like "to scan barcodes for price lookup") — Guideline 5.1.1 rejection
+rule	purpose-key-unused	MEDIUM	PLIST	Key present for a capability the app never uses — Guideline 5.1.1 over-requesting flag (remove it)
+
+purpose	AVCaptureDevice|AVCaptureSession	NSCameraUsageDescription	NSMicrophoneUsageDescription	let session = AVCaptureSession()
+purpose	CLLocationManager	NSLocationWhenInUseUsageDescription	NSLocationAlwaysAndWhenInUseUsageDescription	let manager = CLLocationManager()
+purpose	requestAlwaysAuthorization	NSLocationAlwaysAndWhenInUseUsageDescription	-	manager.requestAlwaysAuthorization()
+purpose	PHPhotoLibrary|PHAsset	NSPhotoLibraryUsageDescription/NSPhotoLibraryAddUsageDescription	-	PHPhotoLibrary.shared().performChanges {}
+purpose	CNContactStore	NSContactsUsageDescription	-	let store = CNContactStore()
+purpose	EKEventStore	NSCalendarsFullAccessUsageDescription/NSRemindersFullAccessUsageDescription	NSCalendarsUsageDescription/NSRemindersUsageDescription	let store = EKEventStore()
+purpose	CBCentralManager|CBPeripheralManager	NSBluetoothAlwaysUsageDescription	-	let central = CBCentralManager()
+purpose	LAContext	NSFaceIDUsageDescription	-	let context = LAContext()
+purpose	SFSpeechRecognizer	NSSpeechRecognitionUsageDescription	-	let recognizer = SFSpeechRecognizer()
+purpose	CMMotionActivityManager|CMPedometer	NSMotionUsageDescription	-	let pedometer = CMPedometer()
+purpose	HKHealthStore	NSHealthShareUsageDescription/NSHealthUpdateUsageDescription	-	let health = HKHealthStore()
+purpose	HMHomeManager	NSHomeKitUsageDescription	-	let home = HMHomeManager()
+purpose	NFCTagReaderSession|NFCNDEFReaderSession	NFCReaderUsageDescription	-	let nfc = NFCNDEFReaderSession(delegate: d, queue: nil, invalidateAfterFirstRead: true)
+purpose	MPMediaLibrary	NSAppleMusicUsageDescription	-	MPMediaLibrary.requestAuthorization { _ in }
+purpose	ATTrackingManager|advertisingIdentifier	NSUserTrackingUsageDescription	-	let idfa = ASIdentifierManager.shared().advertisingIdentifier
+purpose	NWBrowser|NetService|Bonjour	NSLocalNetworkUsageDescription+NSBonjourServices	-	let browser = NWBrowser(for: .bonjour(type: "_x._tcp", domain: nil), using: .tcp)
+purpose	AVAudioRecorder|inputNode	NSMicrophoneUsageDescription	-	let input = engine.inputNode
+
+# ---- Step 3 — privacy manifest (ITMS-91053 since May 2024; ITMS-91061 since Feb 2025) ----
+rule	manifest-missing	BLOCKER	MANIFEST	No PrivacyInfo.xcprivacy in the app target — UserDefaults/@AppStorage alone makes it mandatory for virtually every app (ITMS-91053)
+rule	reason-api-undeclared	BLOCKER	MANIFEST	Required-reason API used but no matching NSPrivacyAccessedAPITypes entry with an approved reason code (ITMS-91053 upload rejection)
+rule	sdk-manifest-missing	BLOCKER	MANIFEST	Listed SDK must ship its own manifest (upgrade the dependency — you cannot declare on its behalf) and, if binary-distributed, a code signature (ITMS-91061)
+rule	tracking-domains-missing	HIGH	MANIFEST	NSPrivacyTracking=true requires NSPrivacyTrackingDomains (5.1.2)
+rule	tracking-inconsistent	HIGH	MANIFEST	Tracking SDKs present with NSPrivacyTracking=false (or no ATT flow) — 5.1.2. iOS blocks requests to declared tracking domains until ATT consent; an app that "works anyway" may be tracking via undeclared domains
+
+reason	UserDefaults|@AppStorage	NSPrivacyAccessedAPICategoryUserDefaults	CA92.1 (own defaults), 1C8F.1 (app group)	UserDefaults.standard.set(true, forKey: "seen")
+reason	FileAttributeKey\.(creationDate|modificationDate)|\[\.(creationDate|modificationDate)\]|(creationDate|contentModificationDate|attributeModificationDate|contentAccessDate)Key|fileModificationDate|getattrlist|\b(f|l)?stat(at)?\(	NSPrivacyAccessedAPICategoryFileTimestamp	C617.1 (in-container files), DDA9.1 (shown to user)	let date = attrs[.modificationDate] as? Date
+reason	systemUptime|mach_absolute_time	NSPrivacyAccessedAPICategorySystemBootTime	35F9.1 (elapsed time)	let up = ProcessInfo.processInfo.systemUptime
+reason	volumeAvailableCapacity|systemFreeSize|statfs	NSPrivacyAccessedAPICategoryDiskSpace	E174.1 (check before write), 85F4.1 (shown to user)	let key: URLResourceKey = .volumeAvailableCapacityForImportantUsageKey
+reason	activeInputModes	NSPrivacyAccessedAPICategoryActiveKeyboards	54BD.1	let modes = UITextInputMode.activeInputModes
+
+# Apple's commonly-used-SDK list (full list: developer.apple.com/support/third-party-SDK-requirements/)
+sdk	firebase	Firebase	https://github.com/firebase/firebase-ios-sdk
+sdk	alamofire	Alamofire	https://github.com/alamofire/alamofire.git
+sdk	kingfisher	Kingfisher	https://github.com/onevcat/kingfisher.git
+sdk	sdwebimage	SDWebImage	https://github.com/sdwebimage/sdwebimage.git
+sdk	snapkit	SnapKit	https://github.com/snapkit/snapkit.git
+sdk	lottie	Lottie	https://github.com/airbnb/lottie-spm.git
+sdk	realm	Realm	https://github.com/realm/realm-swift.git
+sdk	rxswift	RxSwift	https://github.com/reactivex/rxswift.git
+sdk	(^|/)(dg)?charts(\.git)?$	Charts	https://github.com/danielgindi/charts.git
+sdk	googlesignin	GoogleSignIn	https://github.com/google/googlesignin-ios.git
+sdk	fbsdk|facebook-ios-sdk	FBSDK	https://github.com/facebook/facebook-ios-sdk
+sdk	onesignal	OneSignal	https://github.com/onesignal/onesignal-xcframework
+sdk	sentry	Sentry	https://github.com/getsentry/sentry-cocoa.git
+sdk	braze|appboy	Braze	https://github.com/braze-inc/braze-swift-sdk
+sdk	adjust	Adjust	https://github.com/adjust/ios_sdk
+sdk	appsflyer	AppsFlyer	https://github.com/appsflyersdk/appsflyerframework
+
+tracker	adjust	Adjust	https://github.com/adjust/ios_sdk
+tracker	appsflyer	AppsFlyer	https://github.com/appsflyersdk/appsflyerframework
+tracker	fbsdk|facebook-ios-sdk|fbaudiencenetwork	Meta SDK	https://github.com/facebook/facebook-ios-sdk
+tracker	google-mobile-ads|googlemobileads	Google Mobile Ads	https://github.com/googleads/swift-package-manager-google-mobile-ads
+tracker	applovin	AppLovin	https://github.com/applovin/applovin-max-sdk-ios
+tracker	kochava	Kochava	https://github.com/kochava/kochavanetworking-ios-xcframework
+tracker	branch-ios|ios-branch	Branch	https://github.com/branchmetrics/ios-branch-sdk-spm
+
+# ---- Step 4 — configuration, assets, signing, code ---------------------------------------
+rule	encryption-key-missing	HIGH	PLIST	ITSAppUsesNonExemptEncryption absent — every TestFlight build stuck "Missing Compliance" until manually answered. HTTPS/OS-crypto-only apps: set false (TF friction; one-line fix)
+rule	marketing-version-shape	BLOCKER	PLIST	CFBundleShortVersionString / MARKETING_VERSION must be ≤3 period-separated integers, numeric only — `1.0-beta` → upload error
+
+# <!-- FIELD: DD-78 — the CFBundleVersion / CURRENT_PROJECT_VERSION row, moved from SKILL.md Step 4 into these two rules by DD-79. Learned across three consecutive rejections of one first submission, Sept–Oct 2026. Protected from refresh passes (DD-66): append / version-scope / retire-with-citation only. Moved text: "Numeric; increments per upload (redundant-binary rejection). Same value on the app **and every extension** target (Xcode bumps only the app; mismatch fails upload) — Step 1's `sort -u` must show one value outside test targets. A rejected version keeps its `MARKETING_VERSION`; only the build number changes. See `review-packet.md` | **BLOCKER** if app/extension differ; MEDIUM otherwise" -->
+rule	build-number-mismatch	BLOCKER	PLIST	CFBundleVersion / CURRENT_PROJECT_VERSION: same value on the app and every extension target (Xcode bumps only the app; mismatch fails upload) — one value outside test targets. A rejected version keeps its MARKETING_VERSION; only the build number changes. See review-packet.md
+rule	build-number-shape	MEDIUM	PLIST	CFBundleVersion / CURRENT_PROJECT_VERSION: numeric; increments per upload (redundant-binary rejection). See review-packet.md
+
+rule	icon-missing	BLOCKER	ASSET	Asset catalog needs a 1024×1024 marketing icon, no alpha channel (ITMS-90022/90717). Single-size icon: the one PNG must be 1024², opaque. iOS 18 dark/tinted + iOS 26 .icon variants optional
+rule	icon-alpha	BLOCKER	ASSET	1024×1024 marketing icon has an alpha channel (ITMS-90022/90717) — the PNG must be opaque
+rule	launch-screen-missing	BLOCKER	PLIST	UILaunchScreen dict (even empty, or INFOPLIST_KEY_UILaunchScreen_Generation=YES) or UILaunchStoryboardName required — ITMS-90475 with iPad multitasking; outright mandatory from iOS 27 SDKs
+rule	ipad-orientations	BLOCKER	PLIST	TARGETED_DEVICE_FAMILY includes 2 → all four orientations in the ~ipad set unless UIRequiresFullScreen=YES (ITMS-90474)
+rule	requires-fullscreen-deprecated	MEDIUM	PLIST	⚠️VOLATILE: UIRequiresFullScreen deprecated on iPadOS 26 (will be ignored); durable answer is all four orientations + resizable scenes
+rule	required-capabilities	MEDIUM	PLIST	UIRequiredDeviceCapabilities: only truly-required values; adding one in an update can never narrow device support (ITMS-90109). Safest: absent or [arm64]
+rule	get-task-allow	HIGH	SIGNING	get-task-allow=true in a distribution archive → upload fail
+rule	push-without-aps	HIGH	SIGNING	Push registered in code (or Firebase Messaging present) without aps-environment → ITMS-90078 warning
+rule	cloudkit-schema-init	HIGH	CODE	CloudKit sync present but no initializeCloudKitSchema call anywhere — the Development schema is whatever manual testing happened to save (silent post-release failure; see checks-cloudkit.md)
+rule	ats-arbitrary-loads	MEDIUM	PLIST	NSAllowsArbitraryLoads=true without per-domain exceptions draws review questions and is a security smell
+rule	sdk-floor	BLOCKER	SIGNING	⚠️VOLATILE: uploads must be built with iOS {sdk-floor} SDK / Xcode {sdk-floor}+ (since Apr 28, 2026; re-check annually). Verify local + CI toolchain
+rule	uiwebview	BLOCKER	CODE	UIWebView reference — ITMS-90809 upload fail (also check vendored binaries)
+
+pattern	push	registerForRemoteNotifications|import FirebaseMessaging|Messaging\.messaging\(\)	UIApplication.shared.registerForRemoteNotifications()
+pattern	cloudkit-schema-init	initializeCloudKitSchema	try container.initializeCloudKitSchema(options: [])
+pattern	swiftdata-container	ModelContainer|\.modelContainer\(	.modelContainer(for: Item.self)
+pattern	uiwebview	UIWebView	let legacy = UIWebView()
+pattern	private-api	dlopen\(|dlsym\(|PrivateFrameworks	let h = dlopen("/System/Library/PrivateFrameworks/X.framework/X", RTLD_NOW)
+pattern	placeholder-copy	[Ll]orem [Ii]psum|[Cc]oming [Ss]oon|"[^"]*[Pp]laceholder[^"]*"	Text("Coming soon")
+pattern	debug-gate	motionEnded|deviceDidShake|onShake|[Dd]ebugMenu|onTapGesture\(count: *[3-9]	override func motionEnded(_ motion: UIEvent.EventSubtype, with event: UIEvent?) {}
+pattern	log-pii	(print|NSLog|debugPrint|os_log|logger\.[a-z]+)\(.*([Tt]oken|[Pp]assword|[Ss]ecret|[Ee]mail|apiKey|API_KEY|[Bb]earer)	print("auth token: \(token)")
+pattern	display-name	[Bb][Ee][Tt][Aa]|[Dd][Ee][Mm][Oo]|[Tt][Rr][Ii][Aa][Ll]	Trips Beta
+pattern	ci-xcode	[Xx]code	xcode-version: '26.0'
+pattern	on-device-ai	import FoundationModels	import FoundationModels
+
+# ---- FLAGS — branch routing (Step 5 branch files, Step 7 render-checklist.sh) ------------
+# permission-requests must stay byte-identical to the "Find them" grep in checks-permissions.md
+# (a FIELD file); scripts/test/preflight-scan.sh asserts it.
+flag	cloudkit	NSPersistentCloudKitContainer|cloudKitContainerOptions|CKContainer|cloudKitDatabase	let container = NSPersistentCloudKitContainer(name: "Model")
+flag	storekit	import StoreKit|SubscriptionStoreView|StoreView\(	import StoreKit
+flag	permission-requests	request(Access|Authorization|WhenInUseAuthorization|AlwaysAuthorization|FullAccess)|requestPermission|\.requestAuthorization\(	manager.requestWhenInUseAuthorization()
+flag	account-creation	SignInWithAppleButton|ASAuthorizationAppleIDProvider|GIDSignIn|import FirebaseAuth|Auth\.auth\(\)|createUser|[Ss]ignUp|[Cc]reateAccount|[Rr]egisterAccount	func signUp(email: String) async throws {}
+flag	third-party-login	GoogleSignIn|GIDSignIn|FBSDKLoginKit|FBLoginButton|LoginManager\(\)|ASWebAuthenticationSession	import GoogleSignIn
+flag	att	ATTrackingManager|advertisingIdentifier|requestTrackingAuthorization	ATTrackingManager.requestTrackingAuthorization { _ in }
+flag	ai-endpoint	api\.openai\.com|generativelanguage\.googleapis\.com|aiplatform\.googleapis\.com|api\.anthropic\.com|import OpenAI|import GoogleGenerativeAI|import Anthropic	let url = URL(string: "https://api.openai.com/v1/responses")
+flag	webview-primary	WKWebView|WebView\(|WebPage\(	let web = WKWebView()
+flag	ugc	[Cc]hat(View|Message|Room|Thread)|sendMessage|[Cc]omment(View|s?List|Composer)|postComment|reportUser|reportContent|blockUser|UserGeneratedContent	struct ChatView: View {}
+flag	remote-config	RemoteConfig|remoteConfig|[Ff]eatureFlag|LDClient|LaunchDarkly|Statsig|ConfigCat|Optimizely|Unleash	let config = RemoteConfig.remoteConfig()
+depflag	third-party-login	googlesignin|facebook-ios-sdk|fbsdk	https://github.com/google/googlesignin-ios.git
+depflag	ai-endpoint	openai|generative-ai-swift|anthropic	https://github.com/macpaw/openai.git
+depflag	remote-config	launchdarkly|statsig|configcat|optimizely|unleash	https://github.com/launchdarkly/ios-client-sdk.git
+
+# ---- VERIFY-BY-HAND — the repo cannot show these; each becomes a Step 7 checklist item ----
+verify	entitlement	{key} — capability enabled on the App ID and in the distribution profile (ITMS-90164; profile state isn't in the repo)
+verify	distribution-profile	Distribution archive uses the Release config (get-task-allow=false) — a debug-signed archive fails upload
+verify	marketing-version-order	MARKETING_VERSION {value} is higher than the last approved version (App Store Connect state isn't in the repo)
+verify	cloudkit-deploy	Deploy Schema Changes (Development → Production) in the CloudKit Console since the last model change (Console state isn't in the repo; checks-cloudkit.md)
+verify	toolchain	Local + CI toolchain is Xcode {sdk-floor}+ / iOS {sdk-floor} SDK (xcodebuild unavailable to the scan)
+verify	icon	1024×1024 marketing icon present and opaque (sips/plutil unavailable to the scan)
+
+# ---- JUDGE — the scan found it; the model decides. One question per topic ----------------
+judge	purpose-string	Is the string specific — a user-visible reason like "to scan barcodes for price lookup"? Generic → MEDIUM [PLIST] (Guideline 5.1.1)
+judge	listed-sdk	Listed SDK with no local copy to inspect. That version predates the SDK shipping PrivacyInfo.xcprivacy (or, binary-distributed, a code signature) → BLOCKER [MANIFEST] (ITMS-91061; fix = upgrade — you cannot declare on its behalf). Unsure → a Step 7 checklist item, not a story AC
+judge	display-name	"beta/demo/trial" naming the build rather than the product → Guidelines 2.2/2.3
+judge	placeholder-copy	User-visible placeholder, lorem ipsum or "coming soon" content → Guideline 2.1 completeness
+judge	private-api	Dynamic selectors / private frameworks = flag (Guideline 2.5.1); static, documented use = fine
+judge	debug-gate	Debug menu or shake/secret-tap handler reachable in Release (an #if DEBUG gap) → flag
+judge	log-pii	print/NSLog/Logger of tokens or PII in release code — reviewers watch console logs → flag
+judge	ci-toolchain	CI pins an Xcode older than {sdk-floor} → BLOCKER [SIGNING] (⚠️VOLATILE upload floor; see the sdk-floor rule)
+judge	unresolved-setting	Version/build value comes from a variable — resolve it, then apply the marketing-version-shape / build-number rules
+judge	ipad-orientations	Universal app with no iPad orientation key in Info.plist or build settings — confirm all four orientations or UIRequiresFullScreen (ITMS-90474)
+judge	icon	The scan could not inspect the 1024×1024 marketing icon — confirm one ships with no alpha channel (ITMS-90022/90717)
+judge	swiftpm-app	App target declared in Package.swift — check its capabilities' purpose strings and plist keys by hand
