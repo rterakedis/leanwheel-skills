@@ -28,6 +28,9 @@ Three rules fall out of this:
    reads the same docs instead of re-guessing.
 3. **Verify against the spec, by running.** "Done" is a gate that passes, not a vibe.
 
+The reasoning for keeping the spec as docs in the repo, where every session can read it,
+is in [From Docs-as-Code to Docs-in-Code](https://blog.terakedis.dev/post/from-docs-as-code-to-docs-in-code/).
+
 ## How leanwheel-skills does it
 
 Leanwheel turns that idea into a chain of small written artifacts, where **each

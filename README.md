@@ -150,6 +150,17 @@ Zero footprint: no `docs/` tree is created, nothing is tracked on GitHub, and th
 
 ---
 
+## Design notes
+
+If you want the reasoning behind these choices, I wrote up how the project evolved:
+
+- [Building a Leaner AI Development Workflow for Claude Pro](https://blog.terakedis.dev/post/leanwheel-skills-claude-pro-workflow/) - why port BMAD at all, and why size it to a Claude Pro budget
+- [leanwheel-skills, a Month In](https://blog.terakedis.dev/post/leanwheel-skills-what-i-added/) - why it became a plugin, why the pre-planning layer and `/epic-flywheel` were added, and how the token math compares to BMAD
+- [leanwheel-skills, Round Three: Skip the Docs, Keep the Discipline](https://blog.terakedis.dev/post/leanwheel-skills-round-three/) - why the doc-free `/dev-single-goal` lane exists and what it keeps
+- [leanwheel-skills, Round Four: Fewer Guardrails, More Proof](https://blog.terakedis.dev/post/leanwheel-skills-round-four/) - why gates must prove they can fail, and how field knowledge is protected from refresh passes
+
+---
+
 ## Contributing & Security
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the dev workflow and local-customization conventions, [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for community standards, and [SECURITY.md](SECURITY.md) to report a vulnerability privately.
