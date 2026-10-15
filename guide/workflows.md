@@ -120,3 +120,5 @@ flowchart TD
 *Use this when you just want one task done in some folder — no lifecycle, no docs.*
 
 Both maps above assume a project you'll keep working in. When you drop into an arbitrary folder (a coworker's repo, a scripts directory, a fresh clone) and want a single goal done, run **`/dev-single-goal`**: it grills you on intent and edge cases (Behavior Contract + Clarification Gate), writes a verifiable plan to a self-ignoring `.leanwheel/goals/` spec, gets your approval, implements, and verifies by actually running the build and tests — with zero doc prerequisites and zero doc obligations. If the work turns out to be a real ongoing project, it offers `/discover` or `/setup` at the end; it never scaffolds by default.
+
+Why this lane exists, and what it deliberately keeps from the project lanes, is in [Round Three: Skip the Docs, Keep the Discipline](https://blog.terakedis.dev/post/leanwheel-skills-round-three/).

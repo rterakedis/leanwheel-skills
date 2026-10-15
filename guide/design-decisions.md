@@ -64,6 +64,8 @@ walk, a test asserting the summary line of a different target…).
 named failure → restore → green; `scripts/sabotage.sh` makes this mechanical). Enumerating
 gates assert a lower bound. Migration-shaped stories write the invariant test as Task 1.
 `evals` RUN fails any `output-contains` case with empty stdout.
+**Background.** The reasoning for requiring gates to fail first is in
+[Round Four: Fewer Guardrails, More Proof](https://blog.terakedis.dev/post/leanwheel-skills-round-four/).
 
 ### DD-12 — `[Fix-Now]` disposition
 **Context.** With only Patch/Defer, trivially-fixable out-of-AC findings defaulted to the
