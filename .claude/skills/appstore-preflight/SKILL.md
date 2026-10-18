@@ -55,7 +55,7 @@ These need judgment, not just grep. Read the relevant source (auth flows, paywal
 |---|---|---|
 | 1–2 account deletion 5.1.1(v), login services 4.8 | `account-creation` or `third-party-login` | [checks-accounts.md](checks-accounts.md) |
 | 3, 5 ATT 5.1.2, third-party AI 5.1.2(i) | `att` or `ai-endpoint` | [checks-data-sharing.md](checks-data-sharing.md) |
-| 8–10 hidden features 2.3.1, web wrapper 4.2, kids/age 1.2 | `remote-config`, `webview-primary`, `ugc`, or a Kids Category PRD | [checks-content.md](checks-content.md) |
+| 8–10 hidden/dormant features 2.5.19, web wrapper 4.2, UGC/AI content + kids/age 1.2 | `remote-config`, `webview-primary`, `ugc`, or a Kids Category PRD | [checks-content.md](checks-content.md) |
 
 4. **Subscriptions/IAP — 3.1.1/3.1.2.** StoreKit in use (Step 1) → apply [checks-storekit.md](checks-storekit.md): PRODUCTS DIFF reconciliation **and** the 3.1.2(c) paywall hierarchy check (billed amount dominates). No StoreKit → skip.
 6. **In-app privacy policy access — 5.1.1.** A privacy-policy link must be reachable inside the app (settings screen is fine). Missing → **MEDIUM**.

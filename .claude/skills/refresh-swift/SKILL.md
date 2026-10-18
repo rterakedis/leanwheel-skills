@@ -234,7 +234,7 @@ Otherwise research what moved:
 - **App Review Guidelines** (developer.apple.com/app-store/review/guidelines/) + developer.apple.com/news/ — guideline text changes (privacy 5.1.x, business 3.1.x, design 4.x)
 - **developer.apple.com/support/third-party-SDK-requirements/** — listed-SDK additions/removals
 - **Privacy plumbing** — new `NS*UsageDescription` keys, new required-reason API categories or reason codes, privacy-manifest enforcement changes (new ITMS codes)
-- **⚠️VOLATILE items specifically** — external purchase link rules (US storefront litigation), `UIRequiresFullScreen`/iPad windowing enforcement, launch-screen mandates, age-rating system, EU DSA / regulatory, TestFlight policy changes
+- **⚠️VOLATILE items specifically** — external purchase link rules (US no-entitlement carve-out under litigation; per-region StoreKit External Purchase Link Entitlements, Guideline 3.1.1(a)), `UIRequiresFullScreen`/iPad windowing enforcement, launch-screen mandates, age-rating system, EU DSA / regulatory, TestFlight policy changes
 
 Then update in `appstore-preflight/` (each fact lives in exactly one of those files — grep for it):
 

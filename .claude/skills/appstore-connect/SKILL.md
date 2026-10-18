@@ -35,6 +35,7 @@ docs/store/
   screenshots.md         # the plan (table) — the human review gate for ASSETS
   frames/                # USER-SUPPLIED bezels: iphone69.png, ipadPro13.png [, {class}-landscape.png, frames.json]
   template.json          # OPTIONAL per-project screenshot styling; absent = the plain default
+  creative/              # OPTIONAL creative assets (header / search art) — rules in op-assets.md ▸ CREATIVE
   products.md            # subscription groups / subscriptions / one-time IAPs
   review-claims.md       # App Review notes claim ledger — rows UNVERIFIED until walked on device (/appstore-preflight Step 7b)
   review-guide.md        # overflow + recording shot list, rendered to PDF for the Guideline 2.1 reply

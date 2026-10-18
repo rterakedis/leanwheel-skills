@@ -130,6 +130,9 @@ pattern	on-device-ai	import FoundationModels	import FoundationModels
 # ---- FLAGS — branch routing (Step 5 branch files, Step 7 render-checklist.sh) ------------
 # permission-requests must stay byte-identical to the "Find them" grep in checks-permissions.md
 # (a FIELD file); scripts/test/preflight-scan.sh asserts it.
+# remote-config keeps its name but routes every Release-switchable gate (feature flags, launch
+# arguments, env reads) to checks-content.md item 8, Guideline 2.5.19. ugc includes generative
+# APIs: Guideline 1.2 names AI content creation apps (Oct 2026).
 flag	cloudkit	NSPersistentCloudKitContainer|cloudKitContainerOptions|CKContainer|cloudKitDatabase	let container = NSPersistentCloudKitContainer(name: "Model")
 flag	storekit	import StoreKit|SubscriptionStoreView|StoreView\(	import StoreKit
 flag	permission-requests	request(Access|Authorization|WhenInUseAuthorization|AlwaysAuthorization|FullAccess)|requestPermission|\.requestAuthorization\(	manager.requestWhenInUseAuthorization()
@@ -138,8 +141,8 @@ flag	third-party-login	GoogleSignIn|GIDSignIn|FBSDKLoginKit|FBLoginButton|LoginM
 flag	att	ATTrackingManager|advertisingIdentifier|requestTrackingAuthorization	ATTrackingManager.requestTrackingAuthorization { _ in }
 flag	ai-endpoint	api\.openai\.com|generativelanguage\.googleapis\.com|aiplatform\.googleapis\.com|api\.anthropic\.com|import OpenAI|import GoogleGenerativeAI|import Anthropic	let url = URL(string: "https://api.openai.com/v1/responses")
 flag	webview-primary	WKWebView|WebView\(|WebPage\(	let web = WKWebView()
-flag	ugc	[Cc]hat(View|Message|Room|Thread)|sendMessage|[Cc]omment(View|s?List|Composer)|postComment|reportUser|reportContent|blockUser|UserGeneratedContent	struct ChatView: View {}
-flag	remote-config	RemoteConfig|remoteConfig|[Ff]eatureFlag|LDClient|LaunchDarkly|Statsig|ConfigCat|Optimizely|Unleash	let config = RemoteConfig.remoteConfig()
+flag	ugc	[Cc]hat(View|Message|Room|Thread)|sendMessage|[Cc]omment(View|s?List|Composer)|postComment|reportUser|reportContent|blockUser|UserGeneratedContent|LanguageModelSession|ImagePlayground|ImageCreator|imagePlaygroundSheet	struct ChatView: View {}
+flag	remote-config	RemoteConfig|remoteConfig|[Ff]eatureFlag|LDClient|LaunchDarkly|Statsig|ConfigCat|Optimizely|Unleash|ProcessInfo\.processInfo\.(arguments|environment)	let config = RemoteConfig.remoteConfig()
 depflag	third-party-login	googlesignin|facebook-ios-sdk|fbsdk	https://github.com/google/googlesignin-ios.git
 depflag	ai-endpoint	openai|generative-ai-swift|anthropic	https://github.com/macpaw/openai.git
 depflag	remote-config	launchdarkly|statsig|configcat|optimizely|unleash	https://github.com/launchdarkly/ios-client-sdk.git
@@ -158,7 +161,7 @@ judge	listed-sdk	Listed SDK with no local copy to inspect. That version predates
 judge	display-name	"beta/demo/trial" naming the build rather than the product → Guidelines 2.2/2.3
 judge	placeholder-copy	User-visible placeholder, lorem ipsum or "coming soon" content → Guideline 2.1 completeness
 judge	private-api	Dynamic selectors / private frameworks = flag (Guideline 2.5.1); static, documented use = fine
-judge	debug-gate	Debug menu or shake/secret-tap handler reachable in Release (an #if DEBUG gap) → flag
+judge	debug-gate	Debug menu or shake/secret-tap handler reachable in Release (an #if DEBUG gap) → HIGH [BEHAVIOR] (Guideline 2.5.19 hidden features). Compiled out of Release → drop
 judge	log-pii	print/NSLog/Logger of tokens or PII in release code — reviewers watch console logs → flag
 judge	ci-toolchain	CI pins an Xcode older than {sdk-floor} → BLOCKER [SIGNING] (⚠️VOLATILE upload floor; see the sdk-floor rule)
 judge	unresolved-setting	Version/build value comes from a variable — resolve it, then apply the marketing-version-shape / build-number rules

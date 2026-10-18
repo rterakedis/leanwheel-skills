@@ -65,3 +65,15 @@ Pipeline: `sim.sh shots --store` (one call per plan row → native captures, lig
 5. **Verify + lint** — open two outputs with the Read tool (caption legible, bezel aligned, no launch screen); run `asc-lint.sh --locale {locale}` (checks sizes, ≤ 10 per class, and warns on any screenshot with no matching `screenshots.md` row — an orphan from a hand-composed or pre-prune run).
 6. **Previews (optional, on request):** record while a flow runs — `xcrun simctl io <udid> recordVideo --codec h264 docs/store/previews/{locale}/{id}.mp4 &` then `scripts/sim.sh flow <FlowName>`; stop the recording with SIGINT. Real footage only (no post-processing beyond trimming); App Store preview lengths 15–30 s. Not automated in v1.
 7. **Return:** `ASSETS: {locale} — {N} screenshots ({classes}); plan rows {R}; missing routes {list|none}`.
+
+## CREATIVE — creative assets (Guideline 2.3.14, Oct 2026)
+
+Creative assets are the non-screenshot art App Store Connect shows in the product page header and
+search results. Apple's templates and safe areas: https://developer.apple.com/app-store/asset-best-practices/.
+Not automated — when the user authors them under `docs/store/creative/`, hold the copy to:
+
+- **About this app** — its content, functionality, or overarching brand. No references to other apps meant to mislead.
+- **All audiences**, whatever the app's age rating.
+- **No specific or discounted pricing** — no amounts, "% off", "free trial", "limited time". `asc-lint.sh` WARNs on these in `creative/` sources (visible text only).
+- **No unverifiable claims.** Absolutes (*every*, *always*, *never*, *automatic*, *#1*, *guaranteed*) promise an outcome the app can't prove for every user. Make the user the subject — say what the app *helps* them do, not what it does unattended. "Track miles as you drive" describes help; "Every mile logs itself" promises zero gaps and no effort. Regulated domains (tax, health, finance) also follow the project's own copy rules (`demo-data-and-copy.md`).
+- **Real features only** — same bar as screenshots and metadata (2.3.3, `op-metadata.md`).

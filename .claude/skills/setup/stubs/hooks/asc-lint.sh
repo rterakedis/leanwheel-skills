@@ -12,6 +12,7 @@
 #   - screenshot-captions.txt vs the id column of ../screenshots.md
 #   - screenshots/{locale}/*.png filename shape + pixel size vs the accepted
 #     table below (via `sips`), per-class count warning
+#   - creative/*.{html,svg,txt}: WARN on pricing in visible text (Guideline 2.3.14)
 #   - template.json (optional styling), shallow: object shape, balanced braces,
 #     opaque 6-digit hex colours, canvas fractions in 0...1, icon paths resolve.
 #     compose.swift owns the full schema (unknown keys, types, coherence).
@@ -456,6 +457,34 @@ if [ -f "$CLAIMS" ]; then
   done <<EOF_CLAIMS
 $(grep -E '^\|.*\|[[:space:]]*UNVERIFIED[[:space:]]*\|[[:space:]]*$' "$CLAIMS" | cut -c1-100)
 EOF_CLAIMS
+fi
+
+# ---------------------------------------------------------------------------
+# Creative assets (Guideline 2.3.14, Oct 2026) — docs/store/creative/ sources
+#
+# Only the objective half: "specific or discounted pricing information" is banned outright.
+# Unverifiable claims need judgment, so op-assets.md ▸ CREATIVE owns those. Visible text only:
+# HTML/SVG comments and tags are stripped first (a source comment is not on the canvas).
+# WARN, not ERROR — the pattern can't tell "Free trial" on the art from "free" in a label.
+# ---------------------------------------------------------------------------
+CREATIVE="$STORE_DIR/creative"
+CREATIVE_PRICE='[$€£¥][0-9]|[0-9]+[[:space:]]*(USD|EUR|GBP)|[0-9]+[[:space:]]*%[[:space:]]*off|free (trial|for|forever|tier|plan|download)|on sale|discount|half[ -]price|limited[ -]time|per month|per year|/mo([^a-z]|$)|/yr([^a-z]|$)'
+if [ -d "$CREATIVE" ]; then
+  while IFS= read -r cf; do
+    [ -n "$cf" ] || continue
+    hit="$(awk '{ s = s $0 "\n" }
+      END {
+        while ((i = index(s, "<!--")) > 0) {
+          j = index(substr(s, i), "-->")
+          if (j == 0) { s = substr(s, 1, i - 1); break }
+          s = substr(s, 1, i - 1) substr(s, i + j + 2)
+        }
+        gsub(/<[^>]*>/, " ", s); printf "%s", s
+      }' "$cf" | grep -ioE -- "$CREATIVE_PRICE" | head -1)"
+    [ -n "$hit" ] && finding WARN "creative/${cf#"$CREATIVE"/}: pricing text \"$hit\" — creative assets may not carry specific or discounted pricing (Guideline 2.3.14)"
+  done <<EOF_CREATIVE
+$(find "$CREATIVE" -type f \( -name '*.html' -o -name '*.svg' -o -name '*.txt' \) 2>/dev/null)
+EOF_CREATIVE
 fi
 
 # ---------------------------------------------------------------------------
