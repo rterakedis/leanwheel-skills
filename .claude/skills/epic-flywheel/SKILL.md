@@ -7,7 +7,7 @@ description: Drive an entire epic to completion semi-autonomously — runs the p
 
 **Goal:** Take a whole epic from "stories not started" to "all stories implemented, reviewed, and verified together" with minimal steering. The per-story automated gates (Build & Test, evals RUN, invariant verification) still stop the loop on a real compounding bug; the **manual / integration test pass is deferred to the epic boundary** (DD-30).
 
-**Relationship to `/story-flywheel`:** epic-flywheel is the autonomous, epic-scoped layer above story-flywheel. It reuses the same three subagents and per-phase model routing (story-flywheel → **Subagent Delegation & Model Routing**; not duplicated here). What epic-flywheel adds: (1) commit-per-step so a bad story can be unraveled, (2) within-epic auto-advance on clean stories, (3) an **Epic Boundary Gate** that runs build+test+evals+invariants across the whole epic and **HALTs for help** on any failure, (4) continuous deferred-item re-homing, and (5) a deduplicated **rolled-up test plan** that first subtracts what automation already proves, then splits the remainder into simulator-runnable vs physical-device-required.
+**Relationship to `/story-flywheel`:** the autonomous, epic-scoped layer above it — same three subagents and model routing (story-flywheel → **Subagent Delegation & Model Routing**; not duplicated here). Adds: (1) commit-per-step so a bad story can be unraveled, (2) within-epic auto-advance on clean stories, (3) an **Epic Boundary Gate** (build+test+evals+invariants across the whole epic, **HALTs for help** on any failure), (4) continuous deferred-item re-homing, (5) a deduplicated **rolled-up test plan** that subtracts what automation already proves, then splits the rest into simulator-runnable vs physical-device-required.
 
 ---
 
@@ -70,8 +70,8 @@ Spawn `lw-story-creator` with `{epic}.{story}`. Capture `STORY FILE`, `EPIC CONT
 - **Commit:** `story {epic}.{story}: create` (stages the story file + the epic context cache if generated/updated this step + any tracking/epics edits).
 
 ### Step 2 — Dev Story → commit
-**Track first:** `gh-track.sh transition {issue#} in-progress` before spawning, so a long dev pass shows the right state. Then spawn `lw-story-developer` (`model: opus` only if `swift_project`) with the story file path. It runs the full dev-story workflow: implementation, **Build & Test Gate** (verify by running), **evals RUN** (if `docs/evals/`), and invariant + design verification, then stops at `review`. Capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`, `TESTING PLAN`, `REVIEW HANDOFF`.
-- **On HALT or red gate:** stop the loop. Report which story and why; do **not** commit a red story. Resume with `/epic-flywheel {N}` after the blocker is fixed.
+**Probe, then track:** run CLAUDE.md's `## Probe` command if present — non-zero exit pauses the loop as an environment fault, no spawn, no HALT (story-flywheel → Phase 2). Then `gh-track.sh transition {issue#} in-progress` before spawning, so a long dev pass shows the right state. Then spawn `lw-story-developer` (`model: opus` only if `swift_project`) with the story file path. It runs the full dev-story workflow: implementation, **Build & Test Gate** (verify by running), **evals RUN** (if `docs/evals/`), and invariant + design verification, then stops at `review`. Capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`, `TESTING PLAN`, `REVIEW HANDOFF`.
+- **On HALT or red gate:** stop the loop. Report which story and why; do **not** commit a red story. Resume with `/epic-flywheel {N}` after the blocker is fixed. A `blocked` environment fault pauses the same way but is not a story failure.
 - **Operational doc sync (cheap, orchestrator-owned):** the developer does not run docs-sync (DD-24). If `INFRA TOUCHED: yes`, spawn **`lw-docs-sync`** (Haiku) with the story path and op `OPERATIONAL`; capture `DOCS UPDATED`. Skip the spawn when `INFRA TOUCHED: no`. The doc edits land in the dev commit below.
 - **Track:** on green, `gh-track.sh transition {issue#} review`.
 - **Commit (only if gate green):** `story {epic}.{story}: dev` (includes any docs-sync edits).
@@ -85,7 +85,7 @@ Spawn `lw-story-creator` with `{epic}.{story}`. Capture `STORY FILE`, `EPIC CONT
   The `AUTOMATED` names are the subtract list the boundary greps against.
 
 ### Step 3 — Code Review + patch → commit
-Per story-flywheel → Phase 3 (not duplicated here): **always** spawn `lw-story-reviewer` with the developer's `REVIEW HANDOFF` as its prompt, verbatim. It emits the SCORE rubric line, auto-patches `patch` findings, applies `fix-now` findings within code-review's Triage ceiling (recorded in Review Findings, not logged as deferred), logs `defer` via the `deferred` skill (re-homing each — slot as AC or remediation story), and **re-verifies green**. `decision-needed` findings surface to the user.
+Per story-flywheel → Phase 3 (not duplicated here): **always** spawn `lw-story-reviewer` with the developer's `REVIEW HANDOFF` as its prompt, verbatim. It emits the SCORE rubric line, auto-patches `patch` findings, applies `fix-now` findings within code-review's Triage ceiling (recorded in Review Findings, not logged as deferred), logs `defer` via the `deferred` skill (re-homing each — slot as AC or remediation story), and **re-verifies green**. `decision-needed` findings surface to the user. `FOLLOW-UP REVIEW: yes` → one follow-up round on `PATCH BASE` (story-flywheel → Phase 3).
 - **Deferred re-homing check:** confirm every `[Defer]` from this story landed in `docs/deferred-items.md` with a `Scheduled As` target. An orphan is a loop bug — fix before advancing.
 - **Track:** on green, `gh-track.sh close {issue#} "Story {epic}.{story} complete"` (applies `done` + closes — milestone progress ticks up here).
 - **Commit (only if green after patches):** `story {epic}.{story}: review+patch`. If patches couldn't resolve, leave status `in-progress`, don't commit, HALT.
@@ -237,7 +237,7 @@ Append the epic-level roll-up via `scripts/ledger.sh epic-flywheel --story epic-
 
 **Retrospective reminder is mandatory.** The Epic Boundary Gate always surfaces the retrospective prompt — never close an epic silently.
 
-**`/retrospective` is human-in-the-loop even here.** It asks retrospective's `## Seven Questions` one at a time and waits for answers; autonomously generating the retro from git history is forbidden. If the user picks `"continue"` (skip retro), confirm once: "Starting Epic {N+1} without a retrospective for Epic {N} — the learnings/conventions from this epic won't be captured. Proceed?" Honor their choice, but make the skip explicit. If the user runs `"test"` first, then returns, re-surface the retrospective reminder before advancing to the next epic.
+**`/retrospective` is human-in-the-loop even here.** It asks the `## Seven Questions` one at a time and waits; generating the retro from git history is forbidden. If the user picks `"continue"` (skip retro), confirm once: "Starting Epic {N+1} without a retrospective for Epic {N} — its learnings won't be captured. Proceed?" Honor the choice, but make the skip explicit. After `"test"`, re-surface the reminder before advancing.
 
 **Last epic of the phase.** If no later epic remains in `docs/epics.md`, add one more line to the recommended flow after step 3: `4. → Optionally /epic-archive cut-release {version} to archive this phase's epics.md and seed a fresh one for the next phase.` An offer only — never cut a release automatically.
 
@@ -257,5 +257,5 @@ Append the epic-level roll-up via `scripts/ledger.sh epic-flywheel --story epic-
 
 ## Notes
 
-- **Token posture:** every per-epic gate is zero-token (build/test/evals are shell commands; the invariant and deferred sweeps read short recorded blocks). The only model-heavy step is the once-per-epic test-plan dedup + subtract, bounded over plan text plus grep hits.
-- **Why subtract before writing the plan:** DD-31. **Why defer manual testing to the boundary:** DD-30. **Why commit-per-step:** a bisectable, unravel-able history instead of one giant squash.
+- **Token posture:** every per-epic gate is zero-token (shell commands and short recorded blocks); the only model-heavy step is the once-per-epic test-plan dedup + subtract.
+- **Why subtract before writing the plan:** DD-31. **Why defer manual testing to the boundary:** DD-30. **Why commit-per-step:** a bisectable history, not one giant squash.

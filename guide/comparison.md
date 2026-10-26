@@ -4,7 +4,7 @@
 
 > **Historical note.** The two tables below record the port decisions against the upstream
 > BMAD that existed when this repo was created (the v4/v5 YAML/XML-workflow era). Upstream
-> has since been rebuilt — see [Upstream state as of August 2026](#upstream-state-as-of-august-2026)
+> has since been rebuilt — see [Upstream state as of October 2026](#upstream-state-as-of-october-2026)
 > for what's true now, including items upstream has independently cut or converged on.
 
 | Cut | Why |
@@ -49,77 +49,146 @@
 
 ---
 
-## Upstream state as of August 2026
+## Upstream state as of October 2026
 
 Upstream shipped **v6.0.0 stable (~March 2026)** and replaced its entire legacy
-architecture with a skills-based one, then kept moving fast (v6.11 by August 2026).
-Several claims elsewhere in this doc's history — and several rows in the tables above —
-describe an upstream that no longer exists. Current facts, verified against the upstream
-repo and changelog (August 2026):
+architecture with a skills-based one, then kept moving fast. As of October 2026 it runs on
+**two lines**: **v6.12** (September 2026) is the frozen stable release, maintained for bug
+fixes on the `V6.12` branch and installed by the legacy npm installer; `main` is a **v7
+preview alpha** (release was due 16 October 2026 and has slipped) installed via
+`npx skills add` or a plugin marketplace. Several claims elsewhere in this doc's history —
+and several rows in the tables above — describe an upstream that no longer exists. Current
+facts, verified against the upstream repo, changelog, and `bmad-loop` releases
+(October 2026):
 
 ### What upstream cut too (convergence on lean)
 
-- **Activation ceremony and agent personas are gone upstream as well.** Personas were
-  consolidated into a single developer agent (v6.0); the persona directories that remain
-  are skills, not per-invocation persona loads.
+- **The activation ceremony is gone upstream.** Config now resolves through layered TOML
+  read by a renderer script, not a 6-step boot.
 - **The SM → new chat → DEV → new chat → QA cycle is gone.** There is no upstream
   create-story or dev-story anymore. v6.11 renamed Quick Dev to `bmad-build` — "the one
   official way BMad implements code" — with `bmad-build-auto` as its unattended variant.
-- **Uppercase `SKILL.md` is now the upstream convention** (since v6.1). The old
-  lowercase-`skill.md` distinction this repo's docs cited is obsolete.
+  v6.12 made Build decide how much ceremony a change needs *after* investigating it: simple
+  changes get a two-section spec and finish in one session.
+- **Catalog consolidation mirrors leanwheel's merge moves.** Three review skills plus two
+  editorial skills became lenses on one `bmad-review` (`adversarial`, `edge-case-hunter`,
+  `verification-gap`, `structure`, `prose`); three research skills became
+  `bmad-deep-recon`; `check-implementation-readiness` folded into sprint planning. These are
+  the same merges leanwheel made first with `/doc-review`, `/research`, and
+  `/check-readiness`.
+- **Upstream's own `AGENTS.md` now states leanwheel's DD-01/DD-02 philosophy** nearly
+  verbatim: prompt length is paid on every run while a corner case is paid only when it
+  occurs; prefer deleting an instruction to hedging it; automated tests assert outcomes of
+  deterministic code, never LLM output or static prompt text.
+- **Uppercase `SKILL.md` is the upstream convention** (since v6.1). Web bundles, Gemini
+  Gems, Custom GPTs, HTML review reports, and translated docs are all removed.
 - **Test Architect (TEA) moved out** to an external enterprise module (v6.9);
   `bmad-qa-generate-e2e-tests` remains in the shipped set.
 
 ### What upstream added that parallels leanwheel
 
-- **`bmad-loop` (v6.10, July 2026, separate repo)** is upstream's epic flywheel: an
+- **`bmad-loop` (separate repo, v0.13.x by October 2026)** is upstream's epic flywheel: an
   unattended pick-story → implement → verify → gated adversarial review → re-verify →
   commit loop with deferred-work sweeps at epic boundaries. Its architecture is the
   *inverse* of `/epic-flywheel`: a deterministic pure-Python orchestrator (no LLM in the
   control loop) that spawns a fresh coding-agent CLI session per step in tmux, driven by
   a `policy.toml` (retry budgets, oscillation detection), with resumable journaled run
-  state and git-worktree isolation. Leanwheel's orchestrator is an in-session LLM thread
-  holding short structured subagent reports, which lets it make cheap mid-loop judgment
-  calls (auto-advance on clean stories, decision surfacing, the boundary test-plan
-  subtract) that a Python loop cannot.
+  state and git-worktree isolation. Since August it gained: a headless **auto
+  retrospective at each epic boundary** whose open action items are filed into the
+  deferred-work ledger; **environment probes** that run before verify and before each
+  session, so an infrastructure fault pauses the run *without charging the story an
+  attempt* (a verify command can also return a reserved exit code meaning "environment,
+  not code"); `resolve --reverify` to re-run verification on kept work with no new dev
+  session; and plugin hooks that observe structured verification results. Leanwheel's
+  orchestrator is an in-session LLM thread holding short structured subagent reports,
+  which lets it make cheap mid-loop judgment calls (auto-advance on clean stories,
+  decision surfacing, the boundary test-plan subtract) that a Python loop cannot.
 - **Real programmatic subagents.** Since v6.2–6.4, upstream's code review spawns parallel
-  review-layer subagents (Blind Hunter / Edge Case Hunter / Acceptance Auditor) with a
-  deliberate asymmetry — subagents report, the orchestrating session traces consequences
-  and triages (`intent_gap`/`bad_spec`/`patch`/`defer`). Party-mode integrated Claude
-  Code Agent Teams by v6.9. No evidence upstream ships `.claude/agents/*.md` agent
-  definition files; leanwheel's four pinned `lw-*` agents with report contracts and
-  model/effort frontmatter remain a structural difference.
+  review-layer subagents with a deliberate asymmetry — subagents report, the
+  orchestrating session traces consequences and triages. v6.11–6.12 added a
+  **verification-gap layer** ("if this behavior broke, would any test fail?" — reports
+  untested behavior changes, not bugs; tightened in October so a gap exists only when a
+  concrete regression test in the repo's own suite could catch it, plus a
+  *stale-verification* shape: a test that asserts the exact wrong outcome the change
+  fixed), an **Intent Alignment Auditor** fed the verbatim invocation intent, **triage
+  that logs a verdict and evidence for every finding** so nothing is dropped silently,
+  and a **scored follow-up trigger** (any high, or `3 × medium + 1 × low ≥ 5`) instead of
+  a judgment call. The adversarial lens dropped its persona for a method after A/B runs
+  showed the "cynical reviewer" framing changed nothing while a ten-finding floor did.
+  No evidence upstream ships `.claude/agents/*.md` agent definition files; leanwheel's
+  four pinned `lw-*` agents with report contracts and model/effort frontmatter remain a
+  structural difference.
+- **Codebase research with citations.** `bmad-deep-recon` (v7) researches the repository
+  itself: it turns the ask into factual questions, answers them from code and git history,
+  cites a line or commit for every claim, recommends nothing, and offers decisions found
+  in history as ADRs the user approves. `bmad-retrospective` likewise proposes ADRs from
+  the decisions frozen in an epic's plans. Closest leanwheel analogues: `/investigate`,
+  `/discover`, and the decision log.
+- **Skill-level evals.** `bmad-eval` (v7, from the Builder module) evals the *skills
+  themselves* — baseline vs. bare model, stripped-variant vs. full, rubric quality, and
+  trigger accuracy of the description — each case in a clean-room harness. Interesting for
+  this repo's own `evals/` dir, but it brings `uv`, harness config recorded via
+  `bmad-customize`, and a 156 KB skill.
 - **Shared concepts, direction of influence unknown.** forge-idea, a DESIGN.md +
   EXPERIENCE.md dual UX spine, a deferred-work ledger, correct-course, and retrospective
-  all now exist upstream under the same or similar names. Treat these as shared concepts,
+  all exist upstream under the same or similar names. Treat these as shared concepts,
   not leanwheel-only divergences.
 
 ### What genuinely still differs
 
+- **Agent personas came back upstream.** The August 2026 revision of this section said
+  personas were gone; v7 ships six `bmad-agent-*` persona skills (analyst, architect, dev,
+  pm, po, ux-designer), and "Sofia the Product Owner" (`bmad-agent-po`) replaced
+  `bmad-spec`, `bmad-ticket`, and `bmad-correct-course` outright. Leanwheel has none.
 - **Per-invocation weight.** Upstream retained JIT step files, per-skill
-  `customize.toml` (~7KB), and added a content-addressed `render_skill.py` snapshot
-  renderer — `bmad-build` alone spans ~55–60KB of step/config files. The leanwheel
-  equivalent is a single ~200-line `SKILL.md` plus a ~70-line agent file; the entire
-  agent layer is 219 lines.
+  `customize.toml`, added `bmod.toml` module records, and routes every rendered skill
+  through `render_skill.py` via `uv` with **Python 3.11+ as a hard requirement** — a
+  skill halts without `uv`. `bmad-build` is still `step-01` … `step-05` plus
+  `workflow.md`. The upstream `skills/` tree is ~3.6 MB against leanwheel's ~1.1 MB; two
+  single upstream skills (`bmad` hub ~476 KB, `bmad-toolsmith` ~540 KB) each approach half
+  of leanwheel's entire skill set. The leanwheel equivalent of Build is a single ~20 KB
+  `SKILL.md` plus a ~4 KB agent file.
 - **Verifiable artifacts over guardrails (DD-01)** — named report fields checked by
-  zero-token orchestrator shell gates — has no upstream analogue.
-- **Sprint state:** upstream's `sprint-status.yaml` is alive and is `bmad-loop`'s story
-  source; leanwheel still uses GitHub issue labels instead.
+  zero-token orchestrator shell gates (`sabotage.sh`, `ledger.sh`, `budget.sh`,
+  field-protected stubs) — has no upstream analogue. Upstream's closest move is the same
+  instinct applied to bookkeeping: deterministic `sprint_plan.py` and `tickets.py`.
+- **Sprint state:** upstream is replacing `sprint-status.yaml` with a **ticket tree**
+  (`tickets.toml`, per-ticket plan files carrying `status` in frontmatter, a `tickets.py`
+  script, an "active initiative" folder, and a migration command); leanwheel still uses
+  GitHub issue labels and `docs/epics.md`.
 - **Leanwheel-only:** the subtracted/deduplicated epic-boundary manual test plan with
   physical-device routing (DD-31), the sabotage fail-first gate proof (DD-11), per-phase
-  model routing (Opus only for Swift dev, Haiku for docs prose), and the observability
-  ledger. **Upstream-only:** the zero-token deterministic control loop, declarative
-  retry/oscillation policy, and multi-CLI support (Codex, Gemini, Copilot, etc.).
-- **Worth porting as an idea (DD-01 style):** moving more of the epic loop's mechanical
-  bookkeeping — retry budgets, oscillation detection, journaled resumable run state —
-  into a script the orchestrator calls, the way `gh-track.sh` and `sabotage.sh` already
-  moved tracking and gate-proof off the model.
+  model and effort routing (Opus only for Swift dev, Haiku for docs prose), and the
+  observability ledger. **Upstream-only:** the zero-token deterministic control loop,
+  declarative retry/oscillation policy, environment-fault probes, multi-CLI support
+  (Codex, Gemini, Copilot, etc.), and skill-level evals.
+
+### Worth porting as an idea (DD-01 style), October 2026 worklist
+
+Items 1–3 landed as DD-80 (ported as ideas, stack-agnostic — the environment probe is a
+project-declared `## Probe` command, not a Swift-only check). Item 4 was judged low value;
+item 5 stands.
+
+1. **Verification-gap pass in `/code-review`** — the coverage question ("would any test
+   fail?") with the October tightening (only gaps a named regression test could catch;
+   report stale tests that assert the pre-fix outcome). Pass C covers edge cases but
+   nothing asks the coverage question today; it could also feed the eval BUILD step.
+2. **Per-finding verdict + evidence and a scored re-review trigger** — check that every
+   finding gets a logged disposition and that the follow-up decision is a formula.
+3. **Environment fault ≠ story failure** — a probe before the Build & Test Gate / `sim.sh`
+   and a reserved verify exit code, with a ledger field, so flakes don't charge a story.
+4. **Retro action items → `docs/deferred-items.md`** — `/retrospective` and
+   `/epic-flywheel` file open action items into the deferred ledger at the epic boundary.
+5. (Standing) move more of the epic loop's mechanical bookkeeping — retry budgets,
+   oscillation detection, journaled resumable run state — into a script the orchestrator
+   calls, the way `gh-track.sh` and `sabotage.sh` already moved tracking and gate-proof
+   off the model.
 
 ---
 
 ## Relationship to BMAD
 
-This repo has no maintained fork of upstream. It's a standalone, deliberately leaner port. The upstream [BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD) has itself shed the activation ceremony and persona overhead since v6 (see the section above), but it still ships JIT step files, per-skill TOML customization, and a script-rendering indirection — all of which add real per-invocation weight and are absent here by design. Upstream files are never copied directly into this repo for that reason; an upstream `SKILL.md` brings that infrastructure (step files, `customize.toml`, `render_skill.py`) along with it.
+This repo has no maintained fork of upstream. It's a standalone, deliberately leaner port. The upstream [BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD) has itself shed the activation ceremony since v6 (see the section above), but it still ships agent personas, JIT step files, per-skill TOML customization, and a `uv`/Python-backed script-rendering indirection — all of which add real per-invocation weight and are absent here by design. Upstream files are never copied directly into this repo for that reason; an upstream `SKILL.md` brings that infrastructure (step files, `customize.toml`, `render_skill.py`) along with it.
 
 ### Checking for upstream improvements
 
@@ -134,11 +203,11 @@ Because the file structures don't match (upstream's SKILL.md + step files + cust
 ```
 I maintain leanwheel-skills, a token-efficient port of the BMAD Method for Claude Code.
 It deliberately strips upstream's per-invocation infrastructure — JIT step files,
-per-skill customize.toml, and the render_skill.py indirection (and, historically, the
-pre-v6 activation ceremony and agent personas, which upstream has since dropped too) —
+per-skill customize.toml, and the render_skill.py indirection (and the agent personas, plus
+the pre-v6 activation ceremony, which upstream has since dropped) —
 replacing them with plain-English rules in CLAUDE.md and single-pass inline skill files.
 Both repos now use uppercase SKILL.md, but the file structures still don't correspond.
-Full rationale is in guide/comparison.md, including an "Upstream state as of August
+Full rationale is in guide/comparison.md, including an "Upstream state as of October
 2026" section recording the last verified upstream snapshot — start there and update it.
 
 Compare /tmp/BMAD-METHOD (upstream) against .claude/skills/ in this repo. For each

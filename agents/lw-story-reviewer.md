@@ -45,6 +45,7 @@ Your final message IS this report — including after a long build/test run duri
 
 - `RUBRIC: correctness <P/F>, edge-cases <P/F>, ac-coverage <P/F>, design <P/F|n/a>, simplicity <P/F>, security <P/F|n/a> → GATE <PASS/FAIL>`
 - `VERIFY GREEN: green | red(<reason>) | n/a`
+- `FOLLOW-UP REVIEW: yes | no` · `PATCH BASE: <tree sha | n/a>` (code-review → Follow-up review score; always `no` when you are the follow-up pass)
 - `FINDINGS: <patched> patched, <fixnow> fix-now, <deferred> deferred, <decisions> need input`
 - `DECISIONS NEEDED:` bulleted, or `none`
 - `STATUS: done | in-progress`

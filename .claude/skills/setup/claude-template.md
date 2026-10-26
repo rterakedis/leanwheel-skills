@@ -84,6 +84,18 @@ Story files and specs use `[ ]`/`[x]` checkboxes (GitHub renders these interacti
      - One test file: `npx vitest run <file> --reporter=dot`
 -->
 
+## Probe
+
+<!-- One zero-token command that proves the environment can run the gate at all — exits 0 when
+     the toolchain, device, or service the Build & Test Gate needs is reachable. The flywheels
+     run it before each dev spawn and dev-story re-runs it on an unexplained red: a failing
+     probe is an environment fault (pause), never a story failure (DD-80). Omit the section
+     and nothing probes. Examples:
+     - Apple: `scripts/sim.sh doctor`
+     - Web: `node -e 'process.exit(0)' && curl -sf localhost:3000/health`
+     - Python: `uv run python -c 'import app'`
+-->
+
 ---
 
 ## Known Footguns

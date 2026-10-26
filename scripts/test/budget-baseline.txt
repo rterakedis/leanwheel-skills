@@ -8,6 +8,6 @@
 #
 # appstore-connect / appstore-preflight were raised to their sizes on main at 5c8eea8 (growth
 # that predated this rule), then retired once split under the budget (DD-74).
-25504 .claude/skills/epic-flywheel/SKILL.md
-21360 .claude/skills/story-flywheel/SKILL.md
+25501 .claude/skills/epic-flywheel/SKILL.md
+21317 .claude/skills/story-flywheel/SKILL.md
 4763 agents/lw-story-developer.md

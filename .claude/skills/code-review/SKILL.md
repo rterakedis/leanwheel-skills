@@ -60,6 +60,7 @@ Work each pass independently. Look for what's *missing* (absent behavior, unhand
 - Unchecked assumptions baked into the new code (e.g., "list is always non-empty")
 - Regression: does the change touch behavior relied on elsewhere?
 - **Serialization-shaped stories** (backup, export/import, sync, any serializer): round-trip tests must assert the at-risk fields **by name**, never entity counts, and the field set must have been enumerated against the live schema — a curated subset silently drops data every round-trip. Source of the rule: `create-story` → Behavior Contract.
+- **Untested change:** for each behavior change in the diff, name the test that goes red if it regresses. None named, and a test in the repo's own suite could catch it → MEDIUM `untested:` finding (the patch is the test, then register it via evals → BUILD). Not a gap when no concrete test could catch it — unreachable states, defensive branches, build/config plumbing CI already exercises.
 
 **Pass D: Acceptance Audit** (only if story loaded)
 - Each AC: implemented? fully? or only the happy path?
@@ -114,7 +115,7 @@ Anything failing a condition is `defer`, unchanged. Do not stretch the ceiling t
 
 **Pass F (over-engineering) findings** route as `patch` when the cut is clear (usually LOW/MEDIUM), `fix-now` when the cut is clear but outside the ACs and within the ceiling below, or `defer` / `decision-needed` when removing code needs a judgment call. They are cleanups, not correctness bugs — never HIGH.
 
-Merge duplicates. Drop `dismiss`. If zero remain: write `Clean review — no patches, fix-nows, or deferred items.` and justify briefly why each pass came up empty.
+Merge only findings with the same claim *and* the same required action. Keep each `dismiss` as one line — a false positive the reader can audit, never a silent drop. If zero remain: write `Clean review — no patches, fix-nows, or deferred items.` and justify briefly why each pass came up empty.
 
 ## Step 5 — Report and Act
 
@@ -125,6 +126,7 @@ Merge duplicates. Drop `dismiss`. If zero remain: write `Clean review — no pat
   - `- [ ] [HIGH/MEDIUM/LOW] [Patch] {title} [{file}:{line}]`
   - `- [x] [Fix-Now] {title} [{file}:{line}]`
   - `- [ ] [Defer] {title} — pre-existing ({file}:{line})`
+  - `- [x] [Dismiss] {title} — {reason}`
 
 Every `fix-now` is recorded here even though it's already applied — the line is what makes it reviewable rather than invisible.
 
@@ -145,6 +147,8 @@ RUBRIC: correctness PASS · edge-cases PASS · ac-coverage PASS · design PASS �
 ```
 
 The `simplicity` dimension scores Pass F (it's just reporting a pass already run — no extra model calls). A dimension is FAIL if any unresolved `[ ]` finding maps to it; GATE is PASS only when every applicable dimension is PASS. The gate feeds the flywheel checkpoint and the ledger.
+
+**Follow-up review score (arithmetic, no judgment):** `FOLLOW-UP REVIEW: yes` when any applied patch or fix-now resolved a HIGH finding, or `3 × MEDIUM + LOW ≥ 5` across them; else `no`. Append it beside the rubric line. Patch code has no independent reviewer until a second pass reads it (DD-75); the flywheels spawn one round on the patch diff when `yes`, so before applying the first patch record `PATCH BASE: $(git add -A && git write-tree)` — the follow-up reviews `git diff {PATCH BASE}` only (DD-80). A follow-up pass never scores a further follow-up.
 
 **Verify-green gate rule:** GATE PASS additionally requires that Verify green actually ran green this session (or was legitimately skipped: no code changed, or no toolchain — state which). A red or blocked verify caps the outcome at Status `in-progress` — there is no qualified PASS ("PASS pending verify") in any report field or ledger line; `scripts/ledger.sh` refuses one mechanically.
 

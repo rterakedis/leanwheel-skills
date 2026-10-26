@@ -88,7 +88,7 @@ Wait for the subagent's report, then act on its structured fields. Do **not** re
 
 ## Fallback: subagents unavailable
 
-Run every phase inline on the **current session model**. Do not issue model-switch prompts: changing `/model` (or `/effort`) mid-conversation busts the prompt cache, so a per-phase Sonnet→Opus→Sonnet dance costs more than it saves. If the user wants the Swift dev phase on a stronger model than the session is running, tell them once at activation — "start the flywheel in a fresh session on {model} for this epic" — and proceed on the current model if they decline. Inline phases execute `skills/create-story/SKILL.md`, `skills/dev-story/SKILL.md`, and `skills/code-review/SKILL.md` directly; the checkpoint, gates, and report fields are unchanged.
+Run every phase inline on the **current session model**. Never prompt a `/model` or `/effort` switch — it busts the prompt cache, so a per-phase Sonnet→Opus→Sonnet dance costs more than it saves. If the user wants the Swift dev phase on a stronger model, say once at activation: "start the flywheel in a fresh session on {model} for this epic", and proceed on the current model if they decline. Inline phases execute `skills/create-story/SKILL.md`, `skills/dev-story/SKILL.md`, and `skills/code-review/SKILL.md` directly; the checkpoint, gates, and report fields are unchanged.
 
 ---
 
@@ -109,6 +109,7 @@ Repeat until the epic is complete (see **Exit Conditions**):
 
 ### Phase 2 — Dev Story
 
+**Probe (zero-token):** if the project CLAUDE.md has a `## Probe` section, run its command first. Non-zero exit = environment fault: report it and pause the flywheel — no spawn, no ledger line, no story HALT (DD-80).
 **Subagent mode:** spawn `lw-story-developer` via the Agent tool with the story file path. Pass `model: opus` **only if `swift_project`** (otherwise the pinned Sonnet). Instruct it to run the full dev-story workflow including the Build & Test Gate, the evals RUN via `scripts/evals.sh` (if `docs/evals/` exists), and invariant/design verification. It stops at `review`; it does not review its own diff.
 **Fallback mode:** execute `skills/dev-story/SKILL.md` inline on the session model.
 
@@ -124,6 +125,7 @@ Repeat until the epic is complete (see **Exit Conditions**):
 - Its prompt is the developer's `REVIEW HANDOFF`, verbatim — pointers only. Never add a summary of the dev pass or hints about what to check.
 - It runs every code-review pass, emits the **SCORE rubric line**, auto-patches `patch` findings, applies `fix-now` findings within the ceiling, logs `defer` via the deferred skill, and **re-verifies green**.
 - `decision-needed` findings surface in its report — present them to the user, then send the answers back to the same reviewer to apply.
+- **Follow-up round (DD-80):** if the report says `FOLLOW-UP REVIEW: yes`, spawn `lw-story-reviewer` once more with a `REVIEW HANDOFF` whose base is the report's `PATCH BASE` — it reviews the patch diff only. One round; its own follow-up flag is ignored.
 - **Fallback mode** (no subagents): execute `skills/code-review/SKILL.md` inline on the session model. That review shares the author's context, so record `review=inline-fallback` in the roll-up and say so at the checkpoint.
 
 **On unresolvable patches:** Do not proceed to Phase 4. Leave story status `in-progress`, report which items need attention, and stop the flywheel. Resume with `/story-flywheel {epic}.{story}`.
@@ -271,7 +273,7 @@ Reported inline as described in Phase 2. Flywheel does not auto-resume.
 
 ## Notes
 
-- **Toward hands-off runs.** Subagent delegation already collapses the human touch-points to three: the Phase-1 clarification surfacing, the Phase-4 checkpoint, and the epic-boundary gate. To go further, the user may pre-authorize **auto-pilot**: at the start they say "auto-continue on clean stories" — then for any story whose checkpoint has *no* `UNRESOLVED` items, a PASS rubric gate, and a green Build & Test Gate, the flywheel commits (if the user also pre-authorized commits) or pauses only to let the user commit, then advances without waiting for "continue". Any story with unresolved items, a FAIL gate, a red build, or a HALT **always** stops for the human regardless of auto-pilot. This is how the user gets "the app builds while I just steer at checkpoints" without losing the safety gates. Default remains: pause every checkpoint.
+- **Auto-pilot.** If the user pre-authorizes "auto-continue on clean stories", a story with no `UNRESOLVED` items, a PASS gate, and a green Build & Test advances without waiting for "continue" (commits only if also pre-authorized). Unresolved items, a FAIL gate, a red build, or a HALT always stop for the human. Default: pause every checkpoint. `/epic-flywheel` makes this the default within an epic.
 - The flywheel does not commit unless the user pre-authorizes it. You own the commit gate between stories.
 - GitHub tracking is handled by the sub-skills (create-story, dev-story, code-review) — flywheel does not call tracking ops directly.
 - If GitHub is unavailable, flywheel falls back to `docs/epics.md` Status fields for all story discovery.
