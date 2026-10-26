@@ -1000,3 +1000,38 @@ key) and output-only `AVAudioEngine` dropped from the purpose table, and the fil
 narrowed from bare `creationDate`/`modificationDate` (which matched every Core Data attribute of
 that name) to the `FileAttributeKey` / `URLResourceKey` / `stat` family. The CloudKit
 no-`initializeCloudKitSchema` check, previously prose in `checks-cloudkit.md`, is now a finding.
+
+### DD-80 — Review patches get an independent reader; an environment fault is not a story failure
+
+**Context.** An October 2026 pass over upstream (`guide/comparison.md` → *Upstream state as of
+October 2026*) surfaced four review-loop ideas. Checked against the skills, two were real holes
+and two were cheap hygiene; all four are stack-agnostic.
+
+**Hole 1 — patch code had no reviewer.** `lw-story-reviewer` auto-patches findings, then only
+the build re-runs. By DD-75's own argument, code verified by its author's reading alone is not
+reviewed — and the reviewer is the author of its patches. Fix: `code-review` emits
+`FOLLOW-UP REVIEW: yes|no` as **arithmetic** over the applied patches and fix-nows (any HIGH,
+or `3 × MEDIUM + LOW ≥ 5`), records `PATCH BASE` (a `git write-tree` taken before the first
+patch), and the flywheels spawn one more reviewer on `git diff {PATCH BASE}` only. One round;
+the follow-up never scores a follow-up. A formula rather than a judgment so the extra spawn is
+predictable and auditable from the report.
+
+**Hole 2 — simulator-busy counted as a broken story.** The Build & Test Gate's three-red
+escalation, `bt_iterations`, and the flywheel HALT all treated "device unavailable" the same as
+a failing test, so an environment hiccup inflated the model-routing metric (DD-20) and burned a
+human checkpoint. Fix: a run that names no compile error or test — or whose `## Probe` fails on
+re-run — records `blocked` (a status `ledger.sh` already had), does not count toward the three,
+and *pauses* rather than HALTs. The probe is a **project-declared command** in CLAUDE.md
+(`## Probe`, beside `## Quiet commands`): Apple projects use `scripts/sim.sh doctor`, web and
+other stacks declare their own, and an absent section means nothing probes. Environment
+signatures are deliberately **not** hard-coded in the skills — the rule is behavioral, so it
+holds for any toolchain.
+
+**Hygiene.** `dismiss` findings used to be dropped from the report entirely — a silent drop a
+reader could not audit; they are now one `[x] [Dismiss] {title} — {reason}` line, and only
+findings with the same claim *and* action merge. Pass C gains an `untested:` finding for a
+behavior change no test in the repo's own suite would catch (never for unreachable states,
+defensive branches, or CI plumbing); the patch is the test, registered via evals → BUILD.
+
+**Paid for in bytes.** All three over-budget skills shrank conduct prose to fit (DD-72);
+`budget-baseline.txt` ratcheted down for two of them.
