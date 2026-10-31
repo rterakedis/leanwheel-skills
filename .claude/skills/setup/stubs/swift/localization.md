@@ -104,6 +104,16 @@ string.
 
 ---
 
+## The catalog only updates in an Xcode IDE build
+
+`xcodebuild` never writes `.xcstrings`; a new key or a changed `comment:` reaches the catalog
+only when the Xcode app builds the project. Before a PR that touches strings, run
+`/sync-string-catalog` and commit the catalog on the branch. Never hand-insert keys to close
+the gap — mechanism and footguns in `xcode-footguns.md` → *A green `xcodebuild` leaves the
+String Catalog stale*.
+
+---
+
 ## Two mechanical notes
 
 - **Catalog tests read the source JSON, not the bundle.** `Localizable.xcstrings` compiles to a

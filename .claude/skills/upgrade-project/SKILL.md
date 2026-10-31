@@ -63,6 +63,7 @@ Check these:
 | Ledger script | `scripts/ledger.sh` present + executable |
 | Evals runner | `scripts/evals.sh` present + executable (ADD on any project with `docs/evals/` — before it shipped, RUN parsed the eval files in-context) |
 | Simulator harness | `scripts/sim.sh` present + executable, and `docs/setup/swift/simulator.md` present (only if `is_apple`); on CONFLICT also report **capability skew** (below) |
+| Catalog sync | `scripts/xcode-catalog-sync.py` present + executable (only if `is_apple`); the Swift guardrails block is at least `v4` (carries the String Catalog tripwire); `docs/setup/swift/xcode-footguns.md` contains `leaves the String Catalog stale`. See *Replacing a hand-rolled catalog sync* below |
 | Docs structure | `## Docs Structure`, `## Task Tracking Emoji` in CLAUDE.md |
 
 **Stub-install verification.** Walk every stub under `{skills_path}/.claude/skills/setup/stubs/`
@@ -117,6 +118,23 @@ Two limits of that diff, both real misses:
   flag the upgrade *depends on*, check it is handled in the subcommand you will call:
   `grep -n -- '--assetcapture)' scripts/sim.sh`.
 
+**Replacing a hand-rolled catalog sync.** Some projects solved the stale-`.xcstrings` problem
+before leanwheel shipped `scripts/xcode-catalog-sync.py`, with a local driver of the same name
+that hard-codes the project's `.xcodeproj` and catalog path, plus a project-local
+`.claude/skills/sync-string-catalog/` and a `## Known Footguns` bullet. The shipped script reads
+those paths from `.leanwheel/sim.json` / git instead, and the skill now ships with the plugin,
+so the local copies are duplicates, not customizations:
+
+- `scripts/xcode-catalog-sync.py` failing the provenance test **but** containing a hard-coded
+  `CATALOG = "` or `PROJECT = "` constant → **REFRESH** (the pre-leanwheel ancestor; replace it).
+  Any other non-matching copy → CONFLICT, with the usual skew report (`--check`, `--keep-open`,
+  `--project`, `--catalog`, `--timeout`).
+- `.claude/skills/sync-string-catalog/` present in the project → **DUPLICATE**: it shadows the
+  plugin skill. Offer to delete the directory (the one deletion this skill proposes, on
+  confirmation only — it is a copy of a shipped asset, not project content).
+- A `## Known Footguns` bullet already naming `Localizable.xcstrings` / `xcode-catalog-sync` →
+  OK (the v4 guardrails tripwire covers it; leave the project's own wording alone).
+
 Present the plan as a table: `ADD / REFRESH / CONFLICT / OK` per item. Summarize:
 "Will add N, refresh M, skip K conflicts (need manual merge). Proceed? (y/n)"
 
@@ -145,6 +163,9 @@ In dependency order, applying only ADD and REFRESH items:
    On Apple projects (`is_apple`), likewise copy `{skills_path}/scripts/sim.sh` if
    `scripts/sim.sh` is missing, and `chmod +x`. `sim.sh` derives its own
    `.leanwheel/sim.json` on first run — never author that file here.
+   Also on Apple projects copy `{skills_path}/scripts/xcode-catalog-sync.py` if missing or
+   REFRESH (incl. the hand-rolled ancestor above), `chmod +x`, and remove a project-local
+   `.claude/skills/sync-string-catalog/` only after the user confirmed the DUPLICATE row.
    These are unedited-overwrite-safe by the same git-provenance test as stubs (REFRESH
    if the project copy matches a historical committed version; CONFLICT otherwise). A
    CONFLICT here is still *reported* with its capability skew (Step 3) — the copy is left
@@ -187,7 +208,7 @@ In dependency order, applying only ADD and REFRESH items:
    collapse the inlined block to the pointer — never inline it again.
 6. **Manifest:** if a legacy `.bmad-lite/` directory exists, rename it to `.leanwheel/`
    first (contents unchanged). Then write/update `.leanwheel/manifest.json` with the
-   current `scaffolded_at` date, surfaces, and asset flags.
+   current `scaffolded_at` date, surfaces, and asset flags (incl. `catalog_sync` on Apple projects).
 
 ## Step 5 — Report
 
