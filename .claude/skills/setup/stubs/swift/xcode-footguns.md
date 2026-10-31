@@ -124,6 +124,38 @@ genuinely unreferenced, but check whether the string **moved** rather than died 
 
 ---
 
+## A green `xcodebuild` leaves the String Catalog stale
+
+`xcodebuild` **extracts** strings (`.stringsdata`) but never **merges** them into an `.xcstrings`
+catalog. Only a build inside the Xcode IDE does that. Agents only run `xcodebuild`, so a new
+key or an edited translator `comment:` compiles, tests green, passes review, and merges with a
+catalog that does not contain it. The drift surfaces later as an unexplained `Localizable.xcstrings`
+diff in the main checkout — after someone opens the project in Xcode.
+
+Nothing in the build log says so. The catalog is a build *output*, and the tool that writes it
+was never run.
+
+**Do:** before a PR that touches a user-facing string, run `/sync-string-catalog`
+(`python3 scripts/xcode-catalog-sync.py --check`). It has the running Xcode build **this
+checkout's** project through Xcode's MCP server (`xcrun mcpbridge`, Xcode 26.3+; MCP enabled
+in Settings → Intelligence), builds until the catalog stops changing, and lists the added /
+removed / changed keys against HEAD. Review the list, then commit the catalog on the branch.
+
+**Don't:**
+- **Hand-edit keys into the catalog.** That is how the drift starts, and Xcode re-sorts
+  hand-inserted keys on its next build — a second surprise diff.
+- **Open `main`'s project to "sync"** — that rewrites `main`'s catalog from `main`'s strings.
+  Open the worktree's own `.xcodeproj`.
+- **Treat "could not run" as a pass.** The script exits 2 (no Xcode, MCP off, agent not
+  approved) and prints `CATALOG: unavailable`; a gate records that as blocked, never green.
+- **Trust one build after a revert.** The catalog caught up only on the second build; the
+  script builds until two consecutive builds leave it byte-identical.
+
+Xcode rewrites the catalog only when the extracted strings differ, so "in sync" is a real
+answer. Mechanism notes: `skills/sync-string-catalog/reference.md`.
+
+---
+
 ## File auto-discovery covers Swift, not resources
 
 With synchronized folder groups, a new `.swift` file in the right directory is compiled with no
