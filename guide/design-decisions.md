@@ -1035,3 +1035,58 @@ defensive branches, or CI plumbing); the patch is the test, registered via evals
 
 **Paid for in bytes.** All three over-budget skills shrank conduct prose to fit (DD-72);
 `budget-baseline.txt` ratcheted down for two of them.
+
+### DD-81 — The String Catalog follows the code only through an Xcode IDE build; the gate is a script that can say "could not run"
+
+**Context.** On a SwiftUI project, `xcodebuild` extracts strings (`.stringsdata`) but never
+merges them into the `.xcstrings` catalog — only a build inside the Xcode app does. Agents only
+run `xcodebuild`, so a new key or an edited translator comment passed every gate and merged with
+a stale catalog at least twice; the drift surfaced later as an unexplained catalog diff on
+`main`, after a human opened the project in Xcode. Nothing in any build log says so: the catalog
+is a build output whose writer was never run.
+
+**Decision.** Ship the fix as a zero-token script plus a composable skill, not as prose:
+
+- `scripts/xcode-catalog-sync.py` drives Xcode's own MCP server (`xcrun mcpbridge`, Xcode 26.3+)
+  to open **this checkout's** project (a worktree, never `main`'s — that would rewrite `main`'s
+  catalog), build, and diff every git-tracked catalog against HEAD as parsed JSON. Project and
+  catalogs are discovered (`.leanwheel/sim.json` `container`, then filesystem; `git ls-files
+  '*.xcstrings'`) or passed as flags — nothing project-specific is hard-coded. Exit contract:
+  0 in sync · 1 drift under `--check` · 2 could not run. Last stdout line is the `CATALOG:` field.
+- `sync-string-catalog` owns **CHECK** (the gate) and **SYNC** (agent reviews the key list and
+  commits the catalog on the branch). The script never commits — the one step that needs
+  judgment is whether every listed key is explained by the branch's diff.
+- **Both** `/dev-story` (Build & Test Gate 1c) and `/code-review` (Verify green) run CHECK. Dev
+  is where the catalog gets committed with the strings that changed it; review re-runs it
+  independently because the author's run may have been `unavailable`, and a reviewer who skips
+  it on trust re-creates the original hole.
+- **Exit 2 is `blocked` (DD-80), never green.** A machine without Xcode or MCP reports
+  `CATALOG: unavailable — {why}` in the dev/review report and pauses under a flywheel. A missing
+  toolchain turning into a silent pass is exactly the failure mode this entry exists to close.
+
+**Field knowledge baked into the script, measured on Xcode 27.0 (2026-10-30):** every tool but
+`XcodeOpenWorkspace` fails as "not approved" until a project is opened (opening raises the
+prompt; an unanswered prompt ends in a timeout, not a hang); `structuredContent` may be empty, so
+`content[].text` is parsed too; one build is not always enough after a revert, so the script
+builds until two consecutive builds leave every catalog byte-identical (capped at 4); Xcode
+re-sorts hand-inserted keys, so the report separates key-order-only changes from real ones; Xcode
+rewrites the catalog only when extracted strings differ, so "in sync" is a real answer. Recorded
+as `<!-- FIELD -->` in `sync-string-catalog/reference.md`; the footgun lives in the
+`xcode-footguns.md` and `localization.md` stubs and as a tripwire in the Swift guardrails block
+(`v3` → `v4`).
+
+**Rejected.** `xcrun xcstringstool sync` fed from DerivedData, with a `--check` in CI, as the
+primary path: unverified here, and two writers for one file is itself a drift mechanism — any
+difference from the IDE's output (key order included) reproduces the surprise diff on the next
+machine. Documented as a fallback lead, not shipped; revisit only if an Xcode-less CI machine
+must gate on the catalog, and prove byte-identity against an IDE build first.
+
+**Upgrade path.** A project that hand-rolled the same driver before this shipped (hard-coded
+`CATALOG =` / `PROJECT =` constants, a project-local `sync-string-catalog` skill, a Known
+Footguns bullet) is reconciled by `/upgrade-project`: the ancestor script is REFRESH, the local
+skill directory is a DUPLICATE offered for deletion on confirmation, and the project's own
+footgun wording is left alone because the v4 tripwire now carries it.
+
+**Proof.** On a real project with Xcode 27.0: clean tree → exit 0 `in-sync`; planted translator-
+comment edit → exit 1 naming `~ '{key}'`; restored → exit 0; planted key rename → exit 1 naming
+`+`/`-`; restored → exit 0. A gate seen only green is unverified (DD-11).

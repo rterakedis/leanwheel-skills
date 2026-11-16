@@ -1,6 +1,6 @@
 ## Swift/SwiftUI Guardrails (iOS 18+)
 
-<!-- leanwheel:guardrails swift v3 — MANAGED BLOCK.
+<!-- leanwheel:guardrails swift v4 — MANAGED BLOCK.
      Everything between this marker and the next `---` is re-synced by /upgrade-project.
      Do not add project-specific rules here; they belong in `## Critical Rules` above.
      This block is a POINTER plus tripwires: full patterns live in docs/setup/swift/ and are
@@ -79,6 +79,10 @@ file because they must be known **before** a plan is formed.
 - **`EXCLUDED_SOURCE_FILE_NAMES = "CLAUDE.md"`** at project level, in both configurations, before
   a second nested `CLAUDE.md` exists — otherwise the build fails with "Multiple commands produce".
   → `xcode-footguns.md`
+- **A green `xcodebuild` leaves the String Catalog stale** — only an Xcode IDE build merges new
+  keys and comment edits into `.xcstrings`. Before a PR that touches a user-facing string, run
+  `/sync-string-catalog` and commit the catalog on the branch; never hand-edit keys into it, and
+  a `CATALOG: unavailable` result is blocked, not green. → `xcode-footguns.md`
 
 ### Pre-Implementation Checklist
 
@@ -91,4 +95,4 @@ Before marking any story done, verify:
 - [ ] New unit tests use `import Testing`; every new gate has been watched failing
 - [ ] Build is at **zero warnings** and the test log was scored, not eyeballed
 
-<!-- /leanwheel:guardrails swift v3 -->
+<!-- /leanwheel:guardrails swift v4 -->
