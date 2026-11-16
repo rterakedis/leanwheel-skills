@@ -9,7 +9,7 @@ description: Author the App Store Connect inputs for an Apple app as lint-clean,
 
 **Requires:** an Apple app project (`.xcodeproj` / `.xcworkspace` / app-target `Package.swift`). ASSETS has further preconditions of its own (see [op-assets.md](op-assets.md)). Absent → stop with the one-line fix; never fake a capture.
 
-**Currency note:** Store facts (screenshot classes/sizes in [op-assets.md](op-assets.md), character limits in [op-metadata.md](op-metadata.md)) are current as of **August 2026** and are refreshed by `/refresh-swift` Step 4 alongside `appstore-preflight`'s.
+**Currency note:** Store facts (screenshot classes/sizes in [op-assets.md](op-assets.md), character limits in [op-metadata.md](op-metadata.md)) are current as of **August 2026**; the 2.3.3 screenshot-majority and 4.1 metadata rules follow Apple's App Review help (https://developer.apple.com/help/app-review/, read Nov 2026) and and are refreshed by `/refresh-swift` Step 4 alongside `appstore-preflight`'s.
 
 **Division of labour:** `/appstore-preflight` audits the *code* and writes the checklist; this skill authors what the checklist asks for and hands verified facts back (`asc-lint` result, PRODUCTS DIFF).
 

@@ -1090,3 +1090,44 @@ footgun wording is left alone because the v4 tripwire now carries it.
 **Proof.** On a real project with Xcode 27.0: clean tree → exit 0 `in-sync`; planted translator-
 comment edit → exit 1 naming `~ '{key}'`; restored → exit 0; planted key rename → exit 1 naming
 `+`/`-`; restored → exit 0. A gate seen only green is unverified (DD-11).
+
+---
+
+### DD-82 — Apple's App Review help is a primary source; it is appended beside field knowledge, never over it
+
+**Context.** In late 2026 Apple published an App Review help site
+(developer.apple.com/help/app-review/): seventeen articles covering what to put in the Notes
+field, sandbox review of In-App Purchases, device compatibility, the review lifecycle (statuses,
+reply vs resubmit, Bug Fix Submissions, expedite, appeal), removals, and per-guideline reference
+pages for 2.3.3, 4.1, 5.1.1(ii) and 5.1.1(v). Until then most of this was only knowable by being
+rejected, which is why the App Store skills carry it as `<!-- FIELD -->` knowledge (DD-70, DD-78).
+
+**What the comparison found.** Nothing Apple published contradicts a field rule. The eight 2.1
+items, the device recording, "reply rather than resubmit" and the sandbox purchase model are all
+confirmed. Apple's pages are *silent* on the mechanics field knowledge exists for (the 4,000
+character cap, single attachment, `.mov`, hidden location alert, TestFlight's Apple ID, extension
+build numbers, pre-prompt faults, billed-amount hierarchy), so those stay exactly as written.
+
+**Decision.**
+- Gaps are filled where each fact is used: `checks-accounts.md` (guest accounts, no support
+  detour, UGC, subscription billing notice), `checks-storekit.md` above its FIELD section
+  (StoreKit-fetched prices, load-failure state, restriction disclosure), the purpose-string
+  rule and `JUDGE` question in `preflight-facts.tsv` (sentence form, localization, SDK-linked
+  APIs), Step 5 item 7 (Mac / Vision Pro availability, optional hardware), the checklist
+  template, `op-assets.md` (2.3.3 majority-in-use rule) and `op-metadata.md` (4.1: no other
+  app's name or mark in any field).
+- `review-packet.md` is field-derived end to end, so Apple's additions go in one **appended,
+  dated, explicitly non-FIELD section** (demo account per type, expired-subscription account,
+  sign-in code in Notes, demonstration mode, hardware video, documentation by guideline, update
+  notes). Nothing above it changed.
+- New `review-lifecycle.md` holds the after-submission guidance. It is research knowledge, read
+  only when a submission is in review, rejected or removed — the DD-74 branch-file pattern.
+- Two lines were *refined*, not reversed: the demo-account checklist line still says no SMS/2FA
+  and now adds Apple's fallback (a working code in Notes); Step 7b still skips the full packet
+  on updates but always refreshes a "This update" paragraph, because Apple asks for it.
+- `/refresh-swift` Step 4 lists the help site as a source, so the next pass re-reads it.
+
+**Not done.** `meta currency` is not bumped: only the process guidance was re-read, not every
+requirement fact. No new scan rule ids — every change is a message, a question, or a branch-file
+line, so `preflight-scan.sh` is untouched. No lint for the 2.3.3 majority rule: whether a
+screenshot "shows the app in use" is not decidable from a filename.

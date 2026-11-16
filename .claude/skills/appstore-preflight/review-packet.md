@@ -90,3 +90,35 @@ onboarding gate are suppressed or unreachable under UI-test and capture runs, so
 check, `design-verify` pass, or eval has ever seen them. Both rejections of this kind on the
 source project were on screens exactly like that. Walk each on the submitted build, on a device,
 before submitting; record the result in `review-claims.md` alongside the notes claims.
+
+## Appended from Apple's App Review help (Nov 2026)
+
+<!-- Appended under DD-82, not field knowledge: source https://developer.apple.com/help/app-review/before-submitting-for-review/complete-review and …/configure-in-app-purchases. Nothing above is changed by it; `/refresh-swift` Step 4 may refresh this section. -->
+
+Apple now publishes what the Notes field should hold. It matches the eight items above and adds:
+
+- **Incomplete submissions are rejected**, and the resubmission starts a new review. Apple's
+  target is 90% of reviews inside 48 hours; apps with little review history run longer.
+- **Updates need notes too**: what changed, and where the reviewer finds significant new
+  content or features. One short "This update" paragraph, replaced each version.
+- **Item 4, demo accounts.** Credentials must work at submission time and through review. One
+  set **per account type** (admin, member). An app with auto-renewable subscriptions behind an
+  account supplies a demo account whose **subscription has expired**, so the reviewer can walk
+  the whole purchase flow. If sign-in needs a code, put a working one in Notes in advance;
+  otherwise the review waits on a call (3–5 business days).
+- **Demonstration mode instead of a demo account** when the app handles sensitive data or is in
+  a regulated industry: full features, demonstration data.
+- **Item 1, hardware.** An app that needs an accessory supplies a **camera video, not a screen
+  recording**, of the app on a physical Apple device pairing with and using the hardware.
+- **Item 7, documentation, attached before submitting.** By guideline: 1.4.1 medical claims
+  (regulatory clearance per region, or a test report / peer-reviewed study) · 3.1.5 crypto
+  (exchange licence per region) · 3.2.1/3.2.2 finance and loans (licence, lender partnership) ·
+  4.1/5.2.x third-party marks or content (signed contract or written permission) · 5.1.3 health
+  research (IRB approval, consent form) · 5.3.3/5.3.4 lotteries and gambling (licence per
+  storefront) · 1.4.3 cannabis (dispensary licence) · 1.7 crime reporting (law-enforcement
+  partnership on letterhead). The full table is on Apple's page; fetch it for anything regulated.
+- **Item 8, purchases.** State any **storefront or device restriction** on In-App Purchases.
+  Products are reviewed in the sandbox and need no prior approval to work there, but the Paid
+  Apps Agreement must be in effect.
+
+After submission (reply vs resubmit, Bug Fix Submissions, expedite, appeal): `review-lifecycle.md`.

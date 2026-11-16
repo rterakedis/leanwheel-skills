@@ -34,8 +34,8 @@ meta	sdk-floor	26
 
 # ---- Step 2 — purpose strings (crash + 5.1.1) -------------------------------------------
 rule	purpose-key-missing	BLOCKER	PLIST	Protected API used with no matching NS*UsageDescription — instant runtime kill (Guideline 2.1 crash rejection) or ITMS-90683 at upload
-rule	purpose-string-generic	MEDIUM	PLIST	Purpose string < 20 chars or generic (no user-visible reason like "to scan barcodes for price lookup") — Guideline 5.1.1 rejection
-rule	purpose-key-unused	MEDIUM	PLIST	Key present for a capability the app never uses — Guideline 5.1.1 over-requesting flag (remove it)
+rule	purpose-string-generic	MEDIUM	PLIST	Purpose string < 20 chars or generic (no user-visible reason like "to scan barcodes for price lookup") — Guideline 5.1.1(ii) rejection. Apple: one complete sentence naming the feature, with an example, active voice, ending in a period
+rule	purpose-key-unused	MEDIUM	PLIST	Key present for a capability the app never uses — Guideline 5.1.1 over-requesting flag (remove it; if an SDK is what links the API, remove that reference from the binary too)
 
 purpose	AVCaptureDevice|AVCaptureSession	NSCameraUsageDescription	NSMicrophoneUsageDescription	let session = AVCaptureSession()
 purpose	CLLocationManager	NSLocationWhenInUseUsageDescription	NSLocationAlwaysAndWhenInUseUsageDescription	let manager = CLLocationManager()
@@ -153,7 +153,7 @@ verify	toolchain	Local + CI toolchain is Xcode {sdk-floor}+ / iOS {sdk-floor} SD
 verify	icon	1024×1024 marketing icon present and opaque (sips/plutil unavailable to the scan)
 
 # ---- JUDGE — the scan found it; the model decides. One question per topic ----------------
-judge	purpose-string	Is the string specific — a user-visible reason like "to scan barcodes for price lookup"? Generic → MEDIUM [PLIST] (Guideline 5.1.1)
+judge	purpose-string	Is the string specific — a user-visible reason like "to scan barcodes for price lookup"? Apple's 5.1.1(ii) test: one complete sentence, active voice, ending in a period, that names the feature and gives a concrete example; restating the resource ("To use location.") or a vague benefit ("a better experience") fails, and so does marketing copy. Generic → MEDIUM [PLIST]. Also MEDIUM: the app ships more than one localization but this key has no localized value (InfoPlist.xcstrings / InfoPlist.strings). A key present only because an SDK links the API, with no app use → remove the API reference rather than invent a reason
 judge	listed-sdk	Listed SDK with no local copy to inspect. That version predates the SDK shipping PrivacyInfo.xcprivacy (or, binary-distributed, a code signature) → BLOCKER [MANIFEST] (ITMS-91061; fix = upgrade — you cannot declare on its behalf). Unsure → a Step 7 checklist item, not a story AC
 judge	display-name	"beta/demo/trial" naming the build rather than the product → Guidelines 2.2/2.3
 judge	placeholder-copy	User-visible placeholder, lorem ipsum or "coming soon" content → Guideline 2.1 completeness

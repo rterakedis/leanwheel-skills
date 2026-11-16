@@ -9,7 +9,7 @@ description: Audit an iOS/iPadOS SwiftUI project's configuration, privacy declar
 
 **Requires:** An Apple app project (`.xcodeproj`, `.xcworkspace`, or an app-target `Package.swift`). If absent, the scan exits 2 with "No Apple app project found — nothing to preflight." — stop there.
 
-**Currency note:** Requirement facts are dated by the `currency` row of `preflight-facts.tsv` (printed as `INVENTORY|facts`); that date covers every file of this skill. Items marked ⚠️VOLATILE change frequently (litigation, annual SDK mandates) — re-verify against https://developer.apple.com/news/upcoming-requirements/ at submission time rather than trusting these files.
+**Currency note:** Requirement facts are dated by the `currency` row of `preflight-facts.tsv` (printed as `INVENTORY|facts`); that date covers every file of this skill. Items marked ⚠️VOLATILE change frequently (litigation, annual SDK mandates) — re-verify against https://developer.apple.com/news/upcoming-requirements/ at submission time rather than trusting these files. Process guidance (what the Notes field holds, account deletion, purpose strings, screenshots, the review lifecycle) follows Apple's App Review help, https://developer.apple.com/help/app-review/, read Nov 2026 (DD-82).
 
 ---
 
@@ -59,7 +59,7 @@ These need judgment, not just grep. Read the relevant source (auth flows, paywal
 
 4. **Subscriptions/IAP — 3.1.1/3.1.2.** StoreKit in use (Step 1) → apply [checks-storekit.md](checks-storekit.md): PRODUCTS DIFF reconciliation **and** the 3.1.2(c) paywall hierarchy check (billed amount dominates). No StoreKit → skip.
 6. **In-app privacy policy access — 5.1.1.** A privacy-policy link must be reachable inside the app (settings screen is fine). Missing → **MEDIUM**.
-7. **iPad compatibility — 2.4.1.** Every app is reviewed on iPad, **even iPhone-only apps** (compatibility mode). Note as a checklist test item; flag obvious fixed-width/fixed-orientation layouts in a universal app → **MEDIUM**.
+7. **iPad compatibility — 2.4.1.** Every app is reviewed on iPad, **even iPhone-only apps** (compatibility mode). Note as a checklist test item; flag obvious fixed-width/fixed-orientation layouts in a universal app → **MEDIUM**. Removing iPad as a supported destination does **not** stop iPad downloads, and a compatible app is also offered on Apple silicon Macs and Vision Pro unless opted out in App Store Connect. An unguarded hard dependency on optional hardware (camera, telephony, GPS) that would crash or dead-end there → **MEDIUM**; `UIRequiredDeviceCapabilities` is for a genuine hardware dependency, never a distribution preference.
 11. **Permission pre-prompts — 5.1.1(iv).** Any `request*Authorization` / `requestAccess` call site (grep in [checks-permissions.md](checks-permissions.md)) → apply that file: neutral button copy, no exit around the system alert, user-action trigger. Pre-prompts are invisible to automation, so an unwalked one is a MEDIUM finding.
 
 ---
@@ -133,7 +133,7 @@ Read [review-packet.md](review-packet.md) (it sits beside this file) before draf
 3. **Shot list.** Append a recording shot list to `review-guide.md`: fresh-install state, every prompt with its staged trigger, and the paywall. Multiple clips are fine.
 4. **Gate (zero-token).** `asc-lint.sh` reports an oversized `notes.txt` as an ERROR and each `UNVERIFIED` row as a WARN. The checklist's review-notes line is stamped `[x]` only when both are clear. Never flip a row to verified yourself: a claim that reads correctly in source is exactly the kind that fails.
 
-Skip this step on update submissions unless the user asks, or unless `review_information/notes.txt` is absent.
+On update submissions skip the full packet unless the user asks or `review_information/notes.txt` is absent — but always replace the notes' "This update" paragraph (what changed, where the reviewer finds significant new features) and add a claim-ledger row for each new navigable claim.
 
 ---
 
@@ -147,4 +147,5 @@ Skip this step on update submissions unless the user asks, or unless `review_inf
 
 2. State both output paths, plus the Step 7b packet paths and the `UNVERIFIED` claim count.
 3. Say: "Run `/dev-story docs/maintainer/appstore-preflight-{date}.md` to fix the code/config findings. The checklist items in `appstore-submission-checklist.md` are human actions in App Store Connect — work through them before submitting; `/appstore-connect` authors the screenshots, listing copy, and product spec those items ask for. Re-run `/appstore-preflight` after fixes to confirm clean."
-4. If any ⚠️VOLATILE finding was flagged (external purchase links, SDK-floor, UIRequiresFullScreen), remind the user those rules are in flux and name the one(s) to re-verify.
+4. A submission already in review, rejected, or removed (reply vs resubmit, Bug Fix Submission, expedite, appeal) → read [review-lifecycle.md](review-lifecycle.md) before advising; never suggest resubmitting to answer an information request.
+5. If any ⚠️VOLATILE finding was flagged (external purchase links, SDK-floor, UIRequiresFullScreen), remind the user those rules are in flux and name the one(s) to re-verify.
