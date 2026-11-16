@@ -6,6 +6,11 @@ The paywall must show price + period + auto-renew terms; **functional Privacy Po
 
 **Product reconciliation:** run the `appstore-connect` skill's **PRODUCTS DIFF** op — read only `{skills_path}/.claude/skills/appstore-connect/op-products.md`; Step 1 already found the `.storekit` and StoreKit imports it needs, so that skill's SKILL.md is not required — spec ↔ `.storekit` ↔ Swift product-ID literals, plus its recommendations (group/level structure, missing localizations, missing review screenshots, immutable-ID renames, family-sharing/offer gaps). No `docs/store/products.md` yet → its IMPORT sub-op seeds one from the existing `.storekit`/code first (never ask the user to re-type what the code declares). Each mismatch becomes a `[HIGH][BEHAVIOR]` or `[MEDIUM][BEHAVIOR]` finding; the recommendations flow into the Step 7 IAP section (`render-checklist.sh --storekit yes` keeps it).
 
+**How Apple reviews purchases** (App Review help, Nov 2026 — DD-82): in the **sandbox**, with real App Store Connect product data; products need no prior approval to work there, but the Paid Apps Agreement must be in effect. So:
+- Price, period and name on the paywall come from StoreKit `Product` values **fetched before the paywall renders** — a hardcoded price or name that can drift from App Store Connect → **MEDIUM** `[BEHAVIOR]`.
+- A paywall that is empty or spins forever when products fail to load is what the reviewer sees if a product isn't attached; it needs a visible error/retry state → **MEDIUM**. Diagnosis: Apple TN3186.
+- Purchases limited by **storefront or device** → a line in the review notes (Step 7b item 8). Subscriptions behind an account → a demo account with an **expired** subscription (`review-packet.md`).
+
 ## Billed amount must dominate — Guideline 3.1.2(c)
 
 <!-- FIELD: DD-78 — learned from a Guideline 3.1.2(c) rejection of a SwiftUI paywall that rendered the calculated per-month price larger than the billed annual amount, Oct 2026. Protected from refresh passes (DD-66): append / version-scope / retire-with-citation only. -->

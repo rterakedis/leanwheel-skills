@@ -13,6 +13,7 @@
 - [ ] ⚠️VOLATILE: Social-media capability question added to the age-rating questionnaire July 2026 (places the app in the Time Allowance category for Social Media); answering it becomes **required for new versions/updates and notarization starting Sept 2026** — answer honestly, don't skip
 - [ ] Content rights declaration answered honestly (third-party content?)
 - [ ] Pricing & availability set (base storefront + price; review region list vs DSA/France constraints)
+- [ ] Availability on Apple silicon Macs and Apple Vision Pro decided (iPhone/iPad apps are offered there by default; opt out in App Store Connect if touch-, camera- or navigation-dependent)
 - [ ] Copyright field ("{year} {owner}")
 
 ## Required URLs
@@ -25,14 +26,16 @@
 - [ ] Cross-checked against Xcode's aggregated privacy report (Organizer → PrivacyReport)
 
 ## Media
-- [ ] Screenshots: 6.9" iPhone set{+ 13" iPad set if universal} — real UI of THIS build; marketing framing allowed, fabricated UI is not (2.3.3); regenerate after redesigns
+- [ ] Screenshots: 6.9" iPhone set{+ 13" iPad set if universal} — real UI of THIS build; marketing framing allowed, fabricated UI is not (2.3.3); regenerate after redesigns. **More than half of each device's set, in each localization, must show the app in use** — never only login, splash or title art; overlays must not hide the UI
 - [ ] App previews (optional): actual captured footage only
 
 ## App Review Information
-- [ ] Demo account: full access, working, NO SMS/2FA (reviewers can't receive it), valid through review + future update reviews
+- [ ] Demo account: full access, working, NO SMS/2FA (reviewers can't receive it — if a code is unavoidable, put a working one in Notes or the review waits 3–5 business days on a call), valid through review + future update reviews; one per account type; sensitive/regulated apps may ship a demonstration mode instead
+- [ ] Regulated field or third-party material: licence / clearance / permission documents attached BEFORE submitting (`review-packet.md` item 7), or "not applicable" stated in notes
 - [ ] Review notes answer Apple's eight Guideline 2.1 items, numbered (Step 7b) — {`[x] verified — asc-lint clean, 0 UNVERIFIED claims ({date})` or `[ ] {N} UNVERIFIED claims in docs/store/review-claims.md`}
 - [ ] Physical-device screen recording (Release build; launch, core flow, every permission prompt, IAP flow) + PDF guide zipped as ONE `.mp4`+`.pdf` attachment, ready for the 2.1 reply
 - [ ] Contact name/phone/email current
+- [ ] Tested on a physical device per supported platform, incl. iPad compatibility mode for iPhone-only apps; models + OS versions listed in notes item 2
 - [ ] Permission pre-prompts walked by hand on the submitted build: neutral button, no way around the system alert, shown only after a user action on the feature (`checks-permissions.md` — automation can't reach them)
 
 ## TestFlight
@@ -47,6 +50,8 @@
 - [ ] First IAP/subscription products ATTACHED to the version submission (creating them isn't submitting them — #1 IAP rejection)
 - [ ] Subscription group has ≥1 localization; review screenshot per product
 - [ ] `docs/store/products.md` reconciled — PRODUCTS DIFF: {n mismatches, m recommendations — or "not run: no .storekit"}; create products in ASC from that spec (`/appstore-connect products`)
+- [ ] Subscriptions behind an account: a demo account with an EXPIRED subscription in App Review Information, so the reviewer can walk the whole purchase flow
+- [ ] Each product tested in the sandbox and in **Ready to Submit / Ready for Review** state; any storefront or device restriction stated in review notes
 - [ ] Paywall shows price/period/auto-renew terms + Privacy & Terms links + Restore Purchases (verified in Step 5: {result})
 - [ ] Paywall's **billed amount** is the most prominent price (size and position); per-month equivalent, trial, and savings badge are subordinate (Guideline 3.1.2(c); `checks-storekit.md` — verified in Step 5: {result})
 
@@ -58,4 +63,5 @@
 - [ ] Build number unique and identical on the app **and every extension** target; resubmission after rejection keeps the marketing version (`review-packet.md`)
 - [ ] Version release option chosen (manual release recommended for coordinated launches)
 - [ ] Phased release decision (updates only)
+- [ ] After submitting: answer App Review by **replying**, not resubmitting, unless the build changed (`review-lifecycle.md`); screenshots lock at Waiting for Review
 - [ ] Final pass on developer.apple.com/news/upcoming-requirements/ for anything newer than this skill's July 2026 data

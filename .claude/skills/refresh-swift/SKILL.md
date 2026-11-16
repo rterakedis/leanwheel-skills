@@ -232,6 +232,7 @@ Otherwise research what moved:
 
 - **developer.apple.com/news/upcoming-requirements/** — the annual minimum Xcode/SDK upload floor, enforcement deadlines
 - **App Review Guidelines** (developer.apple.com/app-store/review/guidelines/) + developer.apple.com/news/ — guideline text changes (privacy 5.1.x, business 3.1.x, design 4.x)
+- **developer.apple.com/help/app-review/** — Apple's App Review help (new 2026): before-submitting (Notes field, demo accounts, sandbox IAP, device compatibility), after-submitting (statuses, reply vs resubmit, Bug Fix Submissions, expedite, appeal), removals, and the per-guideline reference pages (2.3.3, 4.1, 5.1.1(ii), 5.1.1(v) — check the sidebar for new ones). Feeds `review-lifecycle.md`, the appended section of `review-packet.md`, `checks-accounts.md`, the purpose-string rows, and `appstore-connect/op-{assets,metadata}.md`
 - **developer.apple.com/support/third-party-SDK-requirements/** — listed-SDK additions/removals
 - **Privacy plumbing** — new `NS*UsageDescription` keys, new required-reason API categories or reason codes, privacy-manifest enforcement changes (new ITMS codes)
 - **⚠️VOLATILE items specifically** — external purchase link rules (US storefront litigation), `UIRequiresFullScreen`/iPad windowing enforcement, launch-screen mandates, age-rating system, EU DSA / regulatory, TestFlight policy changes
