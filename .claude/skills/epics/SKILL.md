@@ -1,6 +1,6 @@
 ---
 name: epics
-description: Break the PRD into epics and stories, write docs/epics.md, and create GitHub milestones. Use when the user says "create epics", "break down the PRD", or "plan stories".
+description: Decomposes the PRD and architecture into user-value epics and stories with testable acceptance criteria, checks every requirement is covered, writes docs/epics.md, and creates GitHub milestones and issues. Use after the PRD and architecture exist and before creating stories, or when the user says "create epics", "break down the PRD", or "plan stories".
 ---
 
 # Epics Skill

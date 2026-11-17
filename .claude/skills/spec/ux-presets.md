@@ -7,6 +7,12 @@ backing decisions in the log or is elicited before its section renders.
 **Primary design surfaces:** responsive web apps and Apple platforms (iOS · iPadOS · macOS).
 Android is a future surface; note parity gaps as `[FUTURE: Android]` when discovered.
 
+## Contents
+- Platform Presets
+- Apple Platform
+- Discovery areas (the UX decision surface)
+- Visual aids (on demand)
+
 ## Platform Presets
 
 Resolve the platform surface before rendering. Ask once if not clear from the log, the PRD,

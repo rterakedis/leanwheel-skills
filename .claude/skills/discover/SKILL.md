@@ -34,13 +34,13 @@ Five questions, one at a time:
 
 ## Phase 3 — Write `docs/architecture.md`
 
-Use template. Fill from Phase 2 + interview. Priority: Tech Stack (exact versions), Folder Structure (annotated), Key Patterns (especially from Q4), Testing Strategy.
+Use `skills/spec/architecture-template.md`. Fill from Phase 2 + interview. Priority: Tech Stack (exact versions), Folder Structure (annotated), Key Patterns (especially from Q4), Testing Strategy.
 
 Write to `docs/architecture.md`.
 
 ## Phase 4 — Write `docs/prd.md`
 
-Use template. Sections: Vision (Q1), Target User, Glossary (from code), Features (current behavior from routes/controllers/Q1), Non-Goals (Q3), MVP Scope (exists=In, gaps=Out), Success Metrics (or "Not yet defined").
+Use `skills/spec/prd-template.md`. Sections: Vision (Q1), Target User, Glossary (from code), Features (current behavior from routes/controllers/Q1), Non-Goals (Q3), MVP Scope (exists=In, gaps=Out), Success Metrics (or "Not yet defined").
 
 Write to `docs/prd.md`.
 
@@ -50,7 +50,11 @@ Structure: What This Project Is (one-para), Docs (paths), Critical Rules (Q4+Q5+
 
 Write to root. If exists, merge (show diff).
 
-## Phase 6 — Done
+## Phase 6 — Verify
+
+Check every stated fact against the files: each path named in architecture.md exists, each version matches the manifest/lockfile, each route/feature in the PRD is in code. Fix and re-check until clean. List anything inferred rather than observed under a `Not verified:` line in the report.
+
+## Phase 7 — Done
 
 Report: "{N} FRs, {M} features in PRD. Tech stack + patterns in architecture. {N} rules + {M} footguns in CLAUDE.md.
 

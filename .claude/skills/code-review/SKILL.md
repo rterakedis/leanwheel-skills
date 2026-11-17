@@ -7,7 +7,10 @@ description: Review code changes adversarially. Use when the user says "review",
 
 **Goal:** Find real bugs, missing behavior, AC violations. Assume problems exist — your job is to find them. Zero findings requires explicit justification ("re-analyzed, clean because…"), not silence.
 
-**Independence (DD-75).** You did not write this diff, and you do not inherit the author's view of it. The diff and the story's contract are the evidence. The author's own account — the story's `## Dev Agent Record` (Debug Log, Completion Notes) — is read only *after* your passes, to check its claims (e.g. the recorded sabotage checks), never to decide what to look at. A claim the diff contradicts — a test that doesn't exist, a guard that isn't there — is a `patch` finding against the verification record (add the missing check, or correct the record), never a note. If you did write this diff in this same context (a flywheel's no-subagent fallback), say so in the report and omit `--standalone` from the ledger line.
+**Independence (DD-75).** You did not write this diff, and you do not inherit the author's view of it. The diff and the story's contract are the evidence.
+- The author's own account — the story's `## Dev Agent Record` (Debug Log, Completion Notes) — is read only *after* your passes, to check its claims (e.g. the recorded sabotage checks), never to decide what to look at.
+- A claim the diff contradicts — a test that doesn't exist, a guard that isn't there — is a `patch` finding against the verification record (add the missing check, or correct the record), never a note.
+- If you did write this diff in this same context (a flywheel's no-subagent fallback), say so in the report and omit `--standalone` from the ledger line.
 
 ## Step 1 — Find the Diff
 
@@ -24,7 +27,7 @@ If empty diff: stop. If >3000 lines: warn, offer to chunk by file.
 
 - If story file identified: read it up to its author record — `sed '/^## Dev Agent Record/q' {story}` — and leave the rest for after the passes (see Independence).
 - Read CLAUDE.md if exists.
-- **If `docs/setup/swift/` exists** (Apple platform project): read `docs/setup/swift/anti-patterns.md` and `docs/setup/swift/state-management.md` before beginning passes — use them as the rejection criteria for Pass A and Pass C. Also read `docs/setup/swift/core-data-cloudkit.md` if present and the diff touches the data model, persistence, or sync; `docs/setup/swift/demo-data-and-copy.md` if the diff touches seed/preview data or copy on a regulated surface; `docs/setup/swift/xcode-footguns.md` if the diff touches the `.xcodeproj`. Also read `docs/setup/swift/iphone-duo.md` if present and the diff touches layout geometry, toolbar/tab-bar construction, or sheet presentation; read `docs/setup/swift/ipados-specific.md` if present and the diff touches navigation, split view, or multi-window code; read `docs/setup/swift/macos-specific.md` if present and the diff touches menus, windows, settings, or toolbar code.
+- **If `docs/setup/swift/` exists** (Apple platform project): read [apple-guidance.md](apple-guidance.md) before beginning passes — the `docs/setup/swift/` rejection criteria for Pass A and Pass C, plus per-area reads.
 - **If `docs/setup/web/` exists** (web/SSG project) and the diff touches templates, markup, or styles: read `docs/setup/web/anti-patterns.md` and `docs/setup/web/css-design-system.md` — use them as rejection criteria.
 - **If the diff touches user-visible UI** and `docs/ux/DESIGN.md` exists: read its frontmatter token block (and the story's `### Design Contract` if present) — required input for Pass E.
 - Confirm: "Reviewing {N} files, {+/-lines}. Story context: {yes/no}."
@@ -60,7 +63,9 @@ Work each pass independently. Look for what's *missing* (absent behavior, unhand
 - Unchecked assumptions baked into the new code (e.g., "list is always non-empty")
 - Regression: does the change touch behavior relied on elsewhere?
 - **Serialization-shaped stories** (backup, export/import, sync, any serializer): round-trip tests must assert the at-risk fields **by name**, never entity counts, and the field set must have been enumerated against the live schema — a curated subset silently drops data every round-trip. Source of the rule: `create-story` → Behavior Contract.
-- **Untested change:** for each behavior change in the diff, name the test that goes red if it regresses. None named, and a test in the repo's own suite could catch it → MEDIUM `untested:` finding (the patch is the test, then register it via evals → BUILD). Not a gap when no concrete test could catch it — unreachable states, defensive branches, build/config plumbing CI already exercises.
+- **Untested change:** for each behavior change in the diff, name the test that goes red if it regresses.
+  - None named, and a test in the repo's own suite could catch it → MEDIUM `untested:` finding (the patch is the test, then register it via evals → BUILD).
+  - Not a gap when no concrete test could catch it — unreachable states, defensive branches, build/config plumbing CI already exercises.
 
 **Pass D: Acceptance Audit** (only if story loaded)
 - Each AC: implemented? fully? or only the happy path?
@@ -69,16 +74,7 @@ Work each pass independently. Look for what's *missing* (absent behavior, unhand
 - Files the story said would be touched that weren't (missing implementation)
 - Invariants left `[ ]` UNVERIFIED in `### Invariant Verification` — each is a finding
 
-**Pass E: Design Compliance** (only if the diff touches user-visible UI and `docs/ux/DESIGN.md` or a `### Design Contract` exists)
-- Hardcoded colors/spacing/type values where a DESIGN.md token exists (near-miss hex counts)
-- Required states from EXPERIENCE.md missing: empty, loading, error, offline
-- Dark mode: load-bearing surfaces missing the second appearance
-- Platform checklist: Apple — tap targets, Dynamic Type, safe areas, SF Symbols; web — semantic elements, focus visibility, `alt`, heading hierarchy, off-token `!important`/inline styles
-- New component that near-duplicates one in `docs/ux/components-built.md`
-- **Automation contract** (Apple projects with `docs/setup/swift/testability.md`): an interactive element or dynamic list row shipped with **no** `.accessibilityIdentifier`; an identifier that **differs from the name the story's Design Contract assigned** (HIGH — a silently renamed identifier breaks every flow, eval, and screenshot addressing it, and the break surfaces later as a red test in someone else's story); an identifier not matching `{feature}-{element}-{role}` kebab-case (MEDIUM); a **new screen with no deep-link route** (MEDIUM — unreachable by `/design-verify` and by every future flow). Skip on projects without the testability foundation — route those to `/swift-audit` instead of filing per-diff findings.
-- Unresolved findings in the story's `### Design Verification` section
-- **Never accept "the string/control is in the source" as evidence a UI change is reachable** — presence ≠ renders; require rendered evidence (see `dev-story` verification step).
-- **Dark patterns** (check the diff against EXPERIENCE.md's `## Engagement & Persuasion`, if present): pre-checked paid or consent opt-ins; smart defaults that pre-select the higher-cost/higher-commitment choice; fake or endowed progress indicators; countdown/urgency with no real deadline; guilt-decline (confirmshaming) copy; decoy pricing. Flag any lever in the diff that isn't backed by an honest entry in that section — shipping user-hostile behavior is HIGH severity (it erodes trust and is a support/churn liability, not just a style nit).
+**Pass E: Design Compliance** (only if the diff touches user-visible UI and `docs/ux/DESIGN.md` or a `### Design Contract` exists) — read [design-pass.md](design-pass.md) and apply every check (tokens, states, platform, automation contract, dark patterns).
 
 **Pass F: Over-Engineering** — hunt complexity and code that shouldn't exist (correctness/security belong to Passes A–D; do not duplicate them here). One tagged line per finding:
 - `delete:` — dead code or a speculative feature; replacement is nothing.
@@ -113,7 +109,7 @@ Anything failing a condition is `defer`, unchanged. Do not stretch the ceiling t
 - `MEDIUM` — incorrect behavior under reachable conditions, missing error handling, IDOR
 - `LOW` — edge case with low probability, best-practice gap, missing guard on unlikely path
 
-**Pass F (over-engineering) findings** route as `patch` when the cut is clear (usually LOW/MEDIUM), `fix-now` when the cut is clear but outside the ACs and within the ceiling below, or `defer` / `decision-needed` when removing code needs a judgment call. They are cleanups, not correctness bugs — never HIGH.
+**Pass F (over-engineering) findings** route as `patch` when the cut is clear (usually LOW/MEDIUM), `fix-now` when the cut is clear but outside the ACs and within the ceiling above, or `defer` / `decision-needed` when removing code needs a judgment call. They are cleanups, not correctness bugs — never HIGH.
 
 Merge only findings with the same claim *and* the same required action. Keep each `dismiss` as one line — a false positive the reader can audit, never a silent drop. If zero remain: write `Clean review — no patches, fix-nows, or deferred items.` and justify briefly why each pass came up empty.
 
@@ -136,9 +132,17 @@ Every `fix-now` is recorded here even though it's already applied — the line i
 
 **Auto-patch:** Apply immediately, mark `[x]`. If can't auto-apply, leave `[ ]`. Apply `fix-now` items the same way — but if one turns out to need more than the ceiling allows, revert it and re-triage as `defer`.
 
-**Verify green:** If any patch or fix-now changed code and a toolchain is present, **run a real build + test** before marking the review done (quiet invocation + `tee` to `.leanwheel/logs/`, per dev-story → Build & Test Gate or the project's `## Quiet commands`). A patch is only resolved once the toolchain confirms it compiles and tests stay green — never close a review on a fix verified by reading alone. If red, fix and re-run, or leave the finding `[ ]` and set Status `in-progress`. If the re-run is **blocked** (toolchain busy, simulator held by another session, environment failure), the review is not done: set Status `in-progress` and report the blocker — a blocked verify is treated exactly like a red one. Skip only on a clean review or when no toolchain exists (state which). If `docs/evals/` exists, also run `bash scripts/evals.sh --epic {n} --quiet` (per evals → RUN) — a failing eval is a regression and blocks closing just like a red build.
+**Verify green:** If any patch or fix-now changed code and a toolchain is present, **run a real build + test** before marking the review done. A patch is only resolved once the toolchain confirms it compiles and tests stay green — never close a review on a fix verified by reading alone.
+1. Run quiet + `tee` to `.leanwheel/logs/`, per dev-story → Build & Test Gate or the project's `## Quiet commands`.
+2. Red → fix and re-run, or leave the finding `[ ]` and set Status `in-progress`.
+3. **Blocked** (toolchain busy, simulator held by another session, environment failure) → the review is not done: set Status `in-progress` and report the blocker — a blocked verify is treated exactly like a red one.
+4. If `docs/evals/` exists, also run `bash scripts/evals.sh --epic {n} --quiet` (per evals → RUN) — a failing eval is a regression and blocks closing just like a red build.
+5. Skip only on a clean review or when no toolchain exists (state which).
 
-**String Catalog (Apple projects, `git ls-files '*.xcstrings'` non-empty, diff touches `.swift` or `.xcstrings`):** execute **CHECK** from `skills/sync-string-catalog/SKILL.md` — independent of whether patches were applied, since the author's gate may have been `unavailable`. `drift` is a MEDIUM `patch` finding (`catalog stale: {keys}`) resolved by **SYNC** (commit the catalog on the branch, re-check `in-sync`); `unavailable` is **blocked** under the verify-green gate rule — report `CATALOG: unavailable — {why}`, never silently pass. Record the `CATALOG:` line in `### Review Findings`.
+**String Catalog** (Apple projects: `git ls-files '*.xcstrings'` non-empty, diff touches `.swift` or `.xcstrings`): execute **CHECK** from `skills/sync-string-catalog/SKILL.md` — independent of whether patches were applied, since the author's gate may have been `unavailable`.
+- `drift` → a MEDIUM `patch` finding (`catalog stale: {keys}`) resolved by **SYNC** (commit the catalog on the branch, re-check `in-sync`).
+- `unavailable` → **blocked** under the verify-green gate rule — report `CATALOG: unavailable — {why}`, never silently pass.
+- Record the `CATALOG:` line in `### Review Findings`.
 
 **A new gate is not done until it has been shown to fail** — scoped to tests, evals, and assertions written during this review's patches. Apply dev-story → Build & Test Gate's fail-first rule (`scripts/sabotage.sh --name {TestName} -- {filtered gate cmd}` preferred; record the discriminating check in Completion Notes). A gate only ever observed green is unverified (DD-11).
 
@@ -150,39 +154,26 @@ RUBRIC: correctness PASS · edge-cases PASS · ac-coverage PASS · design PASS �
 
 The `simplicity` dimension scores Pass F (it's just reporting a pass already run — no extra model calls). A dimension is FAIL if any unresolved `[ ]` finding maps to it; GATE is PASS only when every applicable dimension is PASS. The gate feeds the flywheel checkpoint and the ledger.
 
-**Follow-up review score (arithmetic, no judgment):** `FOLLOW-UP REVIEW: yes` when any applied patch or fix-now resolved a HIGH finding, or `3 × MEDIUM + LOW ≥ 5` across them; else `no`. Append it beside the rubric line. Patch code has no independent reviewer until a second pass reads it (DD-75); the flywheels spawn one round on the patch diff when `yes`, so before applying the first patch record `PATCH BASE: $(git add -A && git write-tree)` — the follow-up reviews `git diff {PATCH BASE}` only (DD-80). A follow-up pass never scores a further follow-up.
+**Follow-up review score (arithmetic, no judgment):** append it beside the rubric line.
+- `FOLLOW-UP REVIEW: yes` when any applied patch or fix-now resolved a HIGH finding, or `3 × MEDIUM + LOW ≥ 5` across them; else `no`.
+- Patch code has no independent reviewer until a second pass reads it (DD-75); the flywheels spawn one round on the patch diff when `yes`. So before applying the first patch record `PATCH BASE: $(git add -A && git write-tree)` — the follow-up reviews `git diff {PATCH BASE}` only (DD-80).
+- A follow-up pass never scores a further follow-up.
 
 **Verify-green gate rule:** GATE PASS additionally requires that Verify green actually ran green this session (or was legitimately skipped: no code changed, or no toolchain — state which). A red or blocked verify caps the outcome at Status `in-progress` — there is no qualified PASS ("PASS pending verify") in any report field or ledger line; `scripts/ledger.sh` refuses one mechanically.
 
 **Pull deferred forward:** If any `[ ] [Defer]`, execute **LOG-AND-SCHEDULE** from `skills/deferred/SKILL.md` for each deferred item (title = finding title, detail = finding detail, source = file:line). `[Fix-Now]` items never go to the log — they're already fixed, and that intake rejects them.
 
-**Update epic context:** Before updating status, check for discoveries made during review or fix application that future stories/epics should know about. Look for:
-- Constraints or invariants uncovered while fixing bugs
-- Schema, API, or integration details that differed from assumptions
-- Patterns established or broken during patches
-- Any "we learned X the hard way" that isn't obvious from the code
-
-If a story file was loaded, identify its epic (e.g., `epic-2` from `epic-2-story-3.md`). Check whether `docs/epics/epic-<n>-context.md` exists. If discoveries exist, append them under a `## Story {id} Learnings` heading. If no discoveries worth capturing, skip silently. (These project-canonical learnings are promoted into `docs/architecture.md` at the epic boundary by `/epic-flywheel`.)
-
-If the context file does **not** exist, do not create it — a stub newer than `prd.md`/`architecture.md` would satisfy create-story's timestamp check and silently replace the full distillation with an empty file. Instead surface `EPIC CONTEXT MISSING: docs/epics/epic-<n>-context.md` in the review output so the orchestrator/user regenerates it via create-story's Generate Cache section.
+**Update epic context:** before updating status, if a story file was loaded, identify its epic (e.g., `epic-2` from `epic-2-story-3.md`) and check whether `docs/epics/epic-<n>-context.md` exists.
+- Exists → read [epic-context-learnings.md](epic-context-learnings.md) and append any discoveries as `## Story {id} Learnings`; skip silently if none.
+- Missing → do not create it — a stub newer than `prd.md`/`architecture.md` would satisfy create-story's timestamp check and silently replace the full distillation with an empty file. Instead surface `EPIC CONTEXT MISSING: docs/epics/epic-<n>-context.md` in the review output so the orchestrator/user regenerates it via create-story's Generate Cache section.
 
 **Flag guidance drift:** If, while using `docs/setup/swift/` or `docs/setup/web/` as rejection criteria (Step 2), you found that the *guidance itself* is wrong, stale, or contradicted by what the codebase consistently and intentionally does (not a one-off bug — that's a finding), execute **DRIFT** from `skills/docs-sync/SKILL.md` with the contradiction. It emits a `/refresh-swift|web` advisory and never mutates `docs/setup/*` (external-sourced canon). Skip silently if the guidance held.
 
-**Update component inventory:** If the diff introduced a new reusable UI component (a view/element designed to be used in more than one place), append a row to `docs/ux/components-built.md` — create the file with this header if missing:
-
-```markdown
-# Components Built
-*Auto-maintained by /code-review. /create-story injects this into UI stories — reuse these, never create near-duplicates.*
-
-| Component | File | Purpose | Variants/Props |
-|---|---|---|---|
-```
-
-One-off layout subviews don't qualify; only components future stories should reuse. Skip silently if no new reusable component shipped.
+**Update component inventory:** If the diff introduced a new reusable UI component, read [component-inventory.md](component-inventory.md) and append its row to `docs/ux/components-built.md`. Skip silently if no new reusable component shipped.
 
 **Ledger:** Append one `code-review` line via `scripts/ledger.sh` (never hand-write the JSON — the script owns the schema, normalizes the model name, stamps the timestamp, and no-ops if `docs/metrics/` is absent):
 `bash scripts/ledger.sh code-review --story {id} --model {model} --build-test green|red|blocked|n/a --rubric-gate PASS|FAIL|n/a --evals P/T --patched {n} --decisions {n} --deferred {n} [--standalone] [--notes "≤300 chars"]`
-Pass `--standalone` for every review except a same-context one (see Independence). Notes are a one-line pointer — review detail lives in `### Review Findings`, not the ledger. The script enforces the verify-green gate rule below and refuses a qualified PASS.
+Pass `--standalone` for every review except a same-context one (see Independence). Notes are a one-line pointer — review detail lives in `### Review Findings`, not the ledger. The script enforces the verify-green gate rule above and refuses a qualified PASS.
 
 **Update status** (in the YAML frontmatter — the source of truth; never as a `**Status:**` body line):
 - All resolved: `status: done` → **CLOSE-ISSUE**

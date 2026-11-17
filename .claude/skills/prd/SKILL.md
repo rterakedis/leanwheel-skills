@@ -1,6 +1,6 @@
 ---
 name: prd
-description: Create, update, or validate a PRD. Use when the user wants to produce, edit, or check a PRD.
+description: Alias for /spec with target prd, kept so the /prd slash command still works. The PRD create, update, and validate flow lives in the spec skill.
 ---
 
 # PRD (alias)

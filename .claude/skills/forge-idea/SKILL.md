@@ -1,6 +1,6 @@
 ---
 name: forge-idea
-description: Adversarially pressure-test a formed idea via persona cross-examination until it Hardens, gets Killed, or becomes Clearer. Use when the user wants to stress-test, pressure-test, poke holes in, or "forge" an idea — invocable standalone or after writing a brief.
+description: Alias for /ideate, kept so the /forge-idea slash command still works. The adversarial pressure-test of an idea now runs inside the ideate skill.
 ---
 
 # Forge Idea (alias)

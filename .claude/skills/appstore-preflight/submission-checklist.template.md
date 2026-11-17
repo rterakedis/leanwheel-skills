@@ -3,14 +3,14 @@
 ## Account & Legal (one-time)
 - [ ] Apple Developer Program enrollment active (individual name vs org: seller name is public)
 - [ ] Paid Applications Agreement + banking + tax forms complete — REQUIRED BEFORE any IAP/paid app; products won't even load in sandbox without it
-- [ ] EU DSA trader status declared & verified — required to distribute in the EU (since Feb 2025); if monetized, your address/phone/email become PUBLIC on the EU product page (set up a virtual address/VoIP first, or exclude EU)
+- [ ] EU DSA trader status declared & verified — required to distribute in the EU; if monetized, your address/phone/email become PUBLIC on the EU product page (set up a virtual address/VoIP first, or exclude EU)
 - [ ] US encryption self-classification report (annual, by Feb 1) if using non-exempt crypto — consult counsel; France declaration if distributing non-exempt crypto there
 
 ## App Record (App Store Connect)
 - [ ] Bundle ID registered as explicit App ID and matches Xcode — IMMUTABLE after first upload
 - [ ] App name (≤30 chars, unique store-wide), subtitle (≤30), primary + secondary category
-- [ ] Age rating questionnaire — new 2025 system (4+/9+/13+/16+/18+) must be completed or updates are blocked (deadline was Jan 31, 2026)
-- [ ] ⚠️VOLATILE: Social-media capability question added to the age-rating questionnaire July 2026 (places the app in the Time Allowance category for Social Media); answering it becomes **required for new versions/updates and notarization starting Sept 2026** — answer honestly, don't skip
+- [ ] Age rating questionnaire — current system (4+/9+/13+/16+/18+) must be completed or updates are blocked
+- [ ] ⚠️VOLATILE: Social-media capability question in the age-rating questionnaire (places the app in the Time Allowance category for Social Media) is **required for new versions/updates and notarization** — answer honestly, don't skip
 - [ ] Content rights declaration answered honestly (third-party content?)
 - [ ] Pricing & availability set (base storefront + price; review region list vs DSA/France constraints)
 - [ ] Availability on Apple silicon Macs and Apple Vision Pro decided (iPhone/iPad apps are offered there by default; opt out in App Store Connect if touch-, camera- or navigation-dependent)

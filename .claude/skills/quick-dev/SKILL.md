@@ -18,14 +18,14 @@ description: Implement a one-off feature, bugfix, or change without the full epi
 
 ## Phase 1 — Scope Check
 
-Single goal = one deliverable (cross-layer cross-layer work OK if serving one goal).
+Single goal = one deliverable (cross-layer work OK if serving one goal).
 Multi-goal = split into separate runs.
 
 If multi-goal, ask which to do first.
 
 ## Phase 2 — Write the Spec
 
-Write to `docs/specs/{slug}.md` using template. Rules:
+Write to `docs/specs/{slug}.md` using [spec-template.md](spec-template.md). Rules:
 - Intent frozen after approval
 - Boundaries (Always/Ask-First/Never) drive implementation
 - I/O matrix optional (include only if needed)
@@ -44,7 +44,7 @@ For each task:
 
 Stop only if: Ask-First boundary triggered, dependency missing, or requires out-of-scope changes risking breakage.
 
-Run verification commands after all tasks done.
+**Verify by running** (after all tasks): run the project's build + tests per dev-story → Build & Test Gate; if `docs/evals/` exists, also `bash scripts/evals.sh --quiet` (a failing case is a regression). Red = not done: read the output, fix, re-run until green. After 3 consecutive red runs, stop and report the failing output — don't keep retrying. No toolchain: say so and give the command a human should run; never claim green unrun.
 
 Security pass (conditional): If intent/files touch auth/data-access/api/secrets/llm/payments/file-upload, run matching categories from `skills/security-review/SKILL.md`. Call **LOG-AND-SCHEDULE** for critical/high findings.
 

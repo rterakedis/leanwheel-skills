@@ -1,6 +1,6 @@
 ---
 name: story-flywheel
-description: Run the full story development loop (create → dev → review) repeatedly until the epic is complete. Use when the user says "story flywheel", "run flywheel", or "run the loop".
+description: Runs the per-story loop of create story, dev story, and independent code review in isolated subagents, with a human checkpoint after each story, repeating until the epic is complete or halted. Use to drive an epic story by story, or when the user says "story flywheel", "run flywheel", or "run the loop".
 ---
 
 # Story Flywheel Skill
@@ -9,18 +9,22 @@ description: Run the full story development loop (create → dev → review) rep
 
 **Iron rule:** Never start the next story until the user has committed and given explicit go-ahead.
 
+**Branch files** — read each only when its trigger is reached, and re-read it then rather than relying on memory (a long epic compacts this context):
+- Subagents unavailable (Activation step 4) → [inline-fallback.md](inline-fallback.md)
+- User pre-authorizes auto-continue → [auto-pilot.md](auto-pilot.md)
+- No story left in the epic (Phase 5) → [epic-boundary.md](epic-boundary.md)
+
 ---
 
 ## Activation
 
 1. Determine which epic to run. Check in order:
    - Explicit argument: `/story-flywheel {epic_num}` or `/story-flywheel {epic_num}-{story_num}`
-   - Active milestone with `in-progress` or `review` issues (resume in flight)
+   - Active milestone with `in-progress` or `review` issues (resume in flight — see Resuming Mid-Epic)
    - Lowest epic-numbered milestone that still has open issues (see epic discovery below)
    - Ask: "Which epic should I run the flywheel on?"
 
-   **Epic discovery — sort by epic number in title, not by GitHub milestone ID:**
-   GitHub milestone IDs are assigned in creation order and do not reflect intentional epic sequence. Epics may be reordered or inserted later, so always derive sequence from the number embedded in the milestone title (e.g., `"Epic 3 — ..."` → epic 3).
+   **Epic discovery — sort by epic number in title, not by GitHub milestone ID.** Milestone IDs follow creation order; epics may be reordered or inserted later, so derive sequence from the number in the milestone title (e.g., `"Epic 3 — ..."` → epic 3).
    ```bash
    # List all open milestones, extract epic number from title, sort by it, pick lowest
    gh api repos/{owner}/{repo}/milestones \
@@ -42,18 +46,18 @@ description: Run the full story development loop (create → dev → review) rep
 
 3. Announce: "Starting flywheel for Epic {N}: {title}. {X} stories remaining. First up: {epic}.{story} — {story_title}."
 
-4. **Determine delegation mode + model routing.** Set `swift_project = true` if `docs/setup/swift/` exists OR an `.xcodeproj` / `.xcworkspace` / `Package.swift` is present in the repo; otherwise `false`.
-
-   Check whether the leanwheel subagents are available (the plugin ships `lw-story-creator`, `lw-story-developer`, `lw-story-reviewer` as agent types).
+4. **Determine delegation mode + model routing.**
+   - Set `swift_project = true` if `docs/setup/swift/` exists OR an `.xcodeproj` / `.xcworkspace` / `Package.swift` is present in the repo; otherwise `false`.
+   - Check whether the leanwheel subagents are available (the plugin ships `lw-story-creator`, `lw-story-developer`, `lw-story-reviewer` as agent types).
    - **Subagents available (default, preferred):** run in **subagent-delegation mode** — each phase is spawned as its subagent via the Agent tool, with the model selected automatically (see Subagent Delegation & Model Routing). No manual model switching. Announce once:
      > Running the flywheel with subagent delegation — each phase runs in its own context with its model chosen automatically (Sonnet for create/review{; Opus for dev-story since this is a Swift project | ; Sonnet for dev-story too, per swift_project}). You'll only be asked to weigh in at clarifications, the per-story checkpoint, and epic boundaries.
-   - **Subagents unavailable (fallback):** run every phase inline on the current session model — no mid-session model switching (see Fallback below).
+   - **Subagents unavailable (fallback):** run every phase inline on the current session model — no mid-session model switching. Read [inline-fallback.md](inline-fallback.md) now.
 
 ---
 
 ## Subagent Delegation & Model Routing
 
-Default mode. Each phase is delegated to its subagent via the Agent tool. Two wins on the Pro plan: **model routing is automatic** (no `/model` dance), and **context is isolated** — each phase's heavy doc/code reading happens in a throwaway subagent window, so this orchestrating thread only accumulates each subagent's short structured report, not three phases of file reads.
+Default mode. Each phase is delegated to its subagent via the Agent tool: **model routing is automatic** and **context is isolated** — this thread accumulates only each subagent's short structured report.
 
 Per-phase routing (Conserve-Opus baseline, dynamic Swift exception; Opus is also the **cost ceiling** — a Fable session is never inherited by a phase spawn):
 
@@ -63,7 +67,11 @@ Per-phase routing (Conserve-Opus baseline, dynamic Swift exception; Opus is also
 | 2 — Dev Story | `lw-story-developer` | **Sonnet** (pinned) | **Opus** (override) | The hard phase gets the expert, not the specialist: Opus caps per-story cost while still clearing the Build & Test Gate first-try. Empirical — DD-20; the ledger's `bt_iterations` by model (reported by `/retrospective`) is the evidence for changing this. |
 | 3 — Code Review | `lw-story-reviewer` | Sonnet (pinned) | Sonnet (pinned) | Adversarial reading in a fresh context, every story (DD-75); the Build & Test Gate is the correctness backstop, not the model. |
 
-**How to set the model:** the subagent defs pin `model: sonnet`. Pass a per-spawn `model` override on the Agent call **only** for Phase 2 when `swift_project = true` (`model: opus`) — never `fable` (usage-tier ceiling: flywheel throughput on Fable burns a week's budget in one epic). If the user opts out for the run ("conserve everything", "stay on Sonnet"), drop the Opus override too and note it. Never ask the user to `/model`-switch mid-run — it busts the prompt cache (DD-20).
+**How to set the model:**
+- The subagent defs pin `model: sonnet`.
+- Pass a per-spawn `model` override on the Agent call **only** for Phase 2 when `swift_project = true` (`model: opus`) — never `fable` (usage-tier ceiling: flywheel throughput on Fable burns a week's budget in one epic).
+- If the user opts out for the run ("conserve everything", "stay on Sonnet"), drop the Opus override too and note it.
+- Never ask the user to `/model`-switch mid-run — it busts the prompt cache (DD-20).
 
 **Effort routing (second axis, static):** set only via `effort:` in the agent defs — there is no per-spawn override. Every runner pins it (creator `medium`, developer and reviewer `high`, `lw-docs-sync` `low`) so a session's effort never leaks into a phase. Never step the developer down for budget; that is the model axis's job (DD-73).
 
@@ -78,44 +86,46 @@ Agent tool call:
 
 **Never hand a subagent a command known to hang or flake** (e.g. a flaky full test run) — give it the targeted/known-good invocation. An agent handed a hanging command spawns a watcher and early-returns, orphaning its work.
 
-Wait for the subagent's report, then act on its structured fields. Do **not** re-do the phase's work in this thread — the subagent owns it. If a phase ends with no Agent call in the transcript (only narration like "the creator subagent will handle this"), the phase did not run — go back and make the call. Inline execution is legal only in the documented fallback when subagents are unavailable.
+Wait for the subagent's report, then act on its structured fields:
+- Do **not** re-do the phase's work in this thread — the subagent owns it.
+- If a phase ends with no Agent call in the transcript (only narration like "the creator subagent will handle this"), the phase did not run — go back and make the call.
+- Inline execution is legal only in the documented fallback when subagents are unavailable.
 
-**A report missing its required fields is a non-return.** Each subagent owes a fixed set of report fields — `STORY FILE`/`EPIC CONTEXT` for the creator, `STATUS`/`BUILD & TEST` for the developer, the `RUBRIC` line and `STATUS` for the reviewer (see each agent def's "Report back"). If a subagent's final message is missing any of these — including a message that only narrates what it's about to do next, e.g. "I'll stop polling now and wait for the test suite to notify me" — the phase has **not** returned, no matter how long it ran. Resume it with SendMessage rather than proceeding: ask it to finish and emit the missing fields. Never advance to the next phase, the checkpoint, or a commit on a narration-only message standing in for a report.
+**A report missing its required fields is a non-return.**
+- Each subagent owes a fixed set of report fields — `STORY FILE`/`EPIC CONTEXT` for the creator, `STATUS`/`BUILD & TEST` for the developer, the `RUBRIC` line and `STATUS` for the reviewer (see each agent def's "Report back").
+- If a subagent's final message is missing any of these — including a message that only narrates what it's about to do next, e.g. "I'll stop polling now and wait for the test suite to notify me" — the phase has **not** returned, no matter how long it ran.
+- Resume it with SendMessage rather than proceeding: ask it to finish and emit the missing fields.
+- Never advance to the next phase, the checkpoint, or a commit on a narration-only message standing in for a report.
 
-**Wait loops key on a specific PID or artifact, never on "no matching process anywhere."** When a subagent (or this thread) waits on a long-running command — a full test suite, a build — poll the specific PID it started or a completion marker/artifact that command produces. Never a condition like "no process of this kind is running" (e.g. a `ps aux | grep xcodebuild` emptiness check): the orchestrator or a sibling story may run the same tool concurrently, so that condition can stay permanently false and the wait never ends.
-
----
-
-## Fallback: subagents unavailable
-
-Run every phase inline on the **current session model**. Never prompt a `/model` or `/effort` switch — it busts the prompt cache, so a per-phase Sonnet→Opus→Sonnet dance costs more than it saves. If the user wants the Swift dev phase on a stronger model, say once at activation: "start the flywheel in a fresh session on {model} for this epic", and proceed on the current model if they decline. Inline phases execute `skills/create-story/SKILL.md`, `skills/dev-story/SKILL.md`, and `skills/code-review/SKILL.md` directly; the checkpoint, gates, and report fields are unchanged.
+**Wait loops key on a specific PID or artifact, never on "no matching process anywhere."**
+- When a subagent (or this thread) waits on a long-running command — a full test suite, a build — poll the specific PID it started or a completion marker/artifact that command produces.
+- Never a condition like "no process of this kind is running" (e.g. a `ps aux | grep xcodebuild` emptiness check): the orchestrator or a sibling story may run the same tool concurrently, so that condition can stay permanently false and the wait never ends.
 
 ---
 
 ## The Loop
 
-Repeat until the epic is complete (see **Exit Conditions**):
+Repeat until the epic is complete (see **Exit Conditions**). In fallback mode, each phase's inline equivalent is in [inline-fallback.md](inline-fallback.md).
 
 ### Phase 1 — Create Story
 
-**Subagent mode:** spawn `lw-story-creator` (default model: Sonnet) via the Agent tool. Prompt it with the story identifier (`{epic}.{story}`) so create-story skips identification.
-**Fallback mode:** execute `skills/create-story/SKILL.md` inline on the session model.
+Spawn `lw-story-creator` (default model: Sonnet) via the Agent tool. Prompt it with the story identifier (`{epic}.{story}`) so create-story skips identification.
 
-- Wait for the story file to be written and GitHub issue updated.
-- From the subagent report, capture `STORY FILE`, `EPIC CONTEXT`, `COMPLEXITY`, `CLARIFICATIONS NEEDED`, `PREREQUISITES`, `DESIGN GAP`.
-- **Epic context check (zero-token):** confirm `docs/epics/epic-{N}-context.md` exists on disk (`EPIC CONTEXT` says whether it was generated or reused this phase). If missing, re-spawn the creator with an explicit prompt to run create-story's **Generate Cache** section before proceeding — the cache is a Phase-1 deliverable; every later story in the epic depends on it for token economy and the `## Prior Story Learnings` channel.
-- **Clarification surfacing:** if the report lists material clarifications (the subagent assumed defaults rather than guessing silently), present them to the user now as a human-decision pause before Phase 2 — this is the Clarification Gate surfacing at the orchestration layer. Record the user's answers back into the story file (or confirm the assumed defaults) before proceeding.
-- Do not proceed to Phase 2 until the story file path is in hand and clarifications are resolved.
+1. Wait for the story file to be written and GitHub issue updated.
+2. From the subagent report, capture `STORY FILE`, `EPIC CONTEXT`, `COMPLEXITY`, `CLARIFICATIONS NEEDED`, `PREREQUISITES`, `DESIGN GAP`.
+3. **Epic context check (zero-token):** confirm `docs/epics/epic-{N}-context.md` exists on disk (`EPIC CONTEXT` says whether it was generated or reused this phase). If missing, re-spawn the creator with an explicit prompt to run create-story's **Generate Cache** section before proceeding — the cache is a Phase-1 deliverable every later story depends on (token economy, `## Prior Story Learnings`).
+4. **Clarification surfacing:** if the report lists material clarifications (defaults the subagent assumed), present them to the user now as a human-decision pause before Phase 2 (the Clarification Gate at the orchestration layer). Record the user's answers back into the story file (or confirm the assumed defaults) before proceeding.
+5. Do not proceed to Phase 2 until the story file path is in hand and clarifications are resolved.
 
 ### Phase 2 — Dev Story
 
-**Probe (zero-token):** if the project CLAUDE.md has a `## Probe` section, run its command first. Non-zero exit = environment fault: report it and pause the flywheel — no spawn, no ledger line, no story HALT (DD-80).
-**Subagent mode:** spawn `lw-story-developer` via the Agent tool with the story file path. Pass `model: opus` **only if `swift_project`** (otherwise the pinned Sonnet). Instruct it to run the full dev-story workflow including the Build & Test Gate, the evals RUN via `scripts/evals.sh` (if `docs/evals/` exists), and invariant/design verification. It stops at `review`; it does not review its own diff.
-**Fallback mode:** execute `skills/dev-story/SKILL.md` inline on the session model.
-
-- From the report capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`, `REVIEW HANDOFF`.
-- **Operational doc sync (cheap, orchestrator-owned):** the developer does **not** run docs-sync (it would land on the dev model). If the report's `INFRA TOUCHED` is `yes`, spawn **`lw-docs-sync`** (Haiku) via the Agent tool with the story file path and op `OPERATIONAL`; capture its `DOCS UPDATED` return for the checkpoint/ledger. Skip the spawn entirely when `INFRA TOUCHED: no` (zero cost). Fallback if subagents are unavailable: execute the docs-sync OPERATIONAL op inline.
-- Do not proceed until `STATUS` is `review`/`done` (or HALT).
+1. **Probe (zero-token):** if the project CLAUDE.md has a `## Probe` section, run its command first. Non-zero exit = environment fault: report it and pause the flywheel — no spawn, no ledger line, no story HALT (DD-80).
+2. Spawn `lw-story-developer` via the Agent tool with the story file path. Pass `model: opus` **only if `swift_project`** (otherwise the pinned Sonnet). Instruct it to run the full dev-story workflow including the Build & Test Gate, the evals RUN via `scripts/evals.sh` (if `docs/evals/` exists), and invariant/design verification. It stops at `review`; it does not review its own diff.
+3. From the report capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`, `REVIEW HANDOFF`.
+4. **Operational doc sync (cheap, orchestrator-owned):** the developer does **not** run docs-sync (it would land on the dev model).
+   - `INFRA TOUCHED: yes` → spawn **`lw-docs-sync`** (Haiku) via the Agent tool with the story file path and op `OPERATIONAL`; capture its `DOCS UPDATED` return for the checkpoint/ledger.
+   - `INFRA TOUCHED: no` → skip the spawn entirely (zero cost).
+5. Do not proceed until `STATUS` is `review`/`done` (or HALT).
 
 **On HALT:** Stop the flywheel. Report: "Flywheel paused — dev-story halted on {epic}.{story}: {reason}. Resolve the blocker and resume with `/story-flywheel {epic}.{story}`."
 
@@ -126,7 +136,7 @@ Repeat until the epic is complete (see **Exit Conditions**):
 - It runs every code-review pass, emits the **SCORE rubric line**, auto-patches `patch` findings, applies `fix-now` findings within the ceiling, logs `defer` via the deferred skill, and **re-verifies green**.
 - `decision-needed` findings surface in its report — present them to the user, then send the answers back to the same reviewer to apply.
 - **Follow-up round (DD-80):** if the report says `FOLLOW-UP REVIEW: yes`, spawn `lw-story-reviewer` once more with a `REVIEW HANDOFF` whose base is the report's `PATCH BASE` — it reviews the patch diff only. One round; its own follow-up flag is ignored.
-- **Fallback mode** (no subagents): execute `skills/code-review/SKILL.md` inline on the session model. That review shares the author's context, so record `review=inline-fallback` in the roll-up and say so at the checkpoint.
+- **Fallback mode** (no subagents): the inline review shares the author's context, so record `review=inline-fallback` in the roll-up and say so at the checkpoint ([inline-fallback.md](inline-fallback.md)).
 
 **On unresolvable patches:** Do not proceed to Phase 4. Leave story status `in-progress`, report which items need attention, and stop the flywheel. Resume with `/story-flywheel {epic}.{story}`.
 
@@ -200,32 +210,7 @@ After "continue":
 
 ### Phase 5b — Epic Boundary Gate
 
-All stories in the current epic are done. Before starting a new epic, present:
-
-```
-─────────────────────────────────────────────
-EPIC {N} COMPLETE — {X} stories done
-─────────────────────────────────────────────
-All stories in Epic {N} are implemented and reviewed.
-
-What would you like to do next?
-  • "retro"     — run a retrospective for Epic {N} before continuing
-  • "continue"  — skip retrospective and start Epic {N+1}
-  • "stop"      — end the flywheel here
-─────────────────────────────────────────────
-```
-
-**Wait for user response.**
-
-- **"retro"**: Execute `skills/retrospective/SKILL.md` for the completed epic. After it finishes, prompt again:
-  ```
-  Retrospective complete. Ready to start Epic {N+1}: {title}.
-    • "continue" — start the flywheel on Epic {N+1}
-    • "stop"     — end the flywheel here
-  ```
-  Wait for response, then act accordingly.
-- **"continue"**: Identify the first incomplete story in the next epic and return to **Phase 1** with that story.
-- **"stop"**: Exit gracefully (see **User-Stopped**).
+All stories in the current epic are done. Read [epic-boundary.md](epic-boundary.md) now and follow it: it presents the `EPIC {N} COMPLETE` prompt (retro / continue / stop) and **waits for the user** before starting a new epic.
 
 ---
 
@@ -233,19 +218,7 @@ What would you like to do next?
 
 ### Epic Complete
 
-All epics and stories are done (no remaining open issues or stories in `docs/epics.md`):
-
-```
-─────────────────────────────────────────────
-ALL EPICS COMPLETE
-─────────────────────────────────────────────
-Every story across all epics is implemented and reviewed.
-
-Next steps:
-  • Run /retrospective if you haven't already
-  • Check /status for overall project state
-─────────────────────────────────────────────
-```
+All epics and stories are done (no remaining open issues or stories in `docs/epics.md`): print the `ALL EPICS COMPLETE` message in [epic-boundary.md](epic-boundary.md).
 
 ### User-Stopped
 
@@ -273,8 +246,8 @@ Reported inline as described in Phase 2. Flywheel does not auto-resume.
 
 ## Notes
 
-- **Auto-pilot.** If the user pre-authorizes "auto-continue on clean stories", a story with no `UNRESOLVED` items, a PASS gate, and a green Build & Test advances without waiting for "continue" (commits only if also pre-authorized). Unresolved items, a FAIL gate, a red build, or a HALT always stop for the human. Default: pause every checkpoint. `/epic-flywheel` makes this the default within an epic.
+- **Auto-pilot.** Default: pause every checkpoint. If the user pre-authorizes "auto-continue on clean stories", read [auto-pilot.md](auto-pilot.md).
 - The flywheel does not commit unless the user pre-authorizes it. You own the commit gate between stories.
 - GitHub tracking is handled by the sub-skills (create-story, dev-story, code-review) — flywheel does not call tracking ops directly.
 - If GitHub is unavailable, flywheel falls back to `docs/epics.md` Status fields for all story discovery.
-- Deferred items are logged and scheduled by `skills/deferred/SKILL.md` (called via code-review). SCHEDULE tries SLOT-INTO-BACKLOG first — injecting the item as an AC on the best matching not-started backlog story — and only creates a new remediation story if no suitable slot exists. The flywheel surfaces deferred items in the Phase 4 checkpoint with their D-ID and the story they were slotted into or created as.
+- Deferred items are logged and scheduled by `skills/deferred/SKILL.md` (called via code-review): SCHEDULE tries SLOT-INTO-BACKLOG first (an AC on the best matching not-started backlog story), and only creates a new remediation story if no suitable slot exists. The Phase 4 checkpoint shows each D-ID and the story it was slotted into or created as.

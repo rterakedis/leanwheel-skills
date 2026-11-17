@@ -1,6 +1,6 @@
 ---
 name: ux
-description: Plan UX design and produce DESIGN.md + EXPERIENCE.md. Use when the user wants to create, update, or validate UX/design specs.
+description: Alias for /spec with target ux, kept so the /ux slash command still works. The DESIGN.md and EXPERIENCE.md flow lives in the spec skill.
 ---
 
 # UX (alias)

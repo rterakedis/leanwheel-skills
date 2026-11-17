@@ -2,6 +2,16 @@
 
 <!-- FIELD: DD-70 — learned from a first-submission Guideline 2.1 "Information Needed" rejection on a SwiftUI + CloudKit + StoreKit app, Sept 2026. Protected from refresh passes (DD-66): append / version-scope / retire-with-citation only. -->
 
+## Contents
+- The eight items (number the notes to match the letter)
+- Mechanics Apple doesn't advertise
+- Claims are verified on a device, not from source
+- Recording the video
+- TestFlight purchases don't use the Sandbox Account
+- Resubmission and reply mechanics
+- Screens automation can't reach need a manual pass
+- Appended from Apple's App Review help (Nov 2026)
+
 A **new app** almost always gets the Guideline 2.1 *Information Needed — New App Submission*
 letter first. Answering it after rejection costs a full review cycle (about two weeks). Every
 item it asks for is known before submission, so preflight writes the answer up front.

@@ -1,6 +1,6 @@
 ---
 name: web-audit
-description: Audit planning docs, story files, templates, styles, and markup against the web guidance in docs/setup/web/ and the design tokens in docs/ux/DESIGN.md. Produces a remediation story file with one AC per finding. Use when the user says "web audit", "audit web", "audit site", or "check web patterns".
+description: Audits planning docs, story files, templates, styles, and markup against the web guidance in docs/setup/web/ and the design tokens in docs/ux/DESIGN.md, producing a remediation story file with one AC per finding. Use when the user asks whether a site follows current web, CSS, Astro, or Hugo patterns, before a launch, after a guidance refresh, or says "web audit", "audit web", "audit site", or "check web patterns".
 ---
 
 # Web Audit Skill
