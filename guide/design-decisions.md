@@ -1131,3 +1131,41 @@ build numbers, pre-prompt faults, billed-amount hierarchy), so those stay exactl
 requirement fact. No new scan rule ids — every change is a message, a question, or a branch-file
 line, so `preflight-scan.sh` is untouched. No lint for the 2.3.3 majority rule: whether a
 screenshot "shows the app in use" is not decidable from a filename.
+
+---
+
+### DD-83 — Skills are held to Anthropic's authoring checklist: aliases don't advertise, descriptions say what and when, the four busiest skills load per branch
+
+**Context.** A review of all 44 skills against Anthropic's skill best-practices page (fetched
+live, Nov 2026). Every hard limit passed (names, description length, third person, under 500
+lines). The misses were about discovery and loading, not correctness.
+
+**Decision.**
+- **Aliases stop competing.** `prd`, `architecture`, `ux`, `product-brief` and `forge-idea` only
+  redirect, but their descriptions still claimed the whole job, with the same trigger words as
+  `spec` and `ideate`. Each now reads "Alias for … kept so the slash command still works", with
+  no trigger phrases.
+- **Descriptions say what the skill produces and the situation it fits**, not only the phrase
+  that invokes it: `dev-story`, `create-story`, `story-flywheel`, `retrospective`, `epics`,
+  `status`, and situational triggers on the two audits. The quoted phrases stay.
+- **`dev-story`, `code-review`, `story-flywheel` and `epic-flywheel` load per branch** (the DD-74
+  pattern). Stack-, UI-, standalone-, fallback- and epic-boundary-only detail moved to sibling
+  files, each linked directly from SKILL.md with its trigger and re-read at that trigger after a
+  compaction. Every canonical contract, gate outcome and cited heading stayed in SKILL.md.
+  Paragraph-lines of 600–970 characters became numbered steps. Sizes: 20.7 → 16.2 KB,
+  19.7 → 16.3 KB, 21.4 → 18.8 KB, 25.5 → 15.7 KB. Both flywheels leave the DD-72 grandfather
+  list; `agents/lw-story-developer.md` is the only file still over budget.
+- **`quick-dev` verifies by running** (cites dev-story's Build & Test Gate rather than restating
+  it); **`discover` names its templates and checks its own output** against the files it
+  describes. `discover` is therefore no longer identical to upstream.
+- The checklist template states current rules instead of past deadlines; reference files over
+  100 lines carry a contents list.
+
+**Not done.** No independent review for `quick-dev`: DD-75's mechanism is bound to a story file
+and a REVIEW HANDOFF, and inventing a second contract was out of scope. Skill names stay mixed
+(`create-story`, `epics`, `next`): renaming would break every cross-reference for little gain.
+Eval coverage (6 cases over 5 skills) is unchanged and is the open item.
+
+**Left as found, for a later pass.** story-flywheel Phase 4 "retry" re-runs code-review in the
+same context, which sits awkwardly beside "always spawn the reviewer" (DD-75). epic-flywheel's
+Exit Conditions mention an ALL EPICS COMPLETE message defined only in story-flywheel.

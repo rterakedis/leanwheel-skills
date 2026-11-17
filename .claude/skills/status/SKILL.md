@@ -1,6 +1,6 @@
 ---
 name: status
-description: Show current epic and story progress via GitHub milestones and issues. Use when the user says "status", "sprint status", or "show progress".
+description: Shows a progress dashboard of epics and stories from GitHub milestones and issues, with status icons, overall completion, and the recommended next command. Use to check where the sprint stands, or when the user says "status", "sprint status", or "show progress".
 ---
 
 # Status Skill

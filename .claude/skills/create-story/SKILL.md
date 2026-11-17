@@ -1,6 +1,6 @@
 ---
 name: create-story
-description: Create a comprehensive story file for a specific epic/story. Use when the user says "create story" or "create next story" or "create story {epic}-{story}".
+description: Authors a complete story file for one epic story (Behavior Contract, edge-case ACs, Design Contract, dev notes), asks clarifying questions before writing, then sets it ready-for-dev and updates GitHub tracking. Use when the next story needs a spec before implementation, or when the user says "create story", "create next story", or "create story {epic}-{story}".
 ---
 
 # Create Story Skill

@@ -1,6 +1,6 @@
 ---
 name: product-brief
-description: Help the user arrive at a formed product idea (brainstorm if needed) and distill it into docs/project/brief.md — the upstream input /prd reads. Use when the user has a vague idea, wants to brainstorm, or wants to write a product brief before starting a PRD.
+description: Alias kept so the /product-brief slash command still works. Idea formation and brainstorming live in the ideate skill, and writing docs/project/brief.md lives in /spec with target brief.
 ---
 
 # Product Brief (alias)

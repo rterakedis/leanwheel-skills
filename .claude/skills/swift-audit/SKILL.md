@@ -1,6 +1,6 @@
 ---
 name: swift-audit
-description: Audit planning docs, story files, and Swift source code against the Swift/SwiftUI guidance in docs/setup/swift/. Produces a remediation story file with one AC per finding. Use when the user says "swift audit", "audit swift", "audit codebase", or "check swift patterns".
+description: Audits planning docs, story files, and Swift source code against the Swift/SwiftUI guidance in docs/setup/swift/, producing a remediation story file with one AC per finding. Use when the user asks whether Swift or SwiftUI code follows current patterns, before a release, after a guidance refresh, or says "swift audit", "audit swift", "audit codebase", or "check swift patterns".
 ---
 
 # Swift Audit Skill

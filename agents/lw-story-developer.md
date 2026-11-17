@@ -28,7 +28,7 @@ orchestrating flywheel stays lean.
 5. On completion run invariant verification (stateful stories) and design
    verification (UI stories), then stop at `review` — you never review your own diff.
 6. Append a ledger line for this phase via `scripts/ledger.sh dev-story …` — never
-   hand-write the JSON (see dev-story → Observability).
+   hand-write the JSON (see dev-story → Ledger).
 
 ## Complete your own work
 

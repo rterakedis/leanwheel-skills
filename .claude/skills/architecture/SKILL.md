@@ -1,6 +1,6 @@
 ---
 name: architecture
-description: Create or update the technical architecture document. Use when the user says "create architecture" or "update architecture".
+description: Alias for /spec with target architecture, kept so the /architecture slash command still works. The architecture document flow lives in the spec skill.
 ---
 
 # Architecture (alias)

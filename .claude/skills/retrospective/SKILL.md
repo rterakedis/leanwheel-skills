@@ -1,6 +1,6 @@
 ---
 name: retrospective
-description: Run a lightweight epic retrospective to capture learnings and update project conventions. Use when the user says "retrospective", "retro", or "retro for epic N".
+description: Runs an epic retrospective that writes docs/epics/epic-N-retro-{date}.md, sweeps deferred items and security findings, syncs the PRD and architecture, updates CLAUDE.md conventions, and stamps the epic as retro-complete. Use when an epic is finished, or when the user says "retrospective", "retro", or "retro for epic N".
 ---
 
 # Retrospective Skill

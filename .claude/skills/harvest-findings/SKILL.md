@@ -134,7 +134,7 @@ If there is no corrective `[in-scope]` finding, skip story authoring (everything
 
 ## Step 4 — Reset the test plan
 
-Remove the harvested inline finding bullets from `docs/epics/epic-{N}-test-plan.md` — leave the scenarios, flows, steps, each flow's **Starting state** block (see `epic-flywheel` → Rolled-up Test Plan), and the physical-device section intact. Only the tester's annotations come out (they now live in `docs/epics.md` and the story).
+Remove the harvested inline finding bullets from `docs/epics/epic-{N}-test-plan.md` — leave the scenarios, flows, steps, each flow's **Starting state** block (see `skills/epic-flywheel/test-plan-rollup.md`), and the physical-device section intact. Only the tester's annotations come out (they now live in `docs/epics.md` and the story).
 
 **Remove plan-defect steps for good.** For each `plan-defect` finding, delete its `- [ ]` step from section A and append the covering flow/suite/eval name to that flow's `**Automated — do not re-test:**` line (add the line if the flow lacks one).
 
