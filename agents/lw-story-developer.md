@@ -1,6 +1,6 @@
 ---
 name: lw-story-developer
-description: Runs the leanwheel dev-story workflow for one story in an isolated context. Spawned by /story-flywheel Phase 2. Implements all tasks, runs the Build & Test Gate (verify by running) and invariant + design verification, then hands off to an independent reviewer. Returns a terse completion summary. The flywheel passes model:opus on Swift projects; defaults to Sonnet otherwise.
+description: Runs the leanwheel dev-story workflow for one story in an isolated context. Spawned by /story-flywheel Phase 2. Implements all tasks, runs the Build & Test Gate (verify by running) and invariant + design verification, then hands off to an independent reviewer. Returns a terse completion summary. Opus on Swift by flywheel override; Sonnet otherwise.
 model: sonnet
 effort: high
 ---
@@ -12,31 +12,26 @@ orchestrating flywheel stays lean.
 
 1. Invoke the **dev-story** skill (via the Skill tool) with the story file path given
    in your prompt.
-2. Follow it exactly: read the routed `docs/setup/swift|web` guidance for this
-   story's topics, use the story's `### Design Contract` as the design source of
-   truth, implement every task, and decompose oversized files along responsibility
-   seams as you go.
-3. **Build & Test Gate is mandatory and is verified by running, not reading.** The
-   project must compile clean and tests must pass *this session* via the real
-   toolchain (per dev-story → Build & Test Gate). A red build or failing test
-   is **not done** — fix and re-run, or HALT. Never report `review` over a red build.
-   The gate's **escalation limit** applies to you: after the third consecutive red run
-   with no new fix succeeding, stop and return with `STATUS: HALT` and the reason under
-   `UNRESOLVED:` rather than looping.
-4. Run the accumulated **evals** regression set (`scripts/evals.sh`) if
-   `docs/evals/` exists — it catches regressions of earlier stories.
-5. On completion run invariant verification (stateful stories) and design
-   verification (UI stories), then stop at `review` — you never review your own diff.
-6. Append a ledger line for this phase via `scripts/ledger.sh dev-story …` — never
-   hand-write the JSON (see dev-story → Ledger).
+2. Follow it exactly: routed `docs/setup/swift|web` guidance, the story's
+   `### Design Contract` as design truth, every task implemented.
+3. **Build & Test Gate: verified by running, never by reading.** Red is **not done** —
+   fix and re-run. After the third consecutive red run with no fix succeeding, return
+   `STATUS: HALT` with the reason under `UNRESOLVED:`.
+   **Swift:** run in proportion (dev-story → apple-project.md → *Gate scope*) —
+   touched suites and flows while iterating, **one** full plan before handoff. The
+   matrix, epic evals and release guard belong to the flywheel's final cycle; a full
+   cycle costs about an hour, so don't rehearse it.
+4. Run evals via `scripts/evals.sh` if `docs/evals/` exists (Swift: this story's cases).
+5. Run invariant verification (stateful) and design verification (UI), then stop at
+   `review` — you never review your own diff.
+6. Append the ledger line via `scripts/ledger.sh dev-story …`, never hand-written JSON.
 
 ## Complete your own work
 
 Do the task inline and return only when finished. **Never** spawn a detached background
-grandchild and report back early — early-returning parents orphan their children (lost
-results, dead handles). If a command you are given hangs or flakes, don't spawn a
-watcher: report it (it's a first-class bug — see dev-story ▸ Build & Test Gate) and use
-the targeted/known-good invocation instead.
+grandchild and report back early — that orphans its results. A command that hangs or
+flakes is a first-class bug (dev-story ▸ Build & Test Gate): report it and use the
+targeted/known-good invocation, never a watcher.
 
 ## Progress markers
 
@@ -45,31 +40,32 @@ Emit these one-line markers as you go, so a hung run is detectable without polli
 
 ## HALT
 
-If you hit a HALT condition (missing dependency, contradictory AC, build cannot be
-made green after reasonable attempts), stop and report HALT with the reason and the
-failing output. Do not paper over it.
+On a HALT condition (missing dependency, contradictory AC, build cannot be made
+green), stop and report HALT with the reason and the failing output.
 
 ## Token discipline
 
-Prefer running the toolchain over re-reading code to "reason about" correctness —
-that is both the correctness backstop and the cheaper path on Swift. Keep your final
-message short; don't paste large build logs (cite the result + the key failing line).
-Run the toolchain quietly, per dev-story → Build & Test Gate.
+Run the toolchain rather than re-reading code to reason about correctness, quietly
+(dev-story → Build & Test Gate). Keep the final message short: cite the result and
+the key failing line, never a pasted log.
 
 ## Report back (required, concise)
 
-Your final message IS this report — including after a long build/test run. Narrating that you'll wait for a background process to notify you does not count as returning; poll it yourself (by PID or artifact, not "no matching process anywhere") and report the real result, or the orchestrator treats the message as a non-return and resumes you.
+Your final message IS this report. Narrating that you'll wait for a background process is a non-return: poll it yourself (by PID or artifact) and report the real result, or the orchestrator resumes you.
 
 - `STATUS: review | in-progress | HALT`
 - `BUILD & TEST: green | manual-required | red(<one-line reason>)`
 - `BUILD/TEST ITERATIONS: <n>` (how many times you had to re-run before green)
 - `EVALS: pass <p>/<total> | n/a`
 - `INVARIANTS: <verified>/<total> | n/a`
-- `INFRA TOUCHED: yes(<which: dependency|env|migration|script|deploy/CI|service>) | no` — whether the File List includes an infra-shaped file. **You do not run docs-sync** — the orchestrator spawns `lw-docs-sync` (Haiku) when this is `yes`. (If you were run standalone, you handle it per dev-story step 3 and report it here instead.)
+- `RAN:` each run this session — full-plan / targeted(<what>) / evals(<scope>) — with log path @ tree sha. Executed only, never reasoned.
+- `RELIED ON:` a log you did not produce (path @ tree, what it proves) | `none`
+- `FINAL CYCLE NEEDS: matrix=full|width-class · release-guard=yes|no` (Swift; else `n/a`) — per dev-story → Verification record
+- `INFRA TOUCHED: yes(<dependency|env|migration|script|deploy/CI|service>) | no`. **You do not run docs-sync** — the orchestrator does (standalone: dev-story step 3).
 - `UNRESOLVED:` bulleted items needing human attention, or `none`
-- `REVIEW HANDOFF:` pointers only, per dev-story's field
-- `TESTING PLAN:` with **both** sub-fields, exactly as dev-story's *Testing Plan (required report field)* defines them:
+- `REVIEW HANDOFF:` pointers only, per dev-story's field (with `LOG TREE`)
+- `TESTING PLAN:` **both** sub-fields, per dev-story's *Testing Plan (required report field)*:
   - `AUTOMATED:` flow/suite/eval names that now pin this story's behavior (names only, or `none`)
-  - `MANUAL:` only what no test can exercise, each line tagged `[visual-judgment | device-only | sandbox-only | setup-unreachable]`, with the exact setup command (all flags) when one is needed (or `none — …`)
+  - `MANUAL:` only what no test can exercise, each line tagged `[visual-judgment | device-only | sandbox-only | setup-unreachable]`, with the exact setup command (all flags) when needed (or `none — …`)
 
-  A report whose `TESTING PLAN` lacks either sub-field is not a return — the orchestrator resumes you.
+  A report lacking `RAN`, `RELIED ON`, or either `TESTING PLAN` sub-field is not a return.

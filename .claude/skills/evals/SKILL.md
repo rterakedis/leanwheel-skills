@@ -92,7 +92,7 @@ Input: a story file path (and its `{epic}.{story}`).
 
 Report: `N command cases, M judge cases appended to docs/evals/epic-{epic}.md`.
 
-### RUN — execute the regression net (called by dev-story Build & Test Gate, code-review Verify-green, or `/evals`)
+### RUN — execute the regression net (called by dev-story Build & Test Gate, code-review Verify-green, the flywheels' final cycle and epic boundary, or `/evals`)
 
 **RUN is a script, not a model pass.** Collection, batching, assertion and reporting all
 live in `scripts/evals.sh`:
@@ -133,6 +133,20 @@ What the script guarantees, so no skill has to restate it:
 
 A failing `command` case is a **regression**: surface it exactly like a red Build & Test
 Gate — the caller must fix and re-run or HALT, never proceed over red.
+
+**How often, on Swift / Apple projects (DD-84).** A case there usually shares the unfiltered
+suite command, so one RUN is one full test plan — tens of minutes. The cadence is therefore:
+
+| When | Scope | Command |
+|---|---|---|
+| dev-story, code-review | only the cases that phase added, enabled or touched | `--case {id}` |
+| the story's final cycle (`skills/story-flywheel/final-cycle.md`) | the epic, **once per story** | `--epic {n}` |
+| the epic boundary | the full cumulative set | no scope flag |
+
+A regression in an earlier story's case therefore shows at the end of the story rather than
+mid-development — accepted, because the alternative was the same RUN three or four times per
+story on unchanged code. Every other stack keeps `--epic {n}` in dev-story and code-review:
+its RUN costs seconds.
 
 **Judge cases.** The script counts `type: judge` cases and reports them skipped; judging
 needs a model. Run them only when requested (`/evals --judge`, or a caller passing

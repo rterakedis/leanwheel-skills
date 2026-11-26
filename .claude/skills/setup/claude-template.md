@@ -82,6 +82,16 @@ Story files and specs use `[ ]`/`[x]` checkboxes (GitHub renders these interacti
      Example:
      - Build + test: `xcodebuild -quiet -scheme App -destination 'platform=iOS Simulator,name=iPhone 17' build test 2>&1 | tee .leanwheel/logs/build-test.log | tail -n 40`
      - One test file: `npx vitest run <file> --reporter=dot`
+
+     Apple projects with a slow UI-test plan: name each of these when the project has it, so
+     the flywheel's phases can run in proportion and its final cycle can run everything once
+     (skills/story-flywheel/final-cycle.md). An entry you leave out is reported `n/a`, not guessed.
+     - Targeted: `xcodebuild -quiet … test -only-testing:<Target>/<Suite> 2>&1 | tee .leanwheel/logs/targeted.log | tail -n 40`
+     - Full plan (clean, unfiltered): `… clean build test 2>&1 | tee .leanwheel/logs/build-test.log | tail -n 40`
+     - Log scorer: `scripts/<score-log>.sh .leanwheel/logs/build-test.log`  (prints one green token)
+     - Matrix — full: `<command>` · one cell per width class: `<command>`
+     - Release guard: `<Release build + guard command>`
+     - Pin reset: `<script that rewrites every pinned count from a fresh log>`  (never edit pins by hand)
 -->
 
 ## Probe

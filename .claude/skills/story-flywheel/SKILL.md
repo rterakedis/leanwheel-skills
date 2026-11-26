@@ -12,6 +12,7 @@ description: Runs the per-story loop of create story, dev story, and independent
 **Branch files** — read each only when its trigger is reached, and re-read it then rather than relying on memory (a long epic compacts this context):
 - Subagents unavailable (Activation step 4) → [inline-fallback.md](inline-fallback.md)
 - User pre-authorizes auto-continue → [auto-pilot.md](auto-pilot.md)
+- Review green on a Swift project (Phase 3b) → [final-cycle.md](final-cycle.md)
 - No story left in the epic (Phase 5) → [epic-boundary.md](epic-boundary.md)
 
 ---
@@ -92,7 +93,7 @@ Wait for the subagent's report, then act on its structured fields:
 - Inline execution is legal only in the documented fallback when subagents are unavailable.
 
 **A report missing its required fields is a non-return.**
-- Each subagent owes a fixed set of report fields — `STORY FILE`/`EPIC CONTEXT` for the creator, `STATUS`/`BUILD & TEST` for the developer, the `RUBRIC` line and `STATUS` for the reviewer (see each agent def's "Report back").
+- Each subagent owes a fixed set of report fields — `STORY FILE`/`EPIC CONTEXT` for the creator, `STATUS`/`BUILD & TEST` for the developer, the `RUBRIC` line and `STATUS` for the reviewer, and `RAN`/`RELIED ON` for both (see each agent def's "Report back").
 - If a subagent's final message is missing any of these — including a message that only narrates what it's about to do next, e.g. "I'll stop polling now and wait for the test suite to notify me" — the phase has **not** returned, no matter how long it ran.
 - Resume it with SendMessage rather than proceeding: ask it to finish and emit the missing fields.
 - Never advance to the next phase, the checkpoint, or a commit on a narration-only message standing in for a report.
@@ -120,8 +121,8 @@ Spawn `lw-story-creator` (default model: Sonnet) via the Agent tool. Prompt it w
 ### Phase 2 — Dev Story
 
 1. **Probe (zero-token):** if the project CLAUDE.md has a `## Probe` section, run its command first. Non-zero exit = environment fault: report it and pause the flywheel — no spawn, no ledger line, no story HALT (DD-80).
-2. Spawn `lw-story-developer` via the Agent tool with the story file path. Pass `model: opus` **only if `swift_project`** (otherwise the pinned Sonnet). Instruct it to run the full dev-story workflow including the Build & Test Gate, the evals RUN via `scripts/evals.sh` (if `docs/evals/` exists), and invariant/design verification. It stops at `review`; it does not review its own diff.
-3. From the report capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`, `REVIEW HANDOFF`.
+2. Spawn `lw-story-developer` via the Agent tool with the story file path. Pass `model: opus` **only if `swift_project`** (otherwise the pinned Sonnet). Instruct it to run the full dev-story workflow including the Build & Test Gate, the evals RUN via `scripts/evals.sh` (if `docs/evals/` exists), and invariant/design verification. On Swift dev-story scopes the gate (targeted runs, one full plan) — never ask for more. It stops at `review`; it does not review its own diff.
+3. From the report capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`, `RAN`, `RELIED ON`, `FINAL CYCLE NEEDS`, `REVIEW HANDOFF`.
 4. **Operational doc sync (cheap, orchestrator-owned):** the developer does **not** run docs-sync (it would land on the dev model).
    - `INFRA TOUCHED: yes` → spawn **`lw-docs-sync`** (Haiku) via the Agent tool with the story file path and op `OPERATIONAL`; capture its `DOCS UPDATED` return for the checkpoint/ledger.
    - `INFRA TOUCHED: no` → skip the spawn entirely (zero cost).
@@ -133,12 +134,20 @@ Spawn `lw-story-creator` (default model: Sonnet) via the Agent tool. Prompt it w
 
 **Always spawn `lw-story-reviewer`** — every story, clean or not. The author never reviews its own diff (DD-75).
 - Its prompt is the developer's `REVIEW HANDOFF`, verbatim — pointers only. Never add a summary of the dev pass or hints about what to check.
-- It runs every code-review pass, emits the **SCORE rubric line**, auto-patches `patch` findings, applies `fix-now` findings within the ceiling, logs `defer` via the deferred skill, and **re-verifies green**.
+- It runs every code-review pass, emits the **SCORE rubric line**, auto-patches `patch` findings, applies `fix-now` findings within the ceiling, logs `defer` via the deferred skill, and **verifies green** — on Swift by proving the developer's log still applies and re-running only what its patches touch (code-review → verify-scope.md). Capture its `RAN`, `RELIED ON`, `FINAL CYCLE NEEDS`.
 - `decision-needed` findings surface in its report — present them to the user, then send the answers back to the same reviewer to apply.
 - **Follow-up round (DD-80):** if the report says `FOLLOW-UP REVIEW: yes`, spawn `lw-story-reviewer` once more with a `REVIEW HANDOFF` whose base is the report's `PATCH BASE` — it reviews the patch diff only. One round; its own follow-up flag is ignored.
 - **Fallback mode** (no subagents): the inline review shares the author's context, so record `review=inline-fallback` in the roll-up and say so at the checkpoint ([inline-fallback.md](inline-fallback.md)).
 
 **On unresolvable patches:** Do not proceed to Phase 4. Leave story status `in-progress`, report which items need attention, and stop the flywheel. Resume with `/story-flywheel {epic}.{story}`.
+
+### Phase 3b — Final Cycle (Swift projects)
+
+`swift_project` and the review (and any follow-up) is green → read [final-cycle.md](final-cycle.md) now and run it: **one** full verification cycle, on the story's tree merged with main, before any PR, merge, or commit sign-off (DD-84).
+- Phases 2–3 ran only what they changed; this is the one run that sees everything. Never skipped, never repeated "to be sure".
+- Pass it `FINAL CYCLE NEEDS` = the higher of the developer's and the reviewer's values.
+- Anything but `FINAL CYCLE: green` → the story does not advance (final-cycle.md → *On red*; blocked = pause).
+- Not Swift → skip; `FINAL CYCLE: n/a`.
 
 ### Phase 4 — Human Checkpoint
 
@@ -152,6 +161,8 @@ Status: code review complete
 
 VERIFICATION
 {Build & Test: green | manual-required | red} · {evals: P/T or n/a} · {rubric gate: PASS/FAIL or n/a} · {invariants: V/T or n/a} · build/test iterations: {n}
+FINAL CYCLE: {the block from final-cycle.md → Report, or n/a}
+PROVEN BY: dev ran {RAN} · review ran {RAN}, relied on {RELIED ON}
 
 DECISIONS MADE THIS STORY
 {list each [Decision] finding and the answer recorded — "none" if clean}

@@ -521,9 +521,22 @@ Unit suites run in seconds; a serial XCUITest plan runs in tens of minutes and i
 
 - **Unit suite — always**, every iteration. Nothing is fast enough to justify skipping it.
 - **UI flows — only those the diff touches** (`-only-testing:<Target>/<Flow>`).
-- **Full plan — once, at the epic boundary**, when every story is dev-complete.
+- **Full plan — once per story by the developer before handoff, once in the story's final
+  cycle on the tree merged with main, and at the epic boundary.** Never once per phase.
+  *(Amended, DD-84: this bullet read "once, at the epic boundary". A flaw reached main because
+  one width was never run by any scored gate before the merge, so each story now gets exactly
+  one scored merged-tree cycle. The opposite failure is as real: developer, reviewer, follow-up
+  reviewer and merge each running the whole cycle made a story take three to four hours.)*
 - **Exception:** a diff touching shared test infrastructure or a bootstrap path every flow
-  exercises — then the related flows *are* all of them; run one full plan at that story's end.
+  exercises — then the related flows *are* all of them.
+- **The device / layout matrix is sized the same way:** every cell for a story that touches
+  layout, navigation, or the root view; one cell per width class for any other story; every
+  cell at the epic boundary.
+- **A reviewer proves a log before trusting it, and trusts it before re-running it:** complete,
+  unfiltered, scored green, and no source file changed since the tree it ran on.
+- **Pinned counts** (test totals, suite lists, matrix cells the scorer compares against) are
+  rewritten by one reset script from a fresh log, never by hand. Two branches hand-bumping the
+  same number is a merge conflict every time, and resolving it by hand is a guess.
 
 **Controlled-experiment evidence beats N green runs.** Sabotaging the fix, watching the specific
 test go red naming the item it guards, restoring, and watching it go green costs one targeted

@@ -7,6 +7,8 @@ description: Drive an entire epic to completion semi-autonomously — runs the p
 
 **Goal:** Take a whole epic from "stories not started" to "all stories implemented, reviewed, and verified together" with minimal steering. The per-story automated gates (Build & Test, evals RUN, invariant verification) still stop the loop on a real compounding bug; the **manual / integration test pass is deferred to the epic boundary** (DD-30).
 
+**Swift projects verify once per story, not once per phase (DD-84).** A whole verification cycle on an app with an XCUITest plan costs about an hour; run by the developer, the reviewer, the follow-up reviewer and the merge, it made a story take three to four hours. So each phase runs in proportion to what it changed, and **one final cycle** runs on the story's tree merged with main before anything is closed or merged (Step 3b). The accepted cost: a bug surfaces at the end of the story or at the merge rather than mid-review, and a red final cycle takes longer to trace. Do not restore per-phase full runs to buy that signal back.
+
 **Relationship to `/story-flywheel`:** the autonomous, epic-scoped layer above it — same three subagents and model routing (story-flywheel → **Subagent Delegation & Model Routing**; not duplicated here). Adds:
 1. commit-per-step so a bad story can be unraveled;
 2. within-epic auto-advance on clean stories;
@@ -15,6 +17,7 @@ description: Drive an entire epic to completion semi-autonomously — runs the p
 5. a deduplicated **rolled-up test plan** that subtracts what automation already proves, then splits the rest into simulator-runnable vs physical-device-required.
 
 **Phase files** — read each only when its phase is reached, and re-read it then rather than relying on memory (a long epic compacts this context):
+- Review green on a Swift project (Step 3b) → [`../story-flywheel/final-cycle.md`](../story-flywheel/final-cycle.md)
 - Epic boundary, gates 1–4c and the step 6 report → [boundary-gate.md](boundary-gate.md)
 - Epic boundary, step 5 test plan → [test-plan-rollup.md](test-plan-rollup.md)
 - Epic boundary, step 5b, only when its condition holds → [squash-merge.md](squash-merge.md)
@@ -23,7 +26,7 @@ description: Drive an entire epic to completion semi-autonomously — runs the p
 
 ## Iron rules
 
-1. **HALT, don't push forward.** A red Build & Test Gate, a failing eval, an unverifiable invariant, or a dev-story HALT stops the loop and asks the user for help. Never carry a broken story into the next one.
+1. **HALT, don't push forward.** A red Build & Test Gate, a failing eval, an unverifiable invariant, a red final cycle, or a dev-story HALT stops the loop and asks the user for help. Never carry a broken story into the next one.
 2. **Commit every step.** create → commit → dev → commit → review+patch → commit. The granular trail is what lets you `git bisect`/revert to the precise step that went wrong.
 3. **Don't accumulate context.** The orchestrating thread holds only short structured reports from subagents — never full story files or source. The only LLM-heavy work this thread does itself is the one-time test-plan dedup at the epic boundary, over collected plan text only.
 4. **Deferred means re-homed, not forgotten.** Every `[Defer]` finding gets a home (slotted as an AC or a remediation story) via the `deferred` skill, and the Epic Boundary Gate sweeps for any orphan.
@@ -47,8 +50,20 @@ description: Drive an entire epic to completion semi-autonomously — runs the p
 
    Detect the commit command: prefer `scripts/commit-push.sh "<msg>"` if it exists in the project, else plain `git add -A && git commit`. Push only if the project's script pushes (don't introduce pushing where the project doesn't).
 
-5. **Autonomy level.** Default is **auto-advance within the epic**: any story whose per-story gates are fully green (no `UNRESOLVED`, PASS rubric, green Build & Test, evals pass, invariants verified) advances without a checkpoint. The loop still stops on red/HALT. Offer the stricter alternative:
+5. **Autonomy level.** Default is **auto-advance within the epic**: any story whose per-story gates are fully green (no `UNRESOLVED`, PASS rubric, green Build & Test, evals pass, invariants verified, and on Swift `FINAL CYCLE: green`) advances without a checkpoint. The loop still stops on red/HALT. Offer the stricter alternative:
    > Default: I auto-advance on clean stories and only stop for problems or the epic boundary. Prefer a checkpoint after *every* story instead? (auto / every-story)
+
+---
+
+## Parallel streams — two epics, never two stories of one epic
+
+Default is one stream. Run a second only when the user asks and the project has the isolation for it (a worktree and, on Apple, a simulator set per stream).
+
+- **A stream is one epic's chain of stories, in order.** Two streams means **two independent epics** side by side — allowed only when neither epic's "Depends on" lines (`docs/epics.md`) name the other, directly or through a third.
+- **Never two stories of the same epic in parallel.** They share files, test targets, pinned counts and (on Apple) the String Catalog, so whichever merges second pays a merge-and-re-verify round every time — the parallelism is spent on rework. Independent epics collide far less.
+- Each stream runs this skill's loop unchanged, including its own final cycle on its own tree merged with main. One stream never builds or tests in the other's worktree or device set.
+- Allowed overlap inside one stream: drafting the next story (Step 1) while the current one is in review.
+- The epic boundary gates run per epic, each on a tree that contains main.
 
 ---
 
@@ -91,8 +106,8 @@ Spawn `lw-story-creator` with `{epic}.{story}`. Capture `STORY FILE`, `EPIC CONT
 ### Step 2 — Dev Story → commit
 1. **Probe:** run CLAUDE.md's `## Probe` command if present — non-zero exit pauses the loop as an environment fault, no spawn, no HALT (story-flywheel → Phase 2).
 2. **Track:** `gh-track.sh transition {issue#} in-progress` before spawning, so a long dev pass shows the right state.
-3. **Spawn** `lw-story-developer` (`model: opus` only if `swift_project`) with the story file path. It runs the full dev-story workflow: implementation, **Build & Test Gate** (verify by running), **evals RUN** (if `docs/evals/`), and invariant + design verification, then stops at `review`.
-4. Capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`, `TESTING PLAN`, `REVIEW HANDOFF`.
+3. **Spawn** `lw-story-developer` (`model: opus` only if `swift_project`) with the story file path. It runs the full dev-story workflow: implementation, **Build & Test Gate** (verify by running — on Swift scoped by dev-story to targeted runs plus one full plan), **evals RUN** (if `docs/evals/`), and invariant + design verification, then stops at `review`.
+4. Capture `STATUS`, `BUILD & TEST`, `BUILD/TEST ITERATIONS`, `EVALS`, `INVARIANTS`, `INFRA TOUCHED`, `UNRESOLVED`, `RAN`, `RELIED ON`, `FINAL CYCLE NEEDS`, `TESTING PLAN`, `REVIEW HANDOFF`.
 
 Then:
 - **On HALT or red gate:** stop the loop. Report which story and why; do **not** commit a red story. Resume with `/epic-flywheel {N}` after the blocker is fixed. A `blocked` environment fault pauses the same way but is not a story failure.
@@ -114,12 +129,19 @@ Per story-flywheel → Phase 3 (not duplicated here): **always** spawn `lw-story
 - auto-patches `patch` findings;
 - applies `fix-now` findings within code-review's Triage ceiling (recorded in Review Findings, not logged as deferred);
 - logs `defer` via the `deferred` skill (re-homing each — slot as AC or remediation story);
-- **re-verifies green**.
+- **verifies green** — on Swift by proving the developer's log still applies and re-running only what its patches touch (code-review → verify-scope.md), reporting `RAN` / `RELIED ON` / `FINAL CYCLE NEEDS`.
 
 `decision-needed` findings surface to the user. `FOLLOW-UP REVIEW: yes` → one follow-up round on `PATCH BASE` (story-flywheel → Phase 3).
 - **Deferred re-homing check:** confirm every `[Defer]` from this story landed in `docs/deferred-items.md` with a `Scheduled As` target. An orphan is a loop bug — fix before advancing.
-- **Track:** on green, `gh-track.sh close {issue#} "Story {epic}.{story} complete"` (applies `done` + closes — milestone progress ticks up here).
 - **Commit (only if green after patches):** `story {epic}.{story}: review+patch`. If patches couldn't resolve, leave status `in-progress`, don't commit, HALT.
+- **Track:** `gh-track.sh close {issue#} "Story {epic}.{story} complete"` (applies `done` + closes — milestone progress ticks up here) — on green, and on Swift only after Step 3b is green.
+
+### Step 3b — Final Cycle (Swift projects) → commit
+Per story-flywheel → Phase 3b: read [`final-cycle.md`](../story-flywheel/final-cycle.md) and run the story's **one** full verification cycle on its tree merged with main, with `FINAL CYCLE NEEDS` = the higher of the developer's and reviewer's values.
+- It runs before the story's issue is closed and before any PR or merge the project's flow makes for this story — nothing merges without it.
+- Green → **commit** anything it produced (merge commit, catalog sync, pin-reset output): `story {epic}.{story}: final cycle`.
+- Red or blocked → the story is not closed; follow final-cycle.md → *On red*, or pause on an environment fault.
+- Not a Swift project → skip.
 
 ### Step 4 — Advance or checkpoint
 - **auto mode (default):** if the story is fully green, append the per-story roll-up via `scripts/ledger.sh story-flywheel …` (per story-flywheel → Observability — written every story, silent advance included) and advance silently to the next story. If anything is non-green, stop.

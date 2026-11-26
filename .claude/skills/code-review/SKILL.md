@@ -133,6 +133,8 @@ Every `fix-now` is recorded here even though it's already applied — the line i
 **Auto-patch:** Apply immediately, mark `[x]`. If can't auto-apply, leave `[ ]`. Apply `fix-now` items the same way — but if one turns out to need more than the ceiling allows, revert it and re-triage as `defer`.
 
 **Verify green:** If any patch or fix-now changed code and a toolchain is present, **run a real build + test** before marking the review done. A patch is only resolved once the toolchain confirms it compiles and tests stay green — never close a review on a fix verified by reading alone.
+
+**Swift / Apple projects scope this differently (DD-84):** read [verify-scope.md](verify-scope.md) now and follow it in place of steps 1 and 4 and the String Catalog trigger below — prove the author's log still applies instead of re-running it, re-run only the suites and flows your patches touch, and leave the full cycle to the flywheel's final cycle. Steps 2, 3 and 5 hold on every stack.
 1. Run quiet + `tee` to `.leanwheel/logs/`, per dev-story → Build & Test Gate or the project's `## Quiet commands`.
 2. Red → fix and re-run, or leave the finding `[ ]` and set Status `in-progress`.
 3. **Blocked** (toolchain busy, simulator held by another session, environment failure) → the review is not done: set Status `in-progress` and report the blocker — a blocked verify is treated exactly like a red one.
@@ -159,7 +161,9 @@ The `simplicity` dimension scores Pass F (it's just reporting a pass already run
 - Patch code has no independent reviewer until a second pass reads it (DD-75); the flywheels spawn one round on the patch diff when `yes`. So before applying the first patch record `PATCH BASE: $(git add -A && git write-tree)` — the follow-up reviews `git diff {PATCH BASE}` only (DD-80).
 - A follow-up pass never scores a further follow-up.
 
-**Verify-green gate rule:** GATE PASS additionally requires that Verify green actually ran green this session (or was legitimately skipped: no code changed, or no toolchain — state which). A red or blocked verify caps the outcome at Status `in-progress` — there is no qualified PASS ("PASS pending verify") in any report field or ledger line; `scripts/ledger.sh` refuses one mechanically.
+**Verification record (required report fields, all stacks; shapes per dev-story → Verification record):** `RAN:` what you executed this session (log path @ tree), `RELIED ON:` any log you did not produce (path @ tree, what it proves) or `none`, and on Swift `FINAL CYCLE NEEDS:`. Write them beside the rubric line.
+
+**Verify-green gate rule:** GATE PASS additionally requires that Verify green actually ran green this session (or was legitimately skipped: no code changed, or no toolchain — state which). On Swift, a log proven per verify-scope.md §1 and named in `RELIED ON` counts as ran; an unproven log does not. A red or blocked verify caps the outcome at Status `in-progress` — there is no qualified PASS ("PASS pending verify") in any report field or ledger line; `scripts/ledger.sh` refuses one mechanically.
 
 **Pull deferred forward:** If any `[ ] [Defer]`, execute **LOG-AND-SCHEDULE** from `skills/deferred/SKILL.md` for each deferred item (title = finding title, detail = finding detail, source = file:line). `[Fix-Now]` items never go to the log — they're already fixed, and that intake rejects them.
 

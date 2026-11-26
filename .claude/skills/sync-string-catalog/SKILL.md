@@ -1,6 +1,6 @@
 ---
 name: sync-string-catalog
-description: Have the running Xcode rebuild this checkout so its String Catalog (.xcstrings) follows the code, then review the changed keys and commit the catalog on the branch. Use before a PR on an Apple project that touches user-facing strings, or when the user says "sync string catalog", "sync xcstrings", "catalog drift", or "localizable is stale". Called by /dev-story (Build & Test Gate) and /code-review (Verify green) as the CHECK op.
+description: Have the running Xcode rebuild this checkout so its String Catalog (.xcstrings) follows the code, then review the changed keys and commit the catalog on the branch. Use before a PR on an Apple project that touches user-facing strings, or when the user says "sync string catalog", "sync xcstrings", "catalog drift", or "localizable is stale". Called as the CHECK op by /dev-story (Build & Test Gate), the flywheels' final cycle, and /code-review (Verify green, when its patches touch strings).
 ---
 
 # Sync String Catalog
@@ -43,6 +43,13 @@ Map the exit code to the `CATALOG` report field (last stdout line is already in 
 the calling skill's report; under a flywheel it pauses like any environment fault. Tell the
 user the one-line fix (open Xcode, enable MCP, approve the agent). A gate that cannot run has
 not run — never record `in-sync` because the script could not be executed.
+
+**Who runs CHECK (DD-84).** Each CHECK is an Xcode IDE build, so it runs where it can find
+something new: dev-story once after its full plan (the catalog is committed with the strings
+that changed it); the flywheel's final cycle always, on the tree merged with main (the catalog
+is a routine merge casualty); code-review only when its own patches touched a user-facing
+string or translator comment, or the author's result was `unavailable`. A standalone review
+with no final cycle behind it runs CHECK unconditionally.
 
 Skip CHECK entirely only when the project is not an Apple project, or `git ls-files
 '*.xcstrings'` is empty — state which.

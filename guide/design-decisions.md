@@ -11,7 +11,7 @@ Not to be confused with a user project's `docs/project/decisions.md` (owned by t
 ## Contents
 
 - Principles: DD-01 verifiable artifacts over guardrails · DD-02 contract vs conduct · DD-03 fail loudly
-- Verification: DD-10 verify by running · DD-11 gate integrity · DD-12 Fix-Now · DD-13 evals command-default · DD-14 invariant evidence · DD-71 evals RUN is a script and the CI seam
+- Verification: DD-10 verify by running · DD-11 gate integrity · DD-12 Fix-Now · DD-13 evals command-default · DD-14 invariant evidence · DD-71 evals RUN is a script and the CI seam · DD-84 one full verification cycle per story on Swift
 - Orchestration: DD-20 subagent routing · DD-73 effort pinned per runner · DD-75 the author never reviews its own diff · DD-21 non-return rule · DD-22 orchestrator-owned tracking · DD-23 epic-context cache gate · DD-24 docs-sync audiences · DD-25 boundary merge
 - Testing & test plans: DD-30 manual pass at the epic boundary · DD-31 TESTING PLAN split + subtract · DD-32 plan-defect kind · DD-33 done stories immutable · DD-34 testability foundation · DD-35 flow tiering · DD-36 e2e backfill
 - Simulator automation: DD-40 sim.sh + route navigation · DD-41 silent-failure guards · DD-42 orientation · DD-43 store preset · DD-44 sim.json committed · DD-45 release parity for store captures · DD-46 vendored-script drift is reported, never silent · DD-47 runtime pin + ambiguity guard
@@ -1169,3 +1169,99 @@ Eval coverage (6 cases over 5 skills) is unchanged and is the open item.
 **Left as found, for a later pass.** story-flywheel Phase 4 "retry" re-runs code-review in the
 same context, which sits awkwardly beside "always spawn the reviewer" (DD-75). epic-flywheel's
 Exit Conditions mention an ALL EPICS COMPLETE message defined only in story-flywheel.
+
+---
+
+### DD-84 — On Swift projects the full verification cycle runs once per story, on the merged tree; every earlier phase runs in proportion and says what it relied on
+
+**Context.** On an iOS app with a serial XCUITest plan (one epic, 17 stories), one whole
+verification cycle took 60 to 70 minutes: a clean full test plan (15–20 min, almost all UI
+tests), an iPad smoke matrix (20–30 min), the epic's evals (10–20 min), and a Release build with
+a release guard (5 min). Each story ran that cycle four to six times — the developer (often
+twice), the reviewer, the follow-up reviewer, and again after merging main. A story took three
+to four hours, most of it re-proving code that had not changed since the last green run.
+
+The skills caused it. dev-story's Build & Test Gate, code-review's Verify green, the DD-80
+follow-up round and evals RUN each said "run everything", and none of them knew what the
+previous phase had already proved. DD-10 ("verify by running") was being paid for at full price
+in every phase, when what it requires is that *nothing is called green from reasoning* — not
+that every phase runs the whole plan.
+
+**Decision.** For Swift projects (the flywheels' existing `swift_project` detection):
+
+1. **One authoritative full cycle per story**, run once, on the story's tree merged with the
+   main branch, immediately before the PR / merge / close. Nothing merges without it. The
+   flywheel orchestrator owns it, or delegates it as its own step
+   (`story-flywheel/final-cycle.md`, canonical; story-flywheel Phase 3b, epic-flywheel Step 3b).
+2. **Earlier phases run in proportion to what they changed.** The developer runs the suites and
+   UI flows the story touches while iterating, and one full plan before handing off. The
+   reviewer does not re-run a green log it can prove still applies — complete, unfiltered,
+   green, and no source file changed since the tree it ran on (`LOG TREE`, a `git write-tree`
+   sha in the REVIEW HANDOFF; modification times as the fallback) — and re-runs only the suites
+   and flows its own patches touch. A follow-up review reads the patch diff and re-runs the
+   affected suites only.
+3. **Device and layout matrices run by need.** A story touching layout, navigation, or the root
+   view runs the whole matrix in its final cycle; any other story runs one cell per width class.
+   The whole matrix always runs at the epic boundary.
+4. **The epic's evals RUN once per story**, in the final cycle; phases run only the cases they
+   added or touched; the full cumulative set runs at the epic boundary.
+5. **Pinned counts are never edited by hand.** A project with a reset script uses it; a project
+   with pins and no script gets one proposed as a finding. Hand-edited pins caused nearly every
+   merge conflict between stories and most of the rework after them.
+6. **Parallel streams are two independent epics**, each a chain of stories, when the epics'
+   dependency lines allow. Two stories of one epic in parallel made the second pay a
+   merge-and-re-verify round every time.
+
+**The mechanism (DD-01).** Proportional running only works if the next phase can tell proven
+from assumed, so it is carried by report fields, not by trust: `RAN` (what this phase executed,
+log path at tree sha), `RELIED ON` (a log it did not produce, and what that log proves), and on
+Swift `FINAL CYCLE NEEDS: matrix=… · release-guard=…` — set by the developer, raised only by the
+reviewer from its own reading of the diff, consumed by the orchestrator. A report missing `RAN`
+or `RELIED ON` is a non-return. The final cycle reports a `FINAL CYCLE` block that gates the
+checkpoint, auto-advance, and the issue close.
+
+**What stays, and why.**
+- *The independent review* (DD-75). It found a data-loss bug — a reset that could open the app
+  on a half-deleted store — and a contrast check that never measured what it claimed. Reading is
+  not what was expensive.
+- *Watching every new gate fail once* (DD-11). One targeted run; it exposed three tests that
+  could not fail.
+- *The scored final cycle.* A flaw reached main once because one width was never run by any
+  scored gate. The goal is to run the full cycle once, not zero times.
+- *The release guard* whenever a story touches a launch argument or DEBUG-only code, and at
+  every epic boundary.
+- *Verify by running* (DD-10). A phase never reports green from reasoning alone. What changed is
+  how much it runs, not whether; a log counts only when it is proven to apply and named in
+  `RELIED ON`.
+
+**Cost accepted, stated in the skills so nobody quietly restores the old behaviour.** A bug
+surfaces later — at the end of the story or at the merge, not mid-review — and a red final
+cycle takes longer to trace, because several phases' changes are in the tree. That is cheaper
+than three to five redundant hours per story. The remedy for a class of bug that keeps arriving
+in the final cycle is to widen the developer's targeted run for that kind of story, never to
+put the full cycle back in every phase.
+
+**Scope.** Swift only: the reviewer's log reuse, scoped evals, matrix sizing, release guard,
+and the final cycle itself. On web and Python stacks the whole suite costs seconds, so their
+phases still run everything each time — the redundancy is cheap and the earlier signal is worth
+it. Generalised to every stack, because they are right regardless of suite cost: the `RAN` /
+`RELIED ON` report fields, the pinned-counts rule, and "two epics, not two stories" for parallel
+streams.
+
+**Refinements to earlier entries.** DD-81 had both dev-story and code-review run the String
+Catalog CHECK unconditionally; each CHECK is an Xcode IDE build. The reviewer now runs it only
+when its own patches touch a string, when the author's result was `unavailable`, or when the
+review is standalone — and the final cycle runs it always, on the merged tree, which is where
+the catalog actually breaks. The hole DD-81 closed stays closed. DD-80's follow-up round keeps
+its arithmetic trigger and one-round limit; only its verification is scoped. The `simulator.md`
+stub's field bullet "full plan — once, at the epic boundary" is amended in place with a
+citation to this entry.
+
+**Not done.** `ledger.sh` has no final-cycle field: the story-flywheel roll-up's `--build-test`
+now reports the final cycle's result on Swift. The Swift guardrails block stays `v4` — no new
+tripwire; the rule lives in the skills and the amended stub. story-flywheel does not gain
+auto-commit: when main has moved and the tree is uncommitted, the final cycle pauses for the
+user to commit, because it cannot prove a tree that does not exist yet. "Two small adjacent
+stories in one PR" was considered and not adopted; it needs a trial first. `quick-dev`,
+`dev-single-goal`, `e2e-tests` and `design-verify` are untouched: each runs once, outside the
+flywheel.

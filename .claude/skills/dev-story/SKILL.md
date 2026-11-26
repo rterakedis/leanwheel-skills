@@ -77,7 +77,7 @@ Before review, verify all items in `checklist.md` pass. Fix any failures first.
 **Verification is by running, not by reading.** Static reasoning is not a substitute for the toolchain — especially for Swift, where result builders, macros (`@Observable`/`@Model`), actor isolation, and `some View` produce errors that cannot be reliably predicted by reading. Before the story can leave `in-progress`, the project must **compile clean and its tests must pass this session** — verified by actually invoking the toolchain, not by inspection.
 
 1. Detect the toolchain and run a real build + test:
-   - **Apple / Swift** (Activation step 4's trigger): mandatory — the `xcodebuild` / SwiftPM invocation is in [apple-project.md](apple-project.md) → *Build + test command*.
+   - **Apple / Swift** (Activation step 4's trigger): mandatory — the `xcodebuild` / SwiftPM invocation is in [apple-project.md](apple-project.md) → *Build + test command*. **Scope differs on Swift:** targeted suites and flows while iterating, one full plan before handoff, and the matrix / epic evals / release guard left to the flywheel's final cycle — [apple-project.md](apple-project.md) → *Gate scope* (DD-84). Every other stack runs its whole suite here, each time.
    - **Web / SSG** (`package.json` present): the project's build + test scripts, quiet reporter — see [web-project.md](web-project.md) → *Build + test command*.
    - **Other toolchains:** run the project's documented build + test command — quiet flag if it has one, `tee` to `.leanwheel/logs/`, tail into context.
    - **Quiet output is the rule:** toolchain output is re-sent on every later turn. Full log on disk (`.leanwheel/logs/build-test.log`) for the failing-line cite; only the tail enters context. If `CLAUDE.md` has `## Quiet commands`, use those invocations verbatim.
@@ -90,7 +90,7 @@ Before review, verify all items in `checklist.md` pass. Fix any failures first.
    - **Escalation limit:** after **3 consecutive red runs** with no new fix succeeding, stop, report the failing output, and ask the user — do not keep retrying (retry thrash burns tokens and, on GUI toolchains, ties up the device/UI). This is the HALT condition above.
    - **Environment fault ≠ red (DD-80).** A run that fails without naming a compile error or a test — the toolchain, device, or a service it needs is unavailable, or CLAUDE.md's `## Probe` command fails when re-run — records `blocked`, not red: it does not count toward the three and gets no code fix. A second consecutive one pauses the story as an environment fault (report the probe result / log tail) instead of HALTing it as broken.
 2b. **A flaky or hanging test suite is a first-class bug — file it the moment it is observed**, via **LOG-AND-SCHEDULE** in `skills/deferred/SKILL.md`. Never "it passes in isolation, ignore it": a festering hang blocks the next epic-boundary gate and masquerades as agent or dev failures. Then continue with the targeted/known-good invocation.
-3. **Run the cumulative eval set.** If `docs/evals/` exists, run `bash scripts/evals.sh --epic {n} --quiet` (zero-token; its last line is the RUN report, per evals → RUN). A failing case is a **regression** of an earlier story — treat it exactly like a red build: fix and re-run, or HALT.
+3. **Run the cumulative eval set.** If `docs/evals/` exists, run `bash scripts/evals.sh --epic {n} --quiet` (zero-token; its last line is the RUN report, per evals → RUN) — on Swift, only this story's cases (*Gate scope*). A failing case is a **regression** of an earlier story — treat it exactly like a red build: fix and re-run, or HALT.
 4. **Update the eval set.** If `docs/evals/` exists and this story added tests that cover an AC or invariant, execute **BUILD** from `skills/evals/SKILL.md` to append (or flip `enabled: true` on) the corresponding `type: command` cases, so the next story inherits them.
 4b. **A new gate is not done until it has been shown to fail.** Scope: every test, eval case, or assertion **written this story** (not every run of the existing suite).
    1. Break the thing it guards — revert the fix, reintroduce the defect, or corrupt the input.
@@ -104,7 +104,9 @@ Before review, verify all items in `checklist.md` pass. Fix any failures first.
 
 4d. **Before accepting a zero as proof, prove the channel can see a one.** When verification takes the form "search output for X and find none," first produce an X deliberately and confirm it appears on the channel being searched. An unvalidated zero is not evidence of absence. Needed only for a **novel or assumed** channel (a log stream, a grep over runtime output) — not for ordinary test output.
 
-5. Record the result in the Debug Log: the command run and `build+test green` (or the manual-required note), plus `evals: P/T`. The regression net only works if it actually runs every story.
+4e. **Pinned counts are never edited by hand** (any stack) — test totals, suite lists, matrix cells a scorer compares against change only through the project's reset script; pins with no script are a finding, not a hand edit (`skills/story-flywheel/final-cycle.md` → *Pinned counts*).
+
+5. Record the result in the Debug Log: each command run, the log it wrote, and `build+test green` (or the manual-required note), plus `evals: P/T`. The same facts go in the report's `RAN` field — what you list there is what the reviewer and orchestrator may treat as proven.
 
 ## On Completion
 
@@ -123,7 +125,7 @@ When tasks done, DoD passes, **and the Build & Test Gate is green** (or manual-r
    3. **Ledger:** append one `dev-story` line via `scripts/ledger.sh` (never hand-write the JSON — the script owns the schema, normalizes the model name, stamps the timestamp, and no-ops if `docs/metrics/` is absent):
       `bash scripts/ledger.sh dev-story --story {id} --model {model} --build-test green|red|manual-required --bt-iterations {n} --evals P/T --invariants V/T [--docs-updated a,b] [--duration-min n]`
       Status qualifiers ("233/233", "doc-only") go in `--build-detail`, never in `--build-test`.
-   4. **Report:** "{epic}.{story} ready for review.{ Docs: {list} if any}", then the **TESTING PLAN** and **REVIEW HANDOFF** blocks below.
+   4. **Report:** "{epic}.{story} ready for review.{ Docs: {list} if any}", then the **Verification record**, **TESTING PLAN** and **REVIEW HANDOFF** blocks below.
    5. **Start the review.** Under a flywheel (you are `lw-story-developer`): stop here — the orchestrator spawns the reviewer. **Standalone:** you spawn `lw-story-reviewer` yourself with the REVIEW HANDOFF block as the prompt and relay its report — never review in this context.
 
 ### Review Handoff (required report field)
@@ -135,7 +137,23 @@ REVIEW HANDOFF
 STORY: {story file path}
 BASE: {the base ref recorded at Activation}
 LOG: .leanwheel/logs/build-test.log | none
+LOG TREE: {git write-tree sha taken right after the run that wrote LOG} | none
 ```
+
+`LOG` is a full, unfiltered, green run or `none` — never a filtered one. `LOG TREE` lets the reviewer prove the log still applies instead of re-running it.
+
+### Verification record (required report fields)
+
+Every phase says what it ran and what it only relied on, so the next phase can tell proven from assumed (DD-84). All stacks. A report missing either of the first two is incomplete (under a flywheel, a non-return).
+
+```
+RAN: {each run this session: full-plan | targeted({suites/flows}) | evals({scope}) | catalog-check — log path @ tree sha}
+RELIED ON: {a log you did not produce this session — path @ tree sha — and what it proves} | none
+FINAL CYCLE NEEDS: matrix=full|width-class · release-guard=yes|no    # Swift only; n/a elsewhere
+```
+
+- `matrix=full` when the story touches layout, navigation, or the root view; else `width-class`. `release-guard=yes` when it touches a launch argument or DEBUG-only (`#if DEBUG`) code. When unsure, pick the larger — it costs minutes once, and the final cycle is the only place it runs.
+- Never list under `RAN` something reasoned about rather than executed.
 
 ### Testing Plan (required report field)
 
