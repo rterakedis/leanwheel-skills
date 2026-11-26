@@ -16,7 +16,8 @@ All items must pass before status is set to `review`.
 - [ ] Project **builds clean this session** by actually running the toolchain (`xcodebuild … build` / `swift build` / `npm run build` / documented command) — not asserted from reading. Cite the command in the Debug Log, or record `Build & Test Gate: manual-required` if no toolchain exists.
 - [ ] Unit tests written/updated for all changed logic
 - [ ] Integration tests written/updated where Dev Notes require them
-- [ ] Test suite **executed this session and green** (no regressions) — cite the run; a passing build is not a passing test suite
+- [ ] Test suite **executed this session and green** (no regressions) — cite the run; a passing build is not a passing test suite. Swift projects: one full unfiltered plan before handoff, its tree recorded as `LOG TREE` (targeted runs while iterating do not count as this)
+- [ ] No pinned count hand-edited — changed only via the project's reset script, or N/A
 - [ ] Every gate **new this story** (test, eval case, assertion) was shown to fail — sabotage run recorded in Completion Notes, naming the specific item it flagged — or N/A if the story added none
 - [ ] Any gate that enumerates (tree walk, glob, grep) asserts a plausible lower bound on what it found — or N/A
 - [ ] Test framework and patterns from Dev Notes followed

@@ -21,7 +21,14 @@ Run a full, unfiltered build + test — not story-scoped:
 
 Use the project CLAUDE.md `## Quiet commands` invocations when present; always `tee` the full log to `.leanwheel/logs/` and keep only the tail in context (dev-story → Build & Test Gate).
 
-Red build / any failing test → **HALT**: report the failing target/test output and ask the user how to proceed.
+**Apple projects — also, always, whatever each story ran (DD-84):**
+- the **whole** device / layout matrix — every cell. Stories that did not touch layout ran one cell per width class in their final cycle; this is where the rest is run.
+- the **release guard** (or a plain Release-configuration build when the project has none).
+- Score the full-plan log with the project's scorer when it has one. Run on a tree that contains main.
+
+These run once here, not once per story, because they are the slow part of the cycle. Pinned counts changed by the epic are reset by the project's script, never by hand (`skills/story-flywheel/final-cycle.md` → *Pinned counts*).
+
+Red build / any failing test / red matrix cell / red release guard → **HALT**: report the failing target/test output and ask the user how to proceed.
 
 ## 2. Evals RUN — full cumulative set
 Run `bash scripts/evals.sh --quiet` — every epic, not just this one (per evals → RUN). Any regression → **HALT**, listing the failing cases.
@@ -58,7 +65,7 @@ Run after step 5 (and 5b when it applies). `{a}`, `{b}`, `{s}`, `{g}` come from 
 ─────────────────────────────────────────────
 EPIC {N} COMPLETE & VERIFIED — {X} stories
 ─────────────────────────────────────────────
-Build & Test (whole project): {green | HALTED}
+Build & Test (whole project): {green | HALTED}{ · matrix {n}/{n} cells · release guard green — Apple}
 Evals (cumulative): {p}/{t} command pass
 Invariants: {v}/{t} verified
 Deferred re-homed this epic: {n} (0 orphans)

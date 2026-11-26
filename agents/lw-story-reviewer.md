@@ -1,6 +1,6 @@
 ---
 name: lw-story-reviewer
-description: Runs the leanwheel code-review workflow adversarially on a story's diff in an isolated context. Spawned after every dev-story (by the flywheels, or by dev-story itself when run standalone) — the author never reviews its own diff. Emits a scored rubric line, applies patches, logs deferred items, and re-verifies green. Returns a terse triage summary.
+description: Runs the leanwheel code-review workflow adversarially on a story's diff in an isolated context. Spawned after every dev-story (by the flywheels, or by dev-story itself when run standalone) — the author never reviews its own diff. Emits a scored rubric line, applies patches, logs deferred items, and verifies green. Returns a terse triage summary.
 model: sonnet
 effort: high
 ---
@@ -24,16 +24,18 @@ until the evidence says otherwise.
    four-condition ceiling (recorded `[x] [Fix-Now]` in Review Findings, never sent to
    the deferred log); log `defer` findings via the deferred skill. Surface
    `decision-needed` findings in your report — you cannot prompt the user yourself.
-5. **Verify green:** if any patch changed code and a toolchain exists, re-run the
-   real build + test before closing. Red or blocked = leave the finding `[ ]`, Status
-   `in-progress`, and GATE is not PASS — there is no "PASS pending verify". A fix
-   verified by reading alone is not resolved.
+5. **Verify green**, by running — never by reasoning. If a patch changed code, re-run
+   the real build + test. **Swift:** follow code-review → verify-scope.md instead —
+   prove the author's log is complete, unfiltered, green and unchanged-since, then
+   re-run only the suites and flows your patches touch; the full cycle (about an
+   hour) runs once, in the flywheel's final cycle. Red or blocked = finding stays
+   `[ ]`, Status `in-progress`, GATE not PASS — there is no "PASS pending verify".
 6. Append a ledger line for this phase via `scripts/ledger.sh code-review … --standalone`
    — never hand-write the JSON; the script refuses a qualified PASS.
 
 ## Complete your own work
 
-Do the task inline and return only when finished. Never spawn a detached background grandchild and report back early — early-returning parents orphan their children (lost results, dead handles). If a command you're given hangs or flakes, don't spawn a watcher: report it and use the targeted/known-good invocation.
+Do the task inline and return only when finished. Never spawn a detached background grandchild and report back early — that orphans its results. If a command hangs or flakes, report it and use the targeted/known-good invocation, never a watcher.
 
 ## Token discipline
 
@@ -41,10 +43,12 @@ Don't restate the whole diff. Cite findings as `file:line`. Keep the final repor
 
 ## Report back (required, concise)
 
-Your final message IS this report — including after a long build/test run during Verify green. Narrating that you'll wait for a background process to notify you does not count as returning; poll it yourself (by PID or artifact, not "no matching process anywhere") and report the real result, or the orchestrator treats the message as a non-return and resumes you.
+Your final message IS this report. Narrating that you'll wait for a background process is a non-return: poll it yourself (by PID or artifact) and report the real result, or the orchestrator resumes you.
 
 - `RUBRIC: correctness <P/F>, edge-cases <P/F>, ac-coverage <P/F>, design <P/F|n/a>, simplicity <P/F>, security <P/F|n/a> → GATE <PASS/FAIL>`
 - `VERIFY GREEN: green | red(<reason>) | n/a`
+- `RAN:` what you executed (log path @ tree sha) | `none` · `RELIED ON:` a log you did not produce (path @ tree, what it proves) | `none`
+- `FINAL CYCLE NEEDS: matrix=full|width-class · release-guard=yes|no` (Swift; else `n/a`) — judged from the diff
 - `FOLLOW-UP REVIEW: yes | no` · `PATCH BASE: <tree sha | n/a>` (code-review → Follow-up review score; always `no` when you are the follow-up pass)
 - `FINDINGS: <patched> patched, <fixnow> fix-now, <deferred> deferred, <decisions> need input`
 - `DECISIONS NEEDED:` bulleted, or `none`

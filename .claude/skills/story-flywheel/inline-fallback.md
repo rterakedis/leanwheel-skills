@@ -18,3 +18,4 @@ Inline phases execute `skills/create-story/SKILL.md`, `skills/dev-story/SKILL.md
 | 2 — Dev Story | Run the `## Probe` first as usual, then execute `skills/dev-story/SKILL.md` inline on the session model. |
 | 2 — Operational doc sync | When `INFRA TOUCHED: yes`, execute the docs-sync OPERATIONAL op inline. |
 | 3 — Code Review | Execute `skills/code-review/SKILL.md` inline on the session model. That review shares the author's context, so record `review=inline-fallback` in the roll-up and say so at the checkpoint. |
+| 3b — Final Cycle (Swift) | Unchanged — run [final-cycle.md](final-cycle.md) inline; its "spawn the developer" on red becomes an inline dev-story fix. |

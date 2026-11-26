@@ -8,4 +8,4 @@
 #
 # appstore-connect / appstore-preflight were raised to their sizes on main at 5c8eea8 (growth
 # that predated this rule), then retired once split under the budget (DD-74).
-4756 agents/lw-story-developer.md
+4233 agents/lw-story-developer.md
