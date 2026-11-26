@@ -1,6 +1,6 @@
 ---
 type: regex
-pattern: "(github|\\bgh\\b)[^\\n]*(skip|unavailable|not (installed|available))|(skip|unavailable)[^\\n]*(github|\\bgh\\b)"
+pattern: "(github|\\bgh\\b)[^\\n]*(skip|unavailable|(not|n't) (installed|available|run|updated|created))|(skip|unavailable)[^\\n]*(github|\\bgh\\b)"
 flags: i
 match: contains
 ---
